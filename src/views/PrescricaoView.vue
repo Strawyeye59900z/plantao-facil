@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import { CircleCheck, Copy, Pencil, Replace, Star, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import CartaoAlerta from '@/components/prescricoes/CartaoAlerta.vue'
+import CampoSelect from '@/components/comum/CampoSelect.vue'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import type { ItemPrescricao, UUID } from '@/dominio/tipos'
 import { cn } from '@/lib/utils'
@@ -47,6 +48,13 @@ function alertasDoItem(itemId: UUID) {
 function alternativaEscolhida(item: ItemPrescricao) {
   const altId = escolhidas.value[item.id]
   return altId ? item.alternativas.find((a) => a.id === altId) : undefined
+}
+
+function opcoesItem(item: ItemPrescricao) {
+  return [
+    { valor: null as UUID | null, rotulo: 'Padrão' },
+    ...item.alternativas.map((alt) => ({ valor: alt.id as UUID | null, rotulo: alt.motivo })),
+  ]
 }
 
 function escolher(itemId: UUID, altId: UUID | null) {
@@ -145,37 +153,19 @@ async function moverParaLixeira() {
             </p>
             <p class="text-base whitespace-pre-line">{{ alternativaEscolhida(item)?.texto ?? item.texto }}</p>
           </div>
+          <!-- Troca pela alternativa -->
+          <CampoSelect
+            v-if="item.alternativas.length"
+            :model-value="escolhidas[item.id] ?? null"
+            :opcoes="opcoesItem(item)"
+            class="w-36 shrink-0 sm:w-48"
+            :aria-label="`Substituir item ${i + 1}`"
+            @update:model-value="(altId) => escolher(item.id, altId)"
+          />
         </div>
 
         <CartaoAlerta v-for="alerta in alertasDoItem(item.id)" :key="alerta.id" :alerta="alerta" compacto />
 
-        <!-- Troca pela alternativa -->
-        <div v-if="item.alternativas.length" class="flex flex-wrap gap-2" role="group" :aria-label="`Opções do item ${i + 1}`">
-          <button
-            type="button"
-            :aria-pressed="!escolhidas[item.id]"
-            :class="cn(
-              'min-h-9 rounded-full border px-3 text-sm',
-              !escolhidas[item.id] ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
-            )"
-            @click="escolher(item.id, null)"
-          >
-            Padrão
-          </button>
-          <button
-            v-for="alt in item.alternativas"
-            :key="alt.id"
-            type="button"
-            :aria-pressed="escolhidas[item.id] === alt.id"
-            :class="cn(
-              'min-h-9 rounded-full border px-3 text-left text-sm',
-              escolhidas[item.id] === alt.id ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
-            )"
-            @click="escolher(item.id, alt.id)"
-          >
-            {{ alt.motivo }}
-          </button>
-        </div>
       </li>
     </ol>
 

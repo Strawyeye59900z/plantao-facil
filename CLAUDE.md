@@ -73,7 +73,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Obrigatórios ao salvar: **título, categoria e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
 - Reordenar itens: botões ↑/↓.
 - Excluir categoria: prescrições ficam **"Sem categoria"** (categoria vai para exclusão lógica; não aparece na Lixeira).
-- Recentes: conta ao abrir a prescrição. Alternativa escolhida vive só na tela e volta ao padrão ao sair.
+- Recentes: conta ao abrir a prescrição. Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
 - Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
 - Observações/referência: texto simples com quebras de linha.
 - Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo. Remover um item transforma seus alertas em alertas da prescrição inteira.

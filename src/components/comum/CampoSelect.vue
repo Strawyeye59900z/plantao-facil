@@ -16,7 +16,7 @@ const modelo = defineModel<T>({ required: true })
 </script>
 
 <template>
-  <div :class="cn('relative', $props.class)">
+  <div :class="cn('relative h-fit', $props.class)">
     <select
       :id="id"
       v-model="modelo"
