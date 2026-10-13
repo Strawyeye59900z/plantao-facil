@@ -83,8 +83,9 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Concentração na **mesma unidade da dose**, sem conversão automática.
 - Unidade: texto livre com sugestões.
 - Marcadores: `{dose}`, `{volume}`, `{dose_diaria}`, `{tomadas}` (valor com unidade).
-- Peso: inteiro, sem mínimo/máximo definidos pelo usuário (ver pendências).
-- Copiar: **apenas os itens**, com a alternativa escolhida no lugar do item (formato exato a confirmar na Fase 2).
+- Peso: **até 1 casa decimal**, rejeita zero/negativo/não numérico; **sem limite máximo e sem confirmação** de valor alto.
+- Copiar: **apenas os itens, numerados** ("1. …"), um por linha, **sem linha em branco** entre itens; quebras de linha dentro do item **não** são copiadas. Alternativa escolhida entra no lugar do item.
+- Números: **vírgula decimal, sem zeros sobrando** ("2,5 mL", "300 mg").
 
 ### Backup (Fase 3)
 - JSON com `formato` + `versaoFormato`; inclui itens na lixeira (para propagar exclusões).
@@ -107,7 +108,6 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ## Pendências (perguntar ao usuário)
 
-- Fase 2: confirmar peso só inteiro e sem limites (risco em neonatos/lactentes e erro de digitação); formato exato do texto copiado.
 - Fase 4: o que significa "cadastrar medicações chaves de forma dinâmica" nas calculadoras.
 
 ## Comandos
