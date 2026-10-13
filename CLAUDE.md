@@ -66,6 +66,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - IndexedDB não indexa booleanos nem `null`: favorito/excluidoEm filtrados em memória.
 
 ### Prescrições e dose (Fases 1–2)
+- Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo.
 - Dose/kg pode ser **por tomada ou por dia** (`baseDoseKg`).
 - **Tetos sempre respeitados** (por tomada e/ou diário, conforme cadastrado), inclusive com peso limite (dose fixa por tomada) e **reaplicados após o arredondamento**.
 - Concentração na **mesma unidade da dose**, sem conversão automática.
@@ -82,12 +83,19 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Faixas fechadas `de ≤ x ≤ até`; lacunas detectadas respeitando casas decimais.
 - Escore mostra **resultado parcial** enquanto há campos sem resposta.
 
+### Modo pen drive (PCs do hospital com restrição)
+- Build extra que gera **um único `.html`** aberto como arquivo (file://), levado em pen drive junto com o backup JSON.
+- **Somente leitura**: no hospital só consulta e copia; edição apenas em casa (celular/PC pessoal).
+- Importação de PDF por IA desativada nesse modo (chave de API nunca fica em PC do hospital).
+- Biblioteca **salva no navegador do PC** (carregada do backup do pen drive; abre direto nas próximas vezes). Precisa de "atualizar biblioteca" (substituir pelo backup novo) e "apagar dados deste PC".
+- Navegadores-alvo: desconhecidos → testar em Chrome, Edge e Firefox.
+- Entra como **Fase 3b**, logo após o backup.
+
 ### IA (Fase 5)
 - Chave de API no IndexedDB, nunca no backup, com botão para apagar.
 
 ## Pendências (perguntar ao usuário)
 
-- Fase 1: alertas também por item (além da prescrição)?
 - Fase 2: confirmar peso só inteiro e sem limites (risco em neonatos/lactentes e erro de digitação); formato exato do texto copiado.
 - Fase 4: o que significa "cadastrar medicações chaves de forma dinâmica" nas calculadoras.
 

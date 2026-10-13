@@ -23,6 +23,8 @@ export interface Alerta {
   tipo: TipoAlerta
   gravidade: Gravidade
   texto: string
+  /** null = alerta da prescrição; preenchido = ligado a um item (aparece junto dele e também no topo). */
+  itemId: UUID | null
 }
 
 export interface Alternativa {
