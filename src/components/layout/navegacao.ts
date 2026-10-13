@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calculator, ClipboardList, DatabaseBackup, FileUp, Settings, Trash2 } from '@lucide/vue'
+import { Calculator, ClipboardList, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
 
 export interface ItemNavegacao {
   rota: string
@@ -16,6 +16,7 @@ export const NAVEGACAO_PRINCIPAL: ItemNavegacao[] = [
 
 /** No celular ficam dentro de Ajustes; no PC aparecem também no menu lateral. */
 export const NAVEGACAO_SECUNDARIA: ItemNavegacao[] = [
+  { rota: '/categorias', rotulo: 'Categorias', icone: Tags },
   { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },
   { rota: '/importar', rotulo: 'Importar PDF', icone: FileUp },
   { rota: '/lixeira', rotulo: 'Lixeira', icone: Trash2 },

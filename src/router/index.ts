@@ -15,6 +15,18 @@ export const router = createRouter({
       meta: { titulo: 'Prescrições' },
     },
     {
+      path: '/prescricoes/nova',
+      name: 'prescricao-nova',
+      component: () => import('@/views/PrescricaoEditorView.vue'),
+      meta: { titulo: 'Nova prescrição' },
+    },
+    {
+      path: '/prescricoes/:id/editar',
+      name: 'prescricao-editar',
+      component: () => import('@/views/PrescricaoEditorView.vue'),
+      meta: { titulo: 'Editar prescrição' },
+    },
+    {
       path: '/prescricoes/:id',
       name: 'prescricao',
       component: () => import('@/views/PrescricaoView.vue'),
@@ -37,6 +49,12 @@ export const router = createRouter({
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),
       meta: { titulo: 'Ajustes' },
+    },
+    {
+      path: '/categorias',
+      name: 'categorias',
+      component: () => import('@/views/CategoriasView.vue'),
+      meta: { titulo: 'Categorias' },
     },
     {
       path: '/backup',

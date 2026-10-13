@@ -1,0 +1,122 @@
+import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, UUID } from '@/dominio/tipos'
+
+export type DadosPrescricao = DadosNovos<Prescricao>
+type GerarId = () => UUID
+
+const idPadrao: GerarId = () => crypto.randomUUID()
+
+export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
+  return {
+    titulo: '',
+    categoriaId: null,
+    tags: [],
+    itens: [itemVazio(gerarId)],
+    alertas: [],
+    observacoes: '',
+    referencia: '',
+    favorito: false,
+    origem: 'manual',
+    revisada: true,
+    duvidasImportacao: [],
+  }
+}
+
+export function itemVazio(gerarId: GerarId = idPadrao): ItemPrescricao {
+  return { id: gerarId(), texto: '', regraDose: null, alternativas: [] }
+}
+
+export function alternativaVazia(gerarId: GerarId = idPadrao): Alternativa {
+  return { id: gerarId(), motivo: '', texto: '', regraDose: null }
+}
+
+export function alertaVazio(gerarId: GerarId = idPadrao): Alerta {
+  return { id: gerarId(), tipo: 'atencao', gravidade: 'atencao', texto: '', itemId: null }
+}
+
+/** Cópia profunda sem os campos de entidade (para editar sem mexer no original). */
+export function paraDados(p: Prescricao): DadosPrescricao {
+  const { id: _id, criadoEm: _c, atualizadoEm: _a, excluidoEm: _e, ...dados } = p
+  // Cópia via JSON (os dados são JSON puro): structuredClone falha com os proxies reativos do Vue.
+  return JSON.parse(JSON.stringify(dados)) as DadosPrescricao
+}
+
+/**
+ * Duplica com IDs novos em itens, alternativas e alertas (mantendo o vínculo alerta→item).
+ * Título recebe "(cópia)", sai sem favorito; origem e status de revisão são mantidos,
+ * para uma cópia de importação não revisada continuar não revisada.
+ */
+export function duplicarPrescricao(p: Prescricao, gerarId: GerarId = idPadrao): DadosPrescricao {
+  const dados = paraDados(p)
+  const novoIdItem = new Map<UUID, UUID>()
+
+  dados.itens = dados.itens.map((item) => {
+    const id = gerarId()
+    novoIdItem.set(item.id, id)
+    return {
+      ...item,
+      id,
+      alternativas: item.alternativas.map((alt) => ({ ...alt, id: gerarId() })),
+    }
+  })
+  dados.alertas = dados.alertas.map((alerta) => ({
+    ...alerta,
+    id: gerarId(),
+    itemId: alerta.itemId ? (novoIdItem.get(alerta.itemId) ?? null) : null,
+  }))
+  dados.titulo = `${p.titulo} (cópia)`
+  dados.favorito = false
+  return dados
+}
+
+/** Move um item uma posição para cima (-1) ou para baixo (+1). */
+export function moverItem<T>(lista: T[], indice: number, direcao: -1 | 1): T[] {
+  const destino = indice + direcao
+  if (destino < 0 || destino >= lista.length) return lista
+  const copia = [...lista]
+  ;[copia[indice], copia[destino]] = [copia[destino]!, copia[indice]!]
+  return copia
+}
+
+/** Remove um item; alertas ligados a ele passam a valer para a prescrição inteira. */
+export function removerItem(dados: DadosPrescricao, itemId: UUID): DadosPrescricao {
+  return {
+    ...dados,
+    itens: dados.itens.filter((i) => i.id !== itemId),
+    alertas: dados.alertas.map((a) => (a.itemId === itemId ? { ...a, itemId: null } : a)),
+  }
+}
+
+/** Separa tags digitadas por vírgula, sem vazias nem repetidas (ignorando maiúsculas). */
+export function normalizarTags(tags: string[]): string[] {
+  const vistas = new Set<string>()
+  const resultado: string[] = []
+  for (const bruta of tags.flatMap((t) => t.split(','))) {
+    const tag = bruta.trim()
+    const chave = tag.toLocaleLowerCase('pt-BR')
+    if (tag && !vistas.has(chave)) {
+      vistas.add(chave)
+      resultado.push(tag)
+    }
+  }
+  return resultado
+}
+
+/** Erros que impedem salvar. Lista vazia = válido. */
+export function validarPrescricao(dados: DadosPrescricao, categoriaExiste: (id: UUID) => boolean): string[] {
+  const erros: string[] = []
+  if (!dados.titulo.trim()) erros.push('Informe o título.')
+  if (!dados.categoriaId || !categoriaExiste(dados.categoriaId)) erros.push('Escolha a categoria.')
+  if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
+
+  dados.itens.forEach((item, i) => {
+    if (!item.texto.trim()) erros.push(`Item ${i + 1}: texto vazio.`)
+    item.alternativas.forEach((alt, j) => {
+      if (!alt.texto.trim()) erros.push(`Item ${i + 1}, alternativa ${j + 1}: texto vazio.`)
+      if (!alt.motivo.trim()) erros.push(`Item ${i + 1}, alternativa ${j + 1}: informe o motivo.`)
+    })
+  })
+  dados.alertas.forEach((alerta, i) => {
+    if (!alerta.texto.trim()) erros.push(`Alerta ${i + 1}: texto vazio.`)
+  })
+  return erros
+}

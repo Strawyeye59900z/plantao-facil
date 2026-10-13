@@ -17,7 +17,8 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - Pinia, Vue Router (hash history)
 - Dexie (IndexedDB); pede `navigator.storage.persist()` ao abrir
 - vite-plugin-pwa (`registerType: 'prompt'`, precache de todo o build)
-- shadcn-vue (Tailwind v4 + Reka UI), ícones `@lucide/vue`. Componentes copiados em `src/components/ui/` (adicionar com `npx shadcn-vue@latest add <nome>`)
+- shadcn-vue (Tailwind v4 + Reka UI), ícones `@lucide/vue`, toasts `vue-sonner`. Componentes copiados em `src/components/ui/` (adicionar com `npx shadcn-vue@latest add <nome>`). **Atenção:** o CLI reinsere o import do Google Fonts e um `@layer base` duplicado em `src/style.css` e pergunta se sobrescreve `button` (responder não — ele tem os tamanhos `touch`). Reverter `style.css` após cada `add`.
+- Selects: `CampoSelect` (select nativo, melhor no celular). Confirmações: `DialogoConfirmar`.
 - Vitest + fake-indexeddb
 - Fórmulas (Fase 4): **mathjs** com escopo restrito — nunca `eval`/`new Function`
 - Recorte de páginas de PDF (Fase 5): `pdf-lib`
@@ -38,6 +39,7 @@ src/
   dominio/      TS puro (sem Vue/Dexie) — tipos, motores de cálculo; foco dos testes
     tipos/      modelo de dados de todos os módulos
     texto/      normalização para busca (sem acentos)
+    prescricoes/ busca, agrupamento, edição/duplicação/validação
   db/           Dexie (banco.ts), repositório-base, armazenamento persistente
   stores/       Pinia
   router/
@@ -66,7 +68,16 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - IndexedDB não indexa booleanos nem `null`: favorito/excluidoEm filtrados em memória.
 
 ### Prescrições e dose (Fases 1–2)
-- Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo.
+- Lista: Recentes e Favoritos no topo; depois **agrupada por categoria** (ordem cadastrada), títulos em ordem alfabética, **grupos colapsáveis** (estado só em memória; durante a busca todos abrem). Chips filtram por categoria.
+- Busca (tempo real, sem acentos, todas as palavras): título, categoria, tags, texto dos itens, **motivo e texto das alternativas, observações**.
+- Obrigatórios ao salvar: **título, categoria e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
+- Reordenar itens: botões ↑/↓.
+- Excluir categoria: prescrições ficam **"Sem categoria"** (categoria vai para exclusão lógica; não aparece na Lixeira).
+- Recentes: conta ao abrir a prescrição. Alternativa escolhida vive só na tela e volta ao padrão ao sair.
+- Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
+- Observações/referência: texto simples com quebras de linha.
+- Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo. Remover um item transforma seus alertas em alertas da prescrição inteira.
+- Editor avisa ao sair com alterações não salvas.
 - Dose/kg pode ser **por tomada ou por dia** (`baseDoseKg`).
 - **Tetos sempre respeitados** (por tomada e/ou diário, conforme cadastrado), inclusive com peso limite (dose fixa por tomada) e **reaplicados após o arredondamento**.
 - Concentração na **mesma unidade da dose**, sem conversão automática.

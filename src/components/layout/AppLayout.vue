@@ -10,19 +10,30 @@ import LogoApp from './LogoApp.vue'
 const route = useRoute()
 const router = useRouter()
 
-// A busca do topo leva para a lista de prescrições com ?q= (filtragem na Fase 1).
+// A busca do topo filtra a lista de prescrições (?q=) enquanto se digita.
 const busca = ref('')
 watch(
   () => route.query.q,
   (q) => {
-    busca.value = typeof q === 'string' ? q : ''
+    const termo = typeof q === 'string' ? q : ''
+    // Não sobrescreve o que está sendo digitado (ex.: espaço no fim).
+    if (busca.value.trim() !== termo) busca.value = termo
   },
   { immediate: true },
 )
 
 function buscar() {
   const q = busca.value.trim()
-  router.push({ path: '/prescricoes', query: q ? { q } : {} })
+  const destino = { path: '/prescricoes', query: q ? { q } : {} }
+  // Na própria lista, substitui o histórico para o "voltar" não passar letra por letra.
+  if (route.path === '/prescricoes') router.replace(destino)
+  else router.push(destino)
+}
+
+function concluirBusca(evento: Event) {
+  buscar()
+  // Fecha o teclado do celular para mostrar os resultados.
+  ;(evento.target as HTMLFormElement).querySelector('input')?.blur()
 }
 
 function limparBusca() {
@@ -83,11 +94,12 @@ function ativo(rota: string) {
       >
         <div class="mx-auto flex h-14 max-w-3xl items-center gap-2 px-3">
           <LogoApp class="size-8 shrink-0 md:hidden" />
-          <form class="relative flex-1" role="search" @submit.prevent="buscar">
+          <form class="relative flex-1" role="search" @submit.prevent="concluirBusca">
             <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2" />
             <input
               v-model="busca"
               type="search"
+              @input="buscar"
               inputmode="search"
               enterkeyhint="search"
               placeholder="Buscar prescrição…"
@@ -108,7 +120,9 @@ function ativo(rota: string) {
       </header>
 
       <main class="mx-auto w-full max-w-3xl flex-1 px-3 pt-4 pb-24 md:pb-8">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" :key="route.path" />
+        </RouterView>
       </main>
 
       <!-- Navegação inferior (celular) -->

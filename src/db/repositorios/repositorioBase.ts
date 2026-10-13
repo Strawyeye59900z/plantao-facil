@@ -1,7 +1,8 @@
 import type { EntityTable } from 'dexie'
-import type { Entidade, ISODate, UUID } from '@/dominio/tipos'
+import type { DadosNovos, Entidade, ISODate, UUID } from '@/dominio/tipos'
 
-export type DadosNovos<T extends Entidade> = Omit<T, keyof Entidade>
+export type { DadosNovos }
+
 export type Alteracoes<T extends Entidade> = Partial<DadosNovos<T>>
 
 export interface OpcoesRepositorio {

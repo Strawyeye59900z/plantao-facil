@@ -33,3 +33,6 @@ export interface Categoria extends Entidade {
   escopo: EscopoCategoria
   ordem: number
 }
+
+/** Dados de uma entidade sem os campos controlados pelo repositório. */
+export type DadosNovos<T extends Entidade> = Omit<T, keyof Entidade>
