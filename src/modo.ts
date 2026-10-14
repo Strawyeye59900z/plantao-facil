@@ -10,8 +10,8 @@ export const armazenamento = { emMemoria: false }
 /** Rotas de edição/gestão que não existem no modo pen drive. */
 export function rotaBloqueadaNoPenDrive(caminho: string): boolean {
   return (
-    caminho === '/prescricoes/nova' ||
-    /^\/prescricoes\/[^/]+\/editar$/.test(caminho) ||
+    /^\/(prescricoes|calculadoras)\/nova$/.test(caminho) ||
+    /^\/(prescricoes|calculadoras)\/[^/]+\/editar$/.test(caminho) ||
     ['/categorias', '/lixeira', '/backup', '/importar'].includes(caminho)
   )
 }

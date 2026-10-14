@@ -1,7 +1,29 @@
 <script setup lang="ts">
-import EmBreve from '@/components/layout/EmBreve.vue'
+import ListaBiblioteca from '@/components/comum/ListaBiblioteca.vue'
+import { filtrarCalculadoras } from '@/dominio/calculadoras/busca'
+import type { Calculadora } from '@/dominio/tipos'
+import { useCalculadorasStore } from '@/stores/calculadoras'
+import { useCategoriasStore } from '@/stores/categorias'
+import { useRecentesStore } from '@/stores/recentes'
+
+const calculadoras = useCalculadorasStore()
+const categorias = useCategoriasStore()
+const recentes = useRecentesStore()
+
+function filtrar(itens: Calculadora[], termo: string) {
+  return filtrarCalculadoras(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
+}
 </script>
 
 <template>
-  <EmBreve titulo="Calculadoras" :fase="4" descricao="Escores por pontos e fórmulas cadastrados por você." />
+  <ListaBiblioteca
+    titulo="Calculadoras"
+    rota-base="/calculadoras"
+    rotulo-novo="Nova calculadora"
+    texto-vazio="Nenhuma calculadora cadastrada."
+    :itens="calculadoras.ativas"
+    :categorias="categorias.deCalculadoras"
+    :recentes-ids="recentes.ids('calculadora')"
+    :filtrar="filtrar"
+  />
 </template>

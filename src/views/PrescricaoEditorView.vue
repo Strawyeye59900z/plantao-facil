@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAvisoSaida } from '@/composables/useAvisoSaida'
 import { toast } from 'vue-sonner'
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
@@ -151,32 +152,8 @@ function cancelar() {
   router.back()
 }
 
-// Aviso ao sair com alterações não salvas.
-const confirmarSaida = ref(false)
-let resolverSaida: ((sair: boolean) => void) | null = null
-
-onBeforeRouteLeave(() => {
-  if (salvando || !alterado.value) return true
-  confirmarSaida.value = true
-  return new Promise<boolean>((resolve) => (resolverSaida = resolve))
-})
-
-// Fechar o diálogo por Esc ou toque fora conta como "continuar editando".
-watch(confirmarSaida, (aberto) => {
-  if (!aberto && resolverSaida) responderSaida(false)
-})
-
-function responderSaida(sair: boolean) {
-  confirmarSaida.value = false
-  resolverSaida?.(sair)
-  resolverSaida = null
-}
-
-function avisoAoFechar(evento: BeforeUnloadEvent) {
-  if (alterado.value) evento.preventDefault()
-}
-onMounted(() => window.addEventListener('beforeunload', avisoAoFechar))
-onBeforeUnmount(() => window.removeEventListener('beforeunload', avisoAoFechar))
+// Aviso ao sair com alterações não salvas (depois de salvar, `inicial` é atualizado e libera a saída).
+const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
 </script>
 
 <template>

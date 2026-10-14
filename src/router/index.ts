@@ -41,6 +41,18 @@ export const router = createRouter({
       meta: { titulo: 'Calculadoras' },
     },
     {
+      path: '/calculadoras/nova',
+      name: 'calculadora-nova',
+      component: () => import('@/views/CalculadoraEditorView.vue'),
+      meta: { titulo: 'Nova calculadora' },
+    },
+    {
+      path: '/calculadoras/:id/editar',
+      name: 'calculadora-editar',
+      component: () => import('@/views/CalculadoraEditorView.vue'),
+      meta: { titulo: 'Editar calculadora' },
+    },
+    {
       path: '/calculadoras/:id',
       name: 'calculadora',
       component: () => import('@/views/CalculadoraView.vue'),

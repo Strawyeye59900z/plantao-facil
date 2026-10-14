@@ -3,3 +3,4 @@ import { criarRepositorio } from './repositorioBase'
 
 export const repoPrescricoes = criarRepositorio(db.prescricoes)
 export const repoCategorias = criarRepositorio(db.categorias)
+export const repoCalculadoras = criarRepositorio(db.calculadoras)

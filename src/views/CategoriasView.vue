@@ -6,11 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import SeletorIcone from '@/components/categorias/SeletorIcone.vue'
-import type { Categoria, UUID } from '@/dominio/tipos'
+import { cn } from '@/lib/utils'
+import type { Categoria, EscopoCategoria, UUID } from '@/dominio/tipos'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 
 const categorias = useCategoriasStore()
 
+// Categorias são separadas por módulo.
+const escopo = ref<EscopoCategoria>('prescricao')
+const lista = computed(() => categorias.doEscopo(escopo.value))
 const nova = ref('')
 const novoIcone = ref<string | null>(null)
 const editandoId = ref<UUID | null>(null)
@@ -18,7 +22,7 @@ const nomeEditado = ref('')
 const paraExcluir = ref<Categoria | null>(null)
 
 function nomeRepetido(nome: string, ignorarId?: UUID) {
-  return categorias.dePrescricoes.some(
+  return lista.value.some(
     (c) => c.id !== ignorarId && c.nome.localeCompare(nome, 'pt-BR', { sensitivity: 'base' }) === 0,
   )
 }
@@ -34,7 +38,7 @@ async function criar() {
   nova.value = ''
   const icone = novoIcone.value
   novoIcone.value = null
-  await categorias.criar(nome, 'prescricao', icone)
+  await categorias.criar(nome, escopo.value, icone)
 }
 
 function editar(c: Categoria) {
@@ -64,7 +68,8 @@ const descricaoExclusao = computed(() => {
   if (!paraExcluir.value) return ''
   const n = categorias.emUso(paraExcluir.value.id)
   if (n === 0) return 'Nenhuma prescrição usa esta categoria.'
-  return `${n} ${n === 1 ? 'prescrição ficará' : 'prescrições ficarão'} como “${ROTULO_SEM_CATEGORIA}”.`
+  const [um, varios] = escopo.value === 'prescricao' ? ['prescrição', 'prescrições'] : ['calculadora', 'calculadoras']
+  return `${n} ${n === 1 ? `${um} ficará` : `${varios} ficarão`} como “${ROTULO_SEM_CATEGORIA}”.`
 })
 
 async function excluir() {
@@ -76,7 +81,21 @@ async function excluir() {
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Categorias de prescrições</h1>
+    <h1 class="text-2xl font-semibold">Categorias</h1>
+
+    <div class="bg-muted grid grid-cols-2 gap-1 rounded-xl p-1" role="tablist" aria-label="Módulo">
+      <button
+        v-for="opcao in [{ valor: 'prescricao', rotulo: 'Prescrições' }, { valor: 'calculadora', rotulo: 'Calculadoras' }] as const"
+        :key="opcao.valor"
+        type="button"
+        role="tab"
+        :aria-selected="escopo === opcao.valor"
+        :class="cn('h-10 rounded-lg text-sm font-medium', escopo === opcao.valor ? 'bg-background shadow-sm' : 'text-muted-foreground')"
+        @click="escopo = opcao.valor"
+      >
+        {{ opcao.rotulo }}
+      </button>
+    </div>
 
     <form class="flex gap-2" @submit.prevent="criar">
       <SeletorIcone v-model="novoIcone" nome-categoria="nova categoria" />
@@ -84,12 +103,12 @@ async function excluir() {
       <Button type="submit" size="touch"><Plus /> Criar</Button>
     </form>
 
-    <p v-if="categorias.dePrescricoes.length === 0" class="text-muted-foreground py-6 text-center">
+    <p v-if="lista.length === 0" class="text-muted-foreground py-6 text-center">
       Nenhuma categoria cadastrada.
     </p>
 
     <ul v-else class="bg-card ring-foreground/10 divide-y overflow-hidden rounded-xl ring-1">
-      <li v-for="(c, i) in categorias.dePrescricoes" :key="c.id" class="flex min-h-14 items-center gap-1 px-2 py-1">
+      <li v-for="(c, i) in lista" :key="c.id" class="flex min-h-14 items-center gap-1 px-2 py-1">
         <template v-if="editandoId === c.id">
           <Input
             v-model="nomeEditado"
@@ -117,7 +136,7 @@ async function excluir() {
           <Button
             variant="ghost"
             size="icon-touch"
-            :disabled="i === categorias.dePrescricoes.length - 1"
+            :disabled="i === lista.length - 1"
             aria-label="Mover para baixo"
             @click="categorias.mover(c.id, 1)"
           >

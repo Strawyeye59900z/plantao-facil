@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { db } from '@/db/banco'
 import { repoCategorias } from '@/db/repositorios'
 import type { Categoria, EscopoCategoria, UUID } from '@/dominio/tipos'
+import { useCalculadorasStore } from './calculadoras'
 import { usePrescricoesStore } from './prescricoes'
 
 export const ROTULO_SEM_CATEGORIA = 'Sem categoria'
@@ -17,6 +18,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
   }
 
   const dePrescricoes = computed(() => doEscopo('prescricao'))
+  const deCalculadoras = computed(() => doEscopo('calculadora'))
 
   async function carregar() {
     // Categorias criadas antes dos ícones não têm o campo.
@@ -68,22 +70,27 @@ export const useCategoriasStore = defineStore('categorias', () => {
     }
   }
 
-  /** Exclui a categoria; prescrições que a usavam ficam "Sem categoria". */
+  /** Exclui a categoria; prescrições/calculadoras que a usavam ficam "Sem categoria". */
   async function excluir(id: UUID) {
-    await db.transaction('rw', db.categorias, db.prescricoes, async () => {
+    await db.transaction('rw', db.categorias, db.prescricoes, db.calculadoras, async () => {
       await repoCategorias.moverParaLixeira(id)
-      const afetadas = await db.prescricoes.where('categoriaId').equals(id).toArray()
       const agora = new Date().toISOString()
-      for (const p of afetadas) {
+      for (const p of await db.prescricoes.where('categoriaId').equals(id).toArray()) {
         await db.prescricoes.put({ ...p, categoriaId: null, atualizadoEm: agora })
       }
+      for (const c of await db.calculadoras.where('categoriaId').equals(id).toArray()) {
+        await db.calculadoras.put({ ...c, categoriaId: null, atualizadoEm: agora })
+      }
     })
-    await Promise.all([carregar(), usePrescricoesStore().carregar()])
+    await Promise.all([carregar(), usePrescricoesStore().carregar(), useCalculadorasStore().carregar()])
   }
 
   function emUso(id: UUID): number {
-    return usePrescricoesStore().todas.filter((p) => p.categoriaId === id).length
+    return (
+      usePrescricoesStore().todas.filter((p) => p.categoriaId === id).length +
+      useCalculadorasStore().todas.filter((c) => c.categoriaId === id).length
+    )
   }
 
-  return { todas, dePrescricoes, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
+  return { todas, dePrescricoes, deCalculadoras, doEscopo, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
 })

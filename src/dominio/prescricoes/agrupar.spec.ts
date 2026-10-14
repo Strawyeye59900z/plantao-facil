@@ -20,7 +20,7 @@ describe('agruparPorCategoria', () => {
       categorias,
     )
     expect(grupos.map((g) => g.categoria?.id)).toEqual(['c-2', 'c-1'])
-    expect(grupos[1]!.prescricoes.map((p) => p.titulo)).toEqual(['Ômega', 'Zeta'])
+    expect(grupos[1]!.itens.map((p) => p.titulo)).toEqual(['Ômega', 'Zeta'])
   })
 
   it('sem categoria, categoria inexistente ou excluída vão para "Sem categoria" no fim', () => {
@@ -34,6 +34,6 @@ describe('agruparPorCategoria', () => {
       categorias,
     )
     expect(grupos.map((g) => g.categoria?.id ?? null)).toEqual(['c-2', null])
-    expect(grupos[1]!.prescricoes.map((p) => p.titulo)).toEqual(['A', 'B', 'C'])
+    expect(grupos[1]!.itens.map((p) => p.titulo)).toEqual(['A', 'B', 'C'])
   })
 })

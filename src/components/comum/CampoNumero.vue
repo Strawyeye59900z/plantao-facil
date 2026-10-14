@@ -37,7 +37,7 @@ function aoDigitar() {
       type="text"
       inputmode="decimal"
       autocomplete="off"
-      :aria-invalid="Number.isNaN(valor) || undefined"
+      :aria-invalid="(texto.trim() !== '' && Number.isNaN(valor)) || undefined"
       :class="cn(
         'border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-11 w-full rounded-lg border bg-transparent px-3 text-base outline-none focus-visible:ring-3 aria-invalid:ring-3',
         sufixo && 'pr-14',

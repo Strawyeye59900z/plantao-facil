@@ -24,11 +24,15 @@ watch(
   { immediate: true },
 )
 
+// Cada aba tem sua busca: em Calculadoras busca calculadoras; no resto, prescrições.
+const listaDaBusca = computed(() => (route.path.startsWith('/calculadoras') ? '/calculadoras' : '/prescricoes'))
+const rotuloBusca = computed(() => (listaDaBusca.value === '/calculadoras' ? 'Buscar calculadora' : 'Buscar prescrição'))
+
 function buscar() {
   const q = busca.value.trim()
-  const destino = { path: '/prescricoes', query: q ? { q } : {} }
+  const destino = { path: listaDaBusca.value, query: q ? { q } : {} }
   // Na própria lista, substitui o histórico para o "voltar" não passar letra por letra.
-  if (route.path === '/prescricoes') router.replace(destino)
+  if (route.path === listaDaBusca.value) router.replace(destino)
   else router.push(destino)
 }
 
@@ -40,7 +44,7 @@ function concluirBusca(evento: Event) {
 
 function limparBusca() {
   busca.value = ''
-  if (route.path === '/prescricoes') router.replace({ path: '/prescricoes' })
+  if (route.path === listaDaBusca.value) router.replace({ path: listaDaBusca.value })
 }
 
 // Modo pen drive: faixa de aviso; na tela de carregar a biblioteca, sem menus.
@@ -116,8 +120,8 @@ function ativo(rota: string) {
               @input="buscar"
               inputmode="search"
               enterkeyhint="search"
-              placeholder="Buscar prescrição…"
-              aria-label="Buscar prescrição"
+              :placeholder="`${rotuloBusca}…`"
+              :aria-label="rotuloBusca"
               class="bg-muted/60 focus-visible:ring-ring/50 h-11 w-full rounded-xl border border-transparent pr-10 pl-10 text-base outline-none focus-visible:ring-3 [&::-webkit-search-cancel-button]:hidden"
             />
             <button

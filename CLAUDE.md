@@ -18,10 +18,10 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - Dexie (IndexedDB); pede `navigator.storage.persist()` ao abrir
 - vite-plugin-pwa (`registerType: 'prompt'`, precache de todo o build)
 - shadcn-vue (Tailwind v4 + Reka UI), ícones `@lucide/vue`, toasts `vue-sonner`. Componentes copiados em `src/components/ui/` (adicionar com `npx shadcn-vue@latest add <nome>`). **Atenção:** o CLI reinsere o import do Google Fonts e um `@layer base` duplicado em `src/style.css` e pergunta se sobrescreve `button` (responder não — ele tem os tamanhos `touch`). Reverter `style.css` após cada `add`.
-- Selects: `CampoSelect` (select nativo, melhor no celular). Confirmações: `DialogoConfirmar`.
+- Selects: `CampoSelect` (select nativo, melhor no celular). Números: `CampoNumero` (null = vazio) e `CampoNumeroObrigatorio` (vazio = NaN). Confirmações: `DialogoConfirmar`. Aviso de saída de editor: `useAvisoSaida`. Listas: `ListaBiblioteca` + `LinhaItem`.
 - Vitest + fake-indexeddb
 - Validação de dados externos (backup, resposta da IA): **valibot**
-- Fórmulas (Fase 4): **mathjs** com escopo restrito — nunca `eval`/`new Function`
+- Fórmulas (Fase 4): **mathjs/number** (instância mínima + checagem da árvore) — nunca `eval`/`new Function`
 - Recorte de páginas de PDF (Fase 5): `pdf-lib`
 
 ## Princípios
@@ -43,6 +43,7 @@ src/
     prescricoes/ busca, agrupamento, edição/duplicação/validação
     dose/       motor de cálculo de dose, marcadores, peso
     backup/     esquema (valibot), exportar/ler, planejar e aplicar mesclagem
+    calculadoras/ motor de pontos, fórmula (mathjs restrito), interpretação, editor
   db/           Dexie (banco.ts), repositório-base, armazenamento persistente
   stores/       Pinia
   router/
@@ -109,8 +110,17 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Exclusão permanente não é propagada: se o item ainda existir no aparelho destino, ele fica (decisão do usuário).
 
 ### Calculadoras (Fase 4)
-- Faixas fechadas `de ≤ x ≤ até`; lacunas detectadas respeitando casas decimais.
-- Escore mostra **resultado parcial** enquanto há campos sem resposta.
+- "Medicações chaves dinâmicas" = calculadoras médicas em geral, cadastradas pelo usuário (ex.: escores de checklist). Nenhuma vem pronta.
+- Motores em `src/dominio/calculadoras/`: `pontos.ts`, `formula.ts`, `interpretacao.ts`, `editar.ts` (vazios, duplicar, validar, avisos), `busca.ts`.
+- Faixas fechadas `de ≤ x ≤ até` (null = sem limite); a primeira faixa que contém o valor vence. Lacunas detectadas respeitando casas decimais; no escore, também confere se cobre do menor ao maior total possível. **Sobreposição/lacuna só avisa** (não bloqueia salvar); "de > até" bloqueia.
+- Escore mostra **resultado parcial** ("parcial: X de Y") enquanto há campos sem resposta; interpretação do parcial aparece marcada como parcial. Campo numérico **sem faixa para o valor = erro** (não soma).
+- Fórmula: **mathjs/number** em instância mínima + checagem da árvore (só números, variáveis declaradas, + − * / ^, parênteses e `sqrt, log, log10, exp, abs, min, max, round, floor, ceil`). Recusa import, acesso a propriedade, condicionais, atribuição, strings, matrizes, constantes como `pi`. Decimal na expressão com ponto; nas entradas, vírgula. Ordem: entradas (mín./máx.) → avaliar → casas decimais → teto/piso (com aviso). Resultado não finito = erro.
+- Entradas numéricas aceitam **qualquer número de casas**.
+- **Sem botão Copiar** nas calculadoras: só exibe o valor final (decisão do usuário).
+- Obrigatórios ao salvar: nome, categoria, ≥1 campo/entrada e o necessário de cada tipo. Novos campos começam **sem pontos** (o usuário preenche; nenhum padrão como 0).
+- Editor com painel **"Testar calculadora"** (mesma tela de uso) e avisos ao vivo. Tipo escolhido na criação.
+- Lista igual à de prescrições (`ListaBiblioteca` genérica); **busca do topo é por aba** (Calculadoras busca nome/categoria/descrição). Categorias com abas Prescrições/Calculadoras. Lixeira mostra os dois.
+- Pen drive: calculadoras só para uso (sem editar/duplicar/excluir/favoritar).
 
 ### Modo pen drive (PCs do hospital com restrição)
 - Build extra que gera **um único `.html`** aberto como arquivo (file://), levado em pen drive junto com o backup JSON.
@@ -130,7 +140,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ## Pendências (perguntar ao usuário)
 
-- Fase 4: o que significa "cadastrar medicações chaves de forma dinâmica" nas calculadoras.
+- (nenhuma no momento)
 
 ## Comandos
 

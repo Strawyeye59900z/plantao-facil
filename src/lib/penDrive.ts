@@ -2,6 +2,7 @@ import { db } from '@/db/banco'
 import { substituirBiblioteca } from '@/db/backup'
 import { lerBackup } from '@/dominio/backup/backup'
 import { CHAVE_TEMA_CACHE, useConfiguracoesStore } from '@/stores/configuracoes'
+import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
 import { usePrescricoesStore } from '@/stores/prescricoes'
 
@@ -19,7 +20,7 @@ export async function carregarBibliotecaDoArquivo(arquivo: File): Promise<string
     return `Não foi possível salvar a biblioteca: ${erro instanceof Error ? erro.message : String(erro)}`
   }
   await useConfiguracoesStore().registrarBibliotecaPenDrive(exportadoEm)
-  await Promise.all([usePrescricoesStore().carregar(), useCategoriasStore().carregar()])
+  await Promise.all([usePrescricoesStore().carregar(), useCategoriasStore().carregar(), useCalculadorasStore().carregar()])
   return null
 }
 
@@ -33,5 +34,5 @@ export async function apagarDadosDestePc(): Promise<void> {
   } catch {
     // sem localStorage: nada a apagar
   }
-  await Promise.all([useConfiguracoesStore().carregar(), usePrescricoesStore().carregar(), useCategoriasStore().carregar()])
+  await Promise.all([useConfiguracoesStore().carregar(), usePrescricoesStore().carregar(), useCategoriasStore().carregar(), useCalculadorasStore().carregar()])
 }

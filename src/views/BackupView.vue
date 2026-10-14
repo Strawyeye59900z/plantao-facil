@@ -29,6 +29,7 @@ import {
 import type { ArquivoBackup, Entidade } from '@/dominio/tipos'
 import { baixarArquivo, compartilharArquivo, podeCompartilharArquivo } from '@/lib/arquivo'
 import { cn } from '@/lib/utils'
+import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
 import { useConfiguracoesStore } from '@/stores/configuracoes'
 import { usePrescricoesStore } from '@/stores/prescricoes'
@@ -144,7 +145,7 @@ const totalAGravar = computed(() =>
 )
 
 async function recarregarStores() {
-  await Promise.all([prescricoes.carregar(), categorias.carregar()])
+  await Promise.all([prescricoes.carregar(), categorias.carregar(), useCalculadorasStore().carregar()])
 }
 
 async function mesclar() {

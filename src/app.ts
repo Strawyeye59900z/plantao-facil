@@ -6,6 +6,7 @@ import App from './App.vue'
 import { router } from './router'
 import { pedirArmazenamentoPersistente } from './db/armazenamento'
 import { MODO_PENDRIVE } from './modo'
+import { useCalculadorasStore } from './stores/calculadoras'
 import { useCategoriasStore } from './stores/categorias'
 import { useConfiguracoesStore } from './stores/configuracoes'
 import { usePrescricoesStore } from './stores/prescricoes'
@@ -21,6 +22,7 @@ export async function montarApp() {
     useConfiguracoesStore().carregar(),
     useCategoriasStore().carregar(),
     usePrescricoesStore().carregar(),
+    useCalculadorasStore().carregar(),
   ])
   app.use(router)
   app.mount('#app')
