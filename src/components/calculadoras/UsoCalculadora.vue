@@ -74,86 +74,96 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
 
 <template>
   <div class="flex flex-col gap-4">
-    <!-- Escore por pontos -->
-    <template v-if="calculadora.tipo === 'pontos'">
-      <div
-        v-for="campo in (calculadora as CalculadoraPontos).campos"
-        :key="campo.id"
-        class="bg-card ring-foreground/10 flex flex-col gap-2 rounded-xl p-3 ring-1"
-      >
-        <p class="font-medium">{{ campo.rotulo || 'Campo sem texto' }}</p>
+    <!-- Campos: texto e botões na mesma linha; 2 colunas no PC/tablet, 1 no celular -->
+    <div class="grid gap-2 md:grid-cols-2">
+      <!-- Escore por pontos -->
+      <template v-if="calculadora.tipo === 'pontos'">
+        <div
+          v-for="campo in (calculadora as CalculadoraPontos).campos"
+          :key="campo.id"
+          class="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl px-3 py-2 ring-1"
+        >
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p class="min-w-[40%] flex-1 text-sm font-medium">{{ campo.rotulo || 'Campo sem texto' }}</p>
 
-        <div v-if="campo.tipo === 'sim_nao'" class="grid grid-cols-2 gap-2" role="group" :aria-label="campo.rotulo">
-          <button
-            v-for="opcao in [
-              { valor: true, rotulo: 'Sim', pontos: campo.pontosSim },
-              { valor: false, rotulo: 'Não', pontos: campo.pontosNao },
-            ]"
-            :key="String(opcao.valor)"
-            type="button"
-            :aria-pressed="respostas[campo.id] === opcao.valor"
-            :class="cn(
-              'flex h-12 items-center justify-center gap-2 rounded-lg border text-base font-medium',
-              respostas[campo.id] === opcao.valor ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
-            )"
-            @click="responder(campo.id, opcao.valor)"
-          >
-            {{ opcao.rotulo }} <span class="text-sm opacity-75">{{ sinal(opcao.pontos) }}</span>
-          </button>
-        </div>
+            <div v-if="campo.tipo === 'sim_nao'" class="flex shrink-0 gap-1.5" role="group" :aria-label="campo.rotulo">
+              <button
+                v-for="opcao in [
+                  { valor: true, rotulo: 'Sim', pontos: campo.pontosSim },
+                  { valor: false, rotulo: 'Não', pontos: campo.pontosNao },
+                ]"
+                :key="String(opcao.valor)"
+                type="button"
+                :aria-pressed="respostas[campo.id] === opcao.valor"
+                :class="cn(
+                  'flex h-11 min-w-16 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium',
+                  respostas[campo.id] === opcao.valor ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+                )"
+                @click="responder(campo.id, opcao.valor)"
+              >
+                {{ opcao.rotulo }} <span class="text-xs opacity-75">{{ sinal(opcao.pontos) }}</span>
+              </button>
+            </div>
 
-        <div v-else-if="campo.tipo === 'selecao'" class="flex flex-col gap-1.5" role="radiogroup" :aria-label="campo.rotulo">
-          <button
-            v-for="opcao in campo.opcoes"
-            :key="opcao.id"
-            type="button"
-            role="radio"
-            :aria-checked="respostas[campo.id] === opcao.id"
-            :class="cn(
-              'flex min-h-12 items-center justify-between gap-3 rounded-lg border px-3 text-left text-base',
-              respostas[campo.id] === opcao.id ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
-            )"
-            @click="responder(campo.id, opcao.id)"
-          >
-            <span>{{ opcao.rotulo || 'Opção sem texto' }}</span>
-            <span class="text-sm opacity-75">{{ sinal(opcao.pontos) }}</span>
-          </button>
-        </div>
+            <div
+              v-else-if="campo.tipo === 'selecao'"
+              class="flex flex-wrap justify-end gap-1.5"
+              role="radiogroup"
+              :aria-label="campo.rotulo"
+            >
+              <button
+                v-for="opcao in campo.opcoes"
+                :key="opcao.id"
+                type="button"
+                role="radio"
+                :aria-checked="respostas[campo.id] === opcao.id"
+                :class="cn(
+                  'flex min-h-11 items-center gap-1.5 rounded-lg border px-2.5 text-left text-sm',
+                  respostas[campo.id] === opcao.id ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+                )"
+                @click="responder(campo.id, opcao.id)"
+              >
+                {{ opcao.rotulo || 'Opção sem texto' }} <span class="text-xs opacity-75">{{ sinal(opcao.pontos) }}</span>
+              </button>
+            </div>
 
-        <template v-else>
-          <CampoNumero
-            v-model="modeloNumero(campo.id).value"
-            :sufixo="campo.unidade"
-            class="max-w-48"
-            :aria-label="campo.rotulo"
-          />
-          <p v-if="pontos?.pontosPorCampo[campo.id] !== undefined" class="text-muted-foreground text-sm">
+            <CampoNumero
+              v-else
+              v-model="modeloNumero(campo.id).value"
+              :sufixo="campo.unidade"
+              class="w-32 shrink-0"
+              :aria-label="campo.rotulo"
+            />
+          </div>
+          <p v-if="campo.tipo === 'numero' && pontos?.pontosPorCampo[campo.id] !== undefined" class="text-muted-foreground text-right text-xs">
             {{ sinal(pontos!.pontosPorCampo[campo.id]!) }} {{ Math.abs(pontos!.pontosPorCampo[campo.id]!) === 1 ? 'ponto' : 'pontos' }}
           </p>
-        </template>
-        <p v-if="pontos?.erros[campo.id]" class="text-destructive text-sm">{{ pontos.erros[campo.id] }}</p>
-      </div>
-    </template>
+          <p v-if="pontos?.erros[campo.id]" class="text-destructive text-right text-xs">{{ pontos.erros[campo.id] }}</p>
+        </div>
+      </template>
 
-    <!-- Fórmula -->
-    <template v-else>
-      <div
-        v-for="entrada in (calculadora as CalculadoraFormula).entradas"
-        :key="entrada.id"
-        class="bg-card ring-foreground/10 flex flex-col gap-1.5 rounded-xl p-3 ring-1"
-      >
-        <label :for="`entrada-${entrada.id}`" class="font-medium">{{ entrada.rotulo || entrada.variavel }}</label>
-        <CampoNumero
-          :id="`entrada-${entrada.id}`"
-          v-model="modeloNumero(entrada.id).value"
-          :sufixo="entrada.unidade"
-          class="max-w-48"
-        />
-        <p class="text-muted-foreground text-xs">
-          de {{ formatarNumero(entrada.min) }} a {{ formatarNumero(entrada.max) }} {{ entrada.unidade }}
-        </p>
-      </div>
-    </template>
+      <!-- Fórmula -->
+      <template v-else>
+        <div
+          v-for="entrada in (calculadora as CalculadoraFormula).entradas"
+          :key="entrada.id"
+          class="bg-card ring-foreground/10 flex items-center gap-3 rounded-xl px-3 py-2 ring-1"
+        >
+          <div class="min-w-0 flex-1">
+            <label :for="`entrada-${entrada.id}`" class="text-sm font-medium">{{ entrada.rotulo || entrada.variavel }}</label>
+            <p class="text-muted-foreground text-xs">
+              de {{ formatarNumero(entrada.min) }} a {{ formatarNumero(entrada.max) }} {{ entrada.unidade }}
+            </p>
+          </div>
+          <CampoNumero
+            :id="`entrada-${entrada.id}`"
+            v-model="modeloNumero(entrada.id).value"
+            :sufixo="entrada.unidade"
+            class="w-32 shrink-0"
+          />
+        </div>
+      </template>
+    </div>
 
     <!-- Resultado -->
     <div

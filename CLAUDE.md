@@ -117,6 +117,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Fórmula: **mathjs/number** em instância mínima + checagem da árvore (só números, variáveis declaradas, + − * / ^, parênteses e `sqrt, log, log10, exp, abs, min, max, round, floor, ceil`). Recusa import, acesso a propriedade, condicionais, atribuição, strings, matrizes, constantes como `pi`. Decimal na expressão com ponto; nas entradas, vírgula. Ordem: entradas (mín./máx.) → avaliar → casas decimais → teto/piso (com aviso). Resultado não finito = erro.
 - Entradas numéricas aceitam **qualquer número de casas**.
 - **Sem botão Copiar** nas calculadoras: só exibe o valor final (decisão do usuário).
+- Tela de uso compacta: **texto do campo e botões na mesma linha**; **2 colunas no PC/tablet (md+), 1 no celular**. Opções de seleção quebram linha se não couberem.
 - Obrigatórios ao salvar: nome, categoria, ≥1 campo/entrada e o necessário de cada tipo. Novos campos começam **sem pontos** (o usuário preenche; nenhum padrão como 0).
 - Editor com painel **"Testar calculadora"** (mesma tela de uso) e avisos ao vivo. Tipo escolhido na criação.
 - Lista igual à de prescrições (`ListaBiblioteca` genérica); **busca do topo é por aba** (Calculadoras busca nome/categoria/descrição). Categorias com abas Prescrições/Calculadoras. Lixeira mostra os dois.
