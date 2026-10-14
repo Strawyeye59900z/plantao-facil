@@ -19,7 +19,8 @@ export const useCategoriasStore = defineStore('categorias', () => {
   const dePrescricoes = computed(() => doEscopo('prescricao'))
 
   async function carregar() {
-    todas.value = await db.categorias.toArray()
+    // Categorias criadas antes dos ícones não têm o campo.
+    todas.value = (await db.categorias.toArray()).map((c) => ({ ...c, icone: c.icone ?? null }))
   }
 
   function obter(id: UUID | null): Categoria | undefined {
@@ -37,14 +38,18 @@ export const useCategoriasStore = defineStore('categorias', () => {
     return c
   }
 
-  async function criar(nomeCategoria: string, escopo: EscopoCategoria) {
+  async function criar(nomeCategoria: string, escopo: EscopoCategoria, icone: string | null = null) {
     const lista = doEscopo(escopo)
     const ordem = lista.length ? Math.max(...lista.map((c) => c.ordem)) + 1 : 0
-    return substituir(await repoCategorias.criar({ nome: nomeCategoria.trim(), escopo, ordem }))
+    return substituir(await repoCategorias.criar({ nome: nomeCategoria.trim(), escopo, ordem, icone }))
   }
 
   async function renomear(id: UUID, novoNome: string) {
     return substituir(await repoCategorias.atualizar(id, { nome: novoNome.trim() }))
+  }
+
+  async function definirIcone(id: UUID, icone: string | null) {
+    return substituir(await repoCategorias.atualizar(id, { icone }))
   }
 
   /** Troca a posição com a vizinha (-1 = sobe, +1 = desce). */
@@ -80,5 +85,5 @@ export const useCategoriasStore = defineStore('categorias', () => {
     return usePrescricoesStore().todas.filter((p) => p.categoriaId === id).length
   }
 
-  return { todas, dePrescricoes, carregar, obter, nome, criar, renomear, mover, excluir, emUso }
+  return { todas, dePrescricoes, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
 })

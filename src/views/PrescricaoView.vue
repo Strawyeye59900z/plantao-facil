@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import { CircleCheck, ClipboardCopy, Copy, Pencil, Replace, Scale, Star, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import CartaoAlerta from '@/components/prescricoes/CartaoAlerta.vue'
+import IconeCategoria from '@/components/categorias/IconeCategoria.vue'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
 import ResultadoDose from '@/components/prescricoes/ResultadoDose.vue'
 import { lerPeso } from '@/dominio/dose/peso'
@@ -123,7 +124,10 @@ async function moverParaLixeira() {
   <section v-if="prescricao" class="flex flex-col gap-4 pb-24">
     <!-- Cabeçalho -->
     <header class="flex flex-col gap-2">
-      <p class="text-muted-foreground text-sm">{{ categorias.nome(prescricao.categoriaId) }}</p>
+      <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
+        <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" />
+        {{ categorias.nome(prescricao.categoriaId) }}
+      </p>
       <div class="flex items-start gap-2">
         <h1 class="flex-1 text-2xl leading-tight font-semibold">{{ prescricao.titulo }}</h1>
         <Button

@@ -53,6 +53,18 @@ describe('exportar e ler', () => {
     }
   })
 
+  it('backup antigo sem ícone de categoria é aceito (ícone = null) e não gera conflito', () => {
+    const antigo = montarBackup(biblioteca({ categorias: [categoriaTeste()] }), T1, '0.1.0')
+    delete (antigo.categorias[0] as Partial<typeof antigo.categorias[0]>).icone
+    const lido = lerBackup(JSON.stringify(antigo))
+    expect(lido.ok).toBe(true)
+    if (lido.ok) {
+      expect(lido.backup.categorias[0]!.icone).toBeNull()
+      const plano = planejarMesclagem(biblioteca({ categorias: [categoriaTeste()] }), lido.backup)
+      expect(plano.categorias[0]!.situacao).toBe('igual')
+    }
+  })
+
   it('nome do arquivo com data e hora local', () => {
     expect(nomeArquivoBackup(new Date(2026, 9, 4, 7, 5))).toBe('plantao-facil-backup-2026-10-04-0705.json')
   })

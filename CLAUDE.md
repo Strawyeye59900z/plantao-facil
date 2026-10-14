@@ -64,6 +64,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ### Dados
 - Categorias: **lista gerenciada**, separada por módulo (`escopo: 'prescricao' | 'calculadora'`). Prescrições/calculadoras referenciam `categoriaId`.
+- Categorias têm **ícone opcional** (`icone`: chave da galeria fixa de ~70 ícones Lucide em `src/components/categorias/icones.ts`; não renomear chaves). Escolhido em Categorias (galeria em diálogo). Aparece no cabeçalho dos grupos, nos chips, em Recentes/Favoritos e na tela da prescrição. Registros/backups antigos sem o campo = `null`.
 - Exclusão: vai para a **lixeira** (exclusão lógica); dentro da lixeira pode **excluir permanentemente**.
 - **Recentes: 5 últimos, só em memória** enquanto o app está aberto (não persistem, não vão para o backup).
 - Favoritos: campo `favorito` na entidade; entram no backup.

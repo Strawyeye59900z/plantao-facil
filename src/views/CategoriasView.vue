@@ -5,12 +5,14 @@ import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
+import SeletorIcone from '@/components/categorias/SeletorIcone.vue'
 import type { Categoria, UUID } from '@/dominio/tipos'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 
 const categorias = useCategoriasStore()
 
 const nova = ref('')
+const novoIcone = ref<string | null>(null)
 const editandoId = ref<UUID | null>(null)
 const nomeEditado = ref('')
 const paraExcluir = ref<Categoria | null>(null)
@@ -30,7 +32,9 @@ async function criar() {
   }
   // Limpa antes de gravar: evita juntar nomes se o usuário digitar/tocar de novo durante a gravação.
   nova.value = ''
-  await categorias.criar(nome, 'prescricao')
+  const icone = novoIcone.value
+  novoIcone.value = null
+  await categorias.criar(nome, 'prescricao', icone)
 }
 
 function editar(c: Categoria) {
@@ -75,6 +79,7 @@ async function excluir() {
     <h1 class="text-2xl font-semibold">Categorias de prescrições</h1>
 
     <form class="flex gap-2" @submit.prevent="criar">
+      <SeletorIcone v-model="novoIcone" nome-categoria="nova categoria" />
       <Input v-model="nova" class="h-11 flex-1" placeholder="Nova categoria" aria-label="Nome da nova categoria" />
       <Button type="submit" size="touch"><Plus /> Criar</Button>
     </form>
@@ -97,6 +102,11 @@ async function excluir() {
           <Button variant="ghost" size="icon-touch" aria-label="Cancelar" @click="editandoId = null"><X /></Button>
         </template>
         <template v-else>
+          <SeletorIcone
+            :model-value="c.icone"
+            :nome-categoria="c.nome"
+            @update:model-value="(icone) => categorias.definirIcone(c.id, icone)"
+          />
           <span class="flex-1 px-2">
             {{ c.nome }}
             <span class="text-muted-foreground text-sm">· {{ categorias.emUso(c.id) }}</span>

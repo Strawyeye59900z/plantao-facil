@@ -32,6 +32,8 @@ export interface Categoria extends Entidade {
   nome: string
   escopo: EscopoCategoria
   ordem: number
+  /** Nome de um ícone da galeria (src/components/categorias/icones.ts); null = sem ícone. */
+  icone: string | null
 }
 
 /** Dados de uma entidade sem os campos controlados pelo repositório. */

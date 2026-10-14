@@ -34,7 +34,7 @@ afterEach(async () => {
   await banco.delete()
 })
 
-const dadosTeste = { nome: 'Categoria Teste A', escopo: 'prescricao' as const, ordem: 0 }
+const dadosTeste = { nome: 'Categoria Teste A', escopo: 'prescricao' as const, ordem: 0, icone: null }
 
 describe('repositorioBase', () => {
   it('criar preenche id, criadoEm, atualizadoEm e excluidoEm nulo', async () => {

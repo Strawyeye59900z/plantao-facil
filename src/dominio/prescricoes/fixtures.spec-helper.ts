@@ -31,6 +31,7 @@ export function categoriaTeste(parcial: Partial<Categoria> = {}): Categoria {
     nome: 'Categoria Teste A',
     escopo: 'prescricao',
     ordem: 0,
+    icone: null,
     ...parcial,
   }
 }

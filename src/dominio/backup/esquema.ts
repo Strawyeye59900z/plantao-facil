@@ -32,6 +32,8 @@ export const esquemaCategoria: v.GenericSchema<unknown, Categoria> = v.object({
   nome: v.string(),
   escopo: v.picklist(['prescricao', 'calculadora']),
   ordem: numero,
+  // Opcional: backups feitos antes dos ícones de categoria não têm o campo.
+  icone: v.optional(v.nullable(v.string()), null),
 })
 
 const esquemaRegraDose: v.GenericSchema<unknown, RegraDose> = v.object({

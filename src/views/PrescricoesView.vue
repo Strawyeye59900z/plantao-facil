@@ -12,6 +12,7 @@ import { useRoute } from 'vue-router'
 import { ChevronDown, Clock, Plus, Star } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import LinhaPrescricao from '@/components/prescricoes/LinhaPrescricao.vue'
+import IconeCategoria from '@/components/categorias/IconeCategoria.vue'
 import { agruparPorCategoria } from '@/dominio/prescricoes/agrupar'
 import { filtrarPrescricoes } from '@/dominio/prescricoes/busca'
 import type { Prescricao } from '@/dominio/tipos'
@@ -40,6 +41,7 @@ const chips = computed(() =>
   agruparPorCategoria(prescricoes.ativas, categorias.dePrescricoes).map((g) => ({
     chave: g.categoria?.id ?? SEM_CATEGORIA,
     nome: g.categoria?.nome ?? ROTULO_SEM_CATEGORIA,
+    icone: g.categoria?.icone ?? null,
     total: g.prescricoes.length,
   })),
 )
@@ -117,7 +119,10 @@ function filtrar(chave: string | null) {
         )"
         @click="filtrar(chip.chave)"
       >
-        {{ chip.nome }} <span class="opacity-70">{{ chip.total }}</span>
+        <span class="flex items-center gap-1.5">
+          <IconeCategoria :icone="chip.icone" />
+          {{ chip.nome }} <span class="opacity-70">{{ chip.total }}</span>
+        </span>
       </button>
     </div>
 
@@ -148,6 +153,7 @@ function filtrar(chave: string | null) {
             :key="p.id"
             :prescricao="p"
             :categoria="categorias.nome(p.categoriaId)"
+            :icone-categoria="categorias.obter(p.categoriaId)?.icone"
           />
         </div>
       </div>
@@ -163,6 +169,7 @@ function filtrar(chave: string | null) {
             :key="p.id"
             :prescricao="p"
             :categoria="categorias.nome(p.categoriaId)"
+            :icone-categoria="categorias.obter(p.categoriaId)?.icone"
           />
         </div>
       </div>
@@ -179,6 +186,7 @@ function filtrar(chave: string | null) {
           :aria-expanded="aberta(chaveGrupo(grupo.categoria?.id))"
           @click="alternarGrupo(chaveGrupo(grupo.categoria?.id))"
         >
+          <IconeCategoria :icone="grupo.categoria?.icone" class="text-muted-foreground size-5" />
           <span class="flex-1 font-semibold">{{ grupo.categoria?.nome ?? ROTULO_SEM_CATEGORIA }}</span>
           <span class="text-muted-foreground text-sm">{{ grupo.prescricoes.length }}</span>
           <ChevronDown
