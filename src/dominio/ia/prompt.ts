@@ -21,6 +21,45 @@ Formato:
 - "alertas": apenas avisos explícitos do documento. "tipo": contraindicacao, ajuste_renal, gestacao, interacao, atencao ou outro. "gravidade": informativo, atencao ou critico, conforme o destaque dado no documento; se não houver destaque, use "atencao" e registre a dúvida. "item": 0 se o alerta vale para a prescrição inteira, ou o número do item (1, 2, …) a que ele se refere.
 - "observacoes" e "referencia": copie do documento, se houver.`
 
+/**
+ * Versão para colar num chat no navegador (ChatGPT, Claude, Gemini), junto com o PDF.
+ * Como o chat não tem saída estruturada, o formato vai descrito por extenso; a resposta colada
+ * de volta no app passa pela mesma validação.
+ */
+export function montarPromptChat(): string {
+  return `${INSTRUCOES_SISTEMA}
+
+Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), exatamente nesta estrutura. Os valores abaixo só mostram o tipo de cada campo:
+
+{
+  "prescricoes": [
+    {
+      "titulo": "texto",
+      "categoria": "texto",
+      "tags": ["texto"],
+      "itens": [
+        {
+          "texto": "texto",
+          "alternativas": [{ "motivo": "texto", "texto": "texto" }],
+          "opcoesEquivalentes": false
+        }
+      ],
+      "alertas": [
+        { "tipo": "atencao", "gravidade": "atencao", "texto": "texto", "item": 0 }
+      ],
+      "observacoes": "texto",
+      "referencia": "texto",
+      "duvidas": ["texto"]
+    }
+  ],
+  "duvidas": ["texto"]
+}
+
+Todos os campos são obrigatórios (use "" ou [] quando não houver). "item" é número inteiro. "opcoesEquivalentes" é true ou false.
+
+Extraia as prescrições do PDF anexado seguindo as regras.`
+}
+
 export function montarPedido(intervalo: { de: number; ate: number } | null): string {
   const paginas = intervalo ? ` (páginas ${intervalo.de} a ${intervalo.ate} do documento original)` : ''
   return `Extraia as prescrições deste PDF${paginas} seguindo as regras.`

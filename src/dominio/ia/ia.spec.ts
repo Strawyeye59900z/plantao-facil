@@ -5,7 +5,7 @@ import { categoriaTeste } from '@/dominio/prescricoes/fixtures.spec-helper'
 import { validarPrescricao } from '@/dominio/prescricoes/editar'
 import { enviarParaIA } from '@/lib/enviarParaIA'
 import { contarPaginas, paraBase64, recortarPaginas } from '@/lib/pdf'
-import { INSTRUCOES_SISTEMA, montarPedido } from './prompt'
+import { INSTRUCOES_SISTEMA, montarPedido, montarPromptChat } from './prompt'
 import { anthropic, gemini, mensagemErroHttp, openai, PROVEDORES } from './provedores'
 import { criarRascunhos } from './rascunhos'
 import { JSON_SCHEMA_RESPOSTA, lerRespostaIA, paraEsquemaGemini, type RespostaIA } from './resposta'
@@ -137,6 +137,18 @@ describe('validação da resposta da IA', () => {
   it('aceita resposta válida, inclusive cercada por ```json', () => {
     expect(lerRespostaIA(JSON.stringify(respostaValida)).ok).toBe(true)
     expect(lerRespostaIA('```json\n' + JSON.stringify(respostaValida) + '\n```').ok).toBe(true)
+  })
+
+  it('aceita resposta colada de chat com texto antes e depois do JSON', () => {
+    const colado = `Aqui está o resultado:\n\`\`\`json\n${JSON.stringify(respostaValida)}\n\`\`\`\nQualquer dúvida, avise.`
+    expect(lerRespostaIA(colado).ok).toBe(true)
+  })
+
+  it('prompt de chat traz as regras, o formato e pede só JSON', () => {
+    const p = montarPromptChat()
+    expect(p).toContain(INSTRUCOES_SISTEMA)
+    expect(p).toContain('"opcoesEquivalentes"')
+    expect(p).toContain('SOMENTE com um único bloco JSON')
   })
 
   it('recusa JSON inválido e formato errado com mensagem', () => {

@@ -151,6 +151,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **Dúvidas gerais do documento só na tela de revisão**; dúvidas de cada prescrição ficam salvas em `duvidasImportacao`.
 - Intervalo de páginas recortado no aparelho com `pdf-lib`; limites conferidos antes do envio. **Caixa de confirmação a cada envio** ("não contém dados de pacientes").
 - Revisão: cada prescrição com Editar (mesmo `FormularioPrescricao` do editor), Descartar, Aprovar. Aprovada = salva como "importada — não revisada". Sair com pendentes pede confirmação.
+- **Chat no navegador (sem chave)**: na tela Importar PDF, "Copiar prompt"/"Ver prompt" (`montarPromptChat`: mesmas regras + formato JSON descrito por extenso) e campo para colar a resposta do chat → mesma validação e revisão. A leitura aceita texto antes/depois do JSON e cercas ```json.
 - Mensagens de validação (backup e IA) em português via `descreverProblemas`.
 - Testado com rede simulada (sem chamadas reais). **Teste com chave real fica com o usuário.**
 

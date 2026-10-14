@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue'
 import { toast } from 'vue-sonner'
-import { Check, FileUp, Loader2, Pencil, ShieldAlert, Sparkles, Trash2, TriangleAlert, X } from '@lucide/vue'
+import { Check, ClipboardCopy, FileUp, Loader2, MessagesSquare, Pencil, ShieldAlert, Sparkles, Trash2, TriangleAlert, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import CampoNumero from '@/components/comum/CampoNumero.vue'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
@@ -13,6 +15,9 @@ import { PROVEDORES } from '@/dominio/ia/provedores'
 import { criarRascunhos, type RascunhoImportado } from '@/dominio/ia/rascunhos'
 import { validarPrescricao } from '@/dominio/prescricoes/editar'
 import { enviarParaIA } from '@/lib/enviarParaIA'
+import { copiarTexto } from '@/lib/areaTransferencia'
+import { montarPromptChat } from '@/dominio/ia/prompt'
+import { lerRespostaIA, type RespostaIA } from '@/dominio/ia/resposta'
 import { contarPaginas, recortarPaginas } from '@/lib/pdf'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 import { useConfiguracoesStore } from '@/stores/configuracoes'
@@ -126,11 +131,7 @@ async function enviar() {
       erroEnvio.value = r.erro
       return
     }
-    rascunhos.value = criarRascunhos(r.resposta, categorias.todas)
-    duvidasGerais.value = r.resposta.duvidas
-    errosPorRascunho.value = {}
-    aprovadas.value = 0
-    if (rascunhos.value.length === 0) erroEnvio.value = 'A IA não encontrou prescrições neste PDF.'
+    if (!iniciarRevisao(r.resposta)) erroEnvio.value = 'A IA não encontrou prescrições neste PDF.'
   } catch (e) {
     erroEnvio.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -138,6 +139,44 @@ async function enviar() {
     confirmado.value = false // confirmação vale para um envio só
     controlador = null
   }
+}
+
+/** Abre a revisão com a resposta (da API ou colada do chat). Retorna false se não veio nenhuma prescrição. */
+function iniciarRevisao(resposta: RespostaIA): boolean {
+  rascunhos.value = criarRascunhos(resposta, categorias.todas)
+  duvidasGerais.value = resposta.duvidas
+  errosPorRascunho.value = {}
+  aprovadas.value = 0
+  return rascunhos.value.length > 0
+}
+
+// ===== Chat no navegador (sem chave) =====
+const promptChat = montarPromptChat()
+const verPrompt = ref(false)
+const respostaColada = ref('')
+const erroColado = ref<string | null>(null)
+
+async function copiarPrompt() {
+  try {
+    await copiarTexto(promptChat)
+    toast.success('Prompt copiado. Cole no chat junto com o PDF.')
+  } catch {
+    toast.error('Não foi possível copiar. Use "Ver prompt" e copie manualmente.')
+  }
+}
+
+function revisarColado() {
+  const r = lerRespostaIA(respostaColada.value)
+  if (!r.ok) {
+    erroColado.value = r.erro
+    return
+  }
+  erroColado.value = null
+  if (!iniciarRevisao(r.resposta)) {
+    erroColado.value = 'A resposta não tem nenhuma prescrição.'
+    return
+  }
+  respostaColada.value = ''
 }
 
 function cancelar() {
@@ -337,6 +376,46 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
             <Button v-if="enviando" size="touch" variant="outline" @click="cancelar">Cancelar</Button>
           </div>
           <p v-if="enviando" class="text-muted-foreground text-xs">Pode levar alguns minutos em PDFs grandes.</p>
+        </CardContent>
+      </Card>
+
+      <!-- Alternativa sem chave: usar um chat no navegador e colar a resposta -->
+      <Card>
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2"><MessagesSquare class="size-5" /> Usar um chat no navegador</CardTitle>
+          <CardDescription>Sem chave de API: use o ChatGPT, Claude ou Gemini no navegador e cole a resposta aqui.</CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+          <ol class="list-decimal pl-5 text-sm">
+            <li>Copie o prompt abaixo.</li>
+            <li>No chat, anexe o PDF (<strong>sem dados de pacientes</strong>) e cole o prompt.</li>
+            <li>Copie a resposta do chat (o JSON) e cole no campo abaixo.</li>
+          </ol>
+          <div class="flex flex-wrap gap-2">
+            <Button size="touch" @click="copiarPrompt"><ClipboardCopy /> Copiar prompt</Button>
+            <Button size="touch" variant="outline" @click="verPrompt = !verPrompt">
+              {{ verPrompt ? 'Ocultar prompt' : 'Ver prompt' }}
+            </Button>
+          </div>
+          <pre
+            v-if="verPrompt"
+            class="bg-muted max-h-80 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+          >{{ promptChat }}</pre>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="resposta-chat">Resposta do chat</Label>
+            <Textarea
+              id="resposta-chat"
+              v-model="respostaColada"
+              class="min-h-32 font-mono text-xs"
+              placeholder="Cole aqui o JSON devolvido pelo chat"
+              spellcheck="false"
+            />
+          </div>
+          <p v-if="erroColado" role="alert" class="border-critico bg-critico/12 rounded-lg border p-3 text-sm">{{ erroColado }}</p>
+          <Button size="touch" class="self-start" :disabled="!respostaColada.trim()" @click="revisarColado">
+            <Check /> Revisar prescrições
+          </Button>
         </CardContent>
       </Card>
     </template>

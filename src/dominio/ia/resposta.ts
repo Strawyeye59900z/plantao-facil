@@ -111,7 +111,15 @@ export function lerRespostaIA(textoBruto: string): LeituraRespostaIA {
   try {
     json = JSON.parse(limpo)
   } catch {
-    return { ok: false, erro: 'A IA não devolveu um JSON válido.' }
+    // Resposta colada de um chat pode ter texto antes/depois: tenta o trecho entre a primeira "{" e a última "}".
+    const inicio = limpo.indexOf('{')
+    const fim = limpo.lastIndexOf('}')
+    try {
+      if (inicio === -1 || fim <= inicio) throw new Error()
+      json = JSON.parse(limpo.slice(inicio, fim + 1))
+    } catch {
+      return { ok: false, erro: 'A IA não devolveu um JSON válido.' }
+    }
   }
   const r = v.safeParse(esquemaRespostaIA, json)
   if (!r.success) {
