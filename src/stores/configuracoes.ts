@@ -7,7 +7,12 @@ import type { Configuracoes, Tema } from '@/dominio/tipos'
 export const CHAVE_TEMA_CACHE = 'plantao-facil:tema'
 
 function padrao(): Configuracoes {
-  return { id: 'local', tema: 'escuro', ia: { provedor: 'gemini', chaves: {}, modelos: {} } }
+  return {
+    id: 'local',
+    tema: 'escuro',
+    ia: { provedor: 'gemini', chaves: {}, modelos: {} },
+    ultimoBackupEm: null,
+  }
 }
 
 export function aplicarTema(tema: Tema) {
@@ -41,5 +46,10 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
     await salvar()
   }
 
-  return { config, carregar, definirTema }
+  async function registrarBackup(quando: string) {
+    config.value.ultimoBackupEm = quando
+    await salvar()
+  }
+
+  return { config, carregar, definirTema, registrarBackup }
 })

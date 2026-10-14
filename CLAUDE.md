@@ -20,6 +20,7 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - shadcn-vue (Tailwind v4 + Reka UI), ícones `@lucide/vue`, toasts `vue-sonner`. Componentes copiados em `src/components/ui/` (adicionar com `npx shadcn-vue@latest add <nome>`). **Atenção:** o CLI reinsere o import do Google Fonts e um `@layer base` duplicado em `src/style.css` e pergunta se sobrescreve `button` (responder não — ele tem os tamanhos `touch`). Reverter `style.css` após cada `add`.
 - Selects: `CampoSelect` (select nativo, melhor no celular). Confirmações: `DialogoConfirmar`.
 - Vitest + fake-indexeddb
+- Validação de dados externos (backup, resposta da IA): **valibot**
 - Fórmulas (Fase 4): **mathjs** com escopo restrito — nunca `eval`/`new Function`
 - Recorte de páginas de PDF (Fase 5): `pdf-lib`
 
@@ -40,6 +41,8 @@ src/
     tipos/      modelo de dados de todos os módulos
     texto/      normalização para busca (sem acentos)
     prescricoes/ busca, agrupamento, edição/duplicação/validação
+    dose/       motor de cálculo de dose, marcadores, peso
+    backup/     esquema (valibot), exportar/ler, planejar e aplicar mesclagem
   db/           Dexie (banco.ts), repositório-base, armazenamento persistente
   stores/       Pinia
   router/
@@ -94,8 +97,15 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Regra nova: base "por tomada", arredondamento do volume 1 casa decimal (padrões de formulário, editáveis).
 
 ### Backup (Fase 3)
-- JSON com `formato` + `versaoFormato`; inclui itens na lixeira (para propagar exclusões).
-- Conflito (mesmo id, conteúdo diferente): mostra os dois lados, **pré-seleciona o mais recente** (`atualizadoEm`).
+- JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + `versaoFormato: 1`; prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA, recentes.
+- Validação com **valibot** (esquemas em `src/dominio/backup/esquema.ts`, tipados contra o modelo). Rejeita JSON inválido, arquivo que não é do app, versão de formato mais nova e IDs repetidos.
+- Exportar: **Baixar** e **Compartilhar** (menu do Android, se o navegador suportar). Guarda `ultimoBackupEm` (só no aparelho) e mostra lembrete; destaque em âmbar a partir de 7 dias.
+- Importar: pré-visualização (novos/iguais/conflitos por tipo) → **Mesclar** ou **Substituir**.
+- Mesclar: novo entra; igual (diferença só em `atualizadoEm` conta como igual) é ignorado; o que só existe no aparelho fica; mesmo ID com conteúdo diferente = conflito, escolha da **entidade inteira**, **pré-seleciona a mais recente** (empate: aparelho); botão "usar sempre a mais recente". Lixeira num lado e ativa no outro = conflito.
+- Categorias ativas de **mesmo nome e escopo** (sem maiúsculas/acentos) com IDs diferentes são **juntadas** à do aparelho; prescrições do arquivo são remapeadas.
+- Substituir: aviso + diálogo que oferece **baixar backup antes** (ou substituir sem baixar).
+- Gravação em **uma transação** (tudo ou nada). Dados passam por cópia JSON antes do IndexedDB (proxies do Vue).
+- Exclusão permanente não é propagada: se o item ainda existir no aparelho destino, ele fica (decisão do usuário).
 
 ### Calculadoras (Fase 4)
 - Faixas fechadas `de ≤ x ≤ até`; lacunas detectadas respeitando casas decimais.

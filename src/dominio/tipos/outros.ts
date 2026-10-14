@@ -54,6 +54,8 @@ export interface Configuracoes {
     chaves: Partial<Record<IdProvedor, string>>
     modelos: Partial<Record<IdProvedor, string>>
   }
+  /** Data do último backup exportado neste aparelho (para o lembrete). */
+  ultimoBackupEm: ISODate | null
 }
 
 /** Recentes vivem só na memória enquanto o app está aberto (máx. 5). */
