@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ItemPrescricao, RegraDose } from '@/dominio/tipos'
 import { calcularDose } from './calculo'
-import { substituirMarcadores, validarMarcadores } from './marcadores'
+import { substituirMarcadores, textoTomadas, validarMarcadores } from './marcadores'
 import { formatarNumero } from './numeros'
 import { calcularPrescricao, montarTextoCopia } from './prescricaoCalculada'
 import { validarRegraDose } from './validarRegra'
@@ -32,8 +32,8 @@ describe('formatarNumero', () => {
 describe('marcadores', () => {
   it('substitui com valores e unidades', () => {
     const r = calcularDose(base, 15)
-    expect(substituirMarcadores('Teste A {dose} ({volume}) {tomadas}x/dia, total {dose_diaria}', base, r)).toBe(
-      'Teste A 150 mg (7,5 mL) 3x/dia, total 450 mg',
+    expect(substituirMarcadores('Teste A {dose} ({volume}) {tomadas}, total {dose_diaria}', base, r)).toBe(
+      'Teste A 150 mg (7,5 mL) de 8h em 8h, total 450 mg',
     )
   })
 
@@ -42,7 +42,7 @@ describe('marcadores', () => {
   })
 
   it('sem peso, mostra o nome do marcador; {tomadas} sai com o valor', () => {
-    expect(substituirMarcadores('Teste A {dose} ({volume}) {tomadas}x', base, null)).toBe('Teste A [dose] ([volume]) 3x')
+    expect(substituirMarcadores('Teste A {dose} ({volume}) {tomadas}', base, null)).toBe('Teste A [dose] ([volume]) de 8h em 8h')
   })
 
   it('valida marcador desconhecido, sem regra, sem concentração e sem tomadas', () => {
@@ -53,6 +53,30 @@ describe('marcadores', () => {
     ])
     expect(validarMarcadores('{dose_diaria} {tomadas}', { ...base, tomadasPorDia: null })).toHaveLength(2)
     expect(validarMarcadores('Texto sem marcador', null)).toEqual([])
+  })
+})
+
+describe('{tomadas} como intervalo de horas', () => {
+  it.each([
+    [1, '1 vez ao dia'],
+    [2, 'de 12h em 12h'],
+    [3, 'de 8h em 8h'],
+    [4, 'de 6h em 6h'],
+    [6, 'de 4h em 4h'],
+    [8, 'de 3h em 3h'],
+    [12, 'de 2h em 2h'],
+    [24, 'de 1h em 1h'],
+  ])('%i tomada(s) → %s', (tomadas, texto) => {
+    expect(textoTomadas(tomadas)).toBe(texto)
+    expect(validarMarcadores('{tomadas}', { ...base, tomadasPorDia: tomadas })).toEqual([])
+  })
+
+  it.each([5, 7, 10])('%i tomadas não divide 24h: {tomadas} é bloqueado', (tomadas) => {
+    expect(validarMarcadores('{tomadas}', { ...base, tomadasPorDia: tomadas })).toEqual([
+      '{tomadas} exige 1, 2, 3, 4, 6, 8, 12, 24 tomadas por dia (intervalo exato em horas).',
+    ])
+    // A regra em si continua válida; só o marcador é bloqueado.
+    expect(validarRegraDose({ ...base, tomadasPorDia: tomadas })).toEqual([])
   })
 })
 

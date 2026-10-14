@@ -152,7 +152,7 @@ const previa = computed(() => {
     </div>
 
     <p class="text-muted-foreground text-xs">
-      No texto, use {dose}, {volume}, {dose_diaria} e {tomadas}. A dose é sempre inteira.
+      No texto, use {dose}, {volume}, {dose_diaria} e {tomadas} (vira "de 8h em 8h"). A dose é sempre inteira.
     </p>
 
     <!-- Dose por kg -->

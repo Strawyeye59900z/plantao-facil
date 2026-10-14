@@ -82,14 +82,14 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **Tetos sempre respeitados** (por tomada e/ou diário, conforme cadastrado), inclusive com peso limite (dose fixa por tomada) e **reaplicados após o arredondamento**.
 - Concentração na **mesma unidade da dose**, sem conversão automática.
 - Unidade: texto livre com sugestões.
-- Marcadores: `{dose}`, `{volume}`, `{dose_diaria}`, `{tomadas}` (valor com unidade).
+- Marcadores: `{dose}`, `{volume}`, `{dose_diaria}` (valor com unidade) e `{tomadas}`, que vira **intervalo em horas**: 1 → "1 vez ao dia", 2 → "de 12h em 12h", 3 → "de 8h em 8h"… Só aceito com 1, 2, 3, 4, 6, 8, 12 ou 24 tomadas/dia (o editor bloqueia o marcador nos outros casos; a regra continua válida).
 - Peso: **até 1 casa decimal**, rejeita zero/negativo/não numérico; **sem limite máximo e sem confirmação** de valor alto.
 - Copiar: **apenas os itens, numerados** ("1. …"), um por linha, **sem linha em branco** entre itens; quebras de linha dentro do item **não** são copiadas. Alternativa escolhida entra no lugar do item.
 - Números: **vírgula decimal, sem zeros sobrando, sem separador de milhar** ("2,5 mL", "300 mg", "1000 mg"), sempre com a unidade cadastrada.
 - **Dose sempre inteira**: arredondamento = inteiro mais próximo ou múltiplo de passo inteiro (baixo/próximo/cima). Volume: casas decimais (0–3) ou múltiplo.
 - Ordem do cálculo (src/dominio/dose/calculo.ts): peso limite (peso **>** X, estritamente; dose fixa sem arredondamento) → dose/kg × peso (÷ tomadas se "por dia") → arredondamento → **tetos por último** (por tomada e diário ÷ tomadas; se o teto não for inteiro/múltiplo, ajusta para baixo) → dose diária → volume. Se o volume arredondado equivaler a mais que a dose máxima, arredonda o volume **para baixo** com aviso. Dose ou volume zero = erro (bloqueia copiar).
 - Peso é obrigatório para copiar **só se algum item efetivo** (com a alternativa escolhida) tiver regra de dose. Campo de peso aparece se qualquer item/alternativa tiver regra.
-- Sem peso, marcadores aparecem como "[dose]", "[volume]"; {tomadas} sai com o valor.
+- Sem peso, marcadores aparecem como "[dose]", "[volume]"; {tomadas} sai sempre com o intervalo.
 - Editor: "Testar com peso" (não salvo) mostra prévia e memória de cálculo de cada regra.
 - Regra nova: base "por tomada", arredondamento do volume 1 casa decimal (padrões de formulário, editáveis).
 
