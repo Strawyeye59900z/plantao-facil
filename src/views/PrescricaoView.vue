@@ -2,10 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { CircleCheck, Copy, Pencil, Replace, Star, Trash2 } from '@lucide/vue'
+import { CircleCheck, ClipboardCopy, Copy, Pencil, Replace, Scale, Star, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import CartaoAlerta from '@/components/prescricoes/CartaoAlerta.vue'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
+import ResultadoDose from '@/components/prescricoes/ResultadoDose.vue'
+import { lerPeso } from '@/dominio/dose/peso'
+import { calcularPrescricao, montarTextoCopia } from '@/dominio/dose/prescricaoCalculada'
+import { copiarTexto } from '@/lib/areaTransferencia'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import type { ItemPrescricao, UUID } from '@/dominio/tipos'
 import { cn } from '@/lib/utils'
@@ -24,11 +28,14 @@ const prescricao = computed(() => prescricoes.obter(id.value))
 
 /** Alternativa escolhida por item — só na memória desta tela. */
 const escolhidas = ref<Record<UUID, UUID | null>>({})
+/** Peso digitado — só na memória desta tela, nunca salvo. */
+const pesoDigitado = ref('')
 
 watch(
   id,
   (novo) => {
     escolhidas.value = {}
+    pesoDigitado.value = ''
     const p = prescricoes.obter(novo)
     if (p && p.excluidoEm === null) recentes.registrar('prescricao', novo)
   },
@@ -45,9 +52,34 @@ function alertasDoItem(itemId: UUID) {
   return prescricao.value?.alertas.filter((a) => a.itemId === itemId) ?? []
 }
 
-function alternativaEscolhida(item: ItemPrescricao) {
-  const altId = escolhidas.value[item.id]
-  return altId ? item.alternativas.find((a) => a.id === altId) : undefined
+// ===== Peso e doses (só na memória desta tela; nunca salvo) =====
+const leituraPeso = computed(() => lerPeso(pesoDigitado.value))
+const pesoKg = computed(() => (leituraPeso.value.ok ? leituraPeso.value.kg : null))
+
+/** Mostra o campo de peso se qualquer item ou alternativa tiver regra de dose. */
+const temRegra = computed(
+  () =>
+    prescricao.value?.itens.some((i) => i.regraDose || i.alternativas.some((a) => a.regraDose)) ?? false,
+)
+
+const calculada = computed(() =>
+  calcularPrescricao(prescricao.value?.itens ?? [], escolhidas.value, pesoKg.value),
+)
+
+const motivoBloqueio = computed(() => {
+  if (calculada.value.podeCopiar) return null
+  if (pesoKg.value === null) return 'Informe o peso para copiar.'
+  return 'Há erro no cálculo de algum item.'
+})
+
+async function copiar() {
+  if (!calculada.value.podeCopiar) return
+  try {
+    await copiarTexto(montarTextoCopia(calculada.value.linhas))
+    toast.success('Copiado para a área de transferência.')
+  } catch {
+    toast.error('Não foi possível copiar.')
+  }
 }
 
 function opcoesItem(item: ItemPrescricao) {
@@ -88,7 +120,7 @@ async function moverParaLixeira() {
 </script>
 
 <template>
-  <section v-if="prescricao" class="flex flex-col gap-4 pb-4">
+  <section v-if="prescricao" class="flex flex-col gap-4 pb-24">
     <!-- Cabeçalho -->
     <header class="flex flex-col gap-2">
       <p class="text-muted-foreground text-sm">{{ categorias.nome(prescricao.categoriaId) }}</p>
@@ -136,6 +168,35 @@ async function moverParaLixeira() {
       />
     </div>
 
+    <!-- Peso do paciente (só na memória desta tela) -->
+    <div v-if="temRegra" class="bg-card ring-foreground/10 flex flex-col gap-1.5 rounded-xl p-4 ring-1">
+      <label for="peso" class="flex items-center gap-2 font-semibold"><Scale class="size-5" /> Peso do paciente</label>
+      <div class="relative">
+        <input
+          id="peso"
+          v-model="pesoDigitado"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          placeholder="ex.: 12,5"
+          :aria-invalid="(pesoDigitado.trim() !== '' && !leituraPeso.ok) || undefined"
+          aria-describedby="peso-ajuda"
+          class="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-14 w-full rounded-xl border bg-transparent pr-12 pl-4 text-2xl font-semibold outline-none focus-visible:ring-3 aria-invalid:ring-3"
+        />
+        <span class="text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">kg</span>
+      </div>
+      <p
+        id="peso-ajuda"
+        :class="cn('text-sm', pesoDigitado.trim() !== '' && !leituraPeso.ok ? 'text-destructive' : 'text-muted-foreground')"
+      >
+        {{
+          pesoDigitado.trim() !== '' && !leituraPeso.ok
+            ? (leituraPeso as { erro: string }).erro
+            : 'Até 1 casa decimal. Não é salvo.'
+        }}
+      </p>
+    </div>
+
     <!-- Itens -->
     <ol class="flex flex-col gap-3">
       <li
@@ -148,10 +209,10 @@ async function moverParaLixeira() {
             {{ i + 1 }}
           </span>
           <div class="min-w-0 flex-1">
-            <p v-if="alternativaEscolhida(item)" class="text-primary mb-1 flex items-center gap-1 text-xs font-semibold">
-              <Replace class="size-3.5" /> Alternativa: {{ alternativaEscolhida(item)!.motivo }}
+            <p v-if="calculada.linhas[i]!.motivoAlternativa" class="text-primary mb-1 flex items-center gap-1 text-xs font-semibold">
+              <Replace class="size-3.5" /> Alternativa: {{ calculada.linhas[i]!.motivoAlternativa }}
             </p>
-            <p class="text-base whitespace-pre-line">{{ alternativaEscolhida(item)?.texto ?? item.texto }}</p>
+            <p class="text-base whitespace-pre-line">{{ calculada.linhas[i]!.texto }}</p>
           </div>
           <!-- Troca pela alternativa -->
           <CampoSelect
@@ -166,6 +227,11 @@ async function moverParaLixeira() {
 
         <CartaoAlerta v-for="alerta in alertasDoItem(item.id)" :key="alerta.id" :alerta="alerta" compacto />
 
+        <!-- Dose calculada: avisos de teto/peso limite + memória de cálculo -->
+        <ResultadoDose v-if="calculada.linhas[i]!.resultado" :resultado="calculada.linhas[i]!.resultado!" />
+        <p v-else-if="calculada.linhas[i]!.regra" class="text-muted-foreground flex items-center gap-1.5 text-sm">
+          <Scale class="size-4" /> Informe o peso para calcular a dose.
+        </p>
       </li>
     </ol>
 
@@ -186,6 +252,19 @@ async function moverParaLixeira() {
       </Button>
       <Button variant="outline" size="touch" @click="duplicar"><Copy /> Duplicar</Button>
       <Button variant="destructive" size="touch" @click="confirmarLixeira = true"><Trash2 /> Excluir</Button>
+    </div>
+
+    <!-- Copiar: barra fixa -->
+    <div
+      v-if="!prescricao.excluidoEm"
+      class="bg-background/95 fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t backdrop-blur md:bottom-0 md:left-60"
+    >
+      <div class="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2">
+        <p v-if="motivoBloqueio" class="text-muted-foreground flex-1 text-sm">{{ motivoBloqueio }}</p>
+        <Button size="touch" :class="motivoBloqueio ? '' : 'flex-1'" :disabled="!calculada.podeCopiar" @click="copiar">
+          <ClipboardCopy /> Copiar
+        </Button>
+      </div>
     </div>
 
     <DialogoConfirmar

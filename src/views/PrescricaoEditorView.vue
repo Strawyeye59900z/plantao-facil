@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
 import CampoTags from '@/components/comum/CampoTags.vue'
+import CampoNumero from '@/components/comum/CampoNumero.vue'
+import EditorRegraDose from '@/components/prescricoes/EditorRegraDose.vue'
+import { limpar } from '@/dominio/dose/numeros'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import {
   alertaVazio,
@@ -46,6 +49,13 @@ const inicial = ref(JSON.stringify(dados.value))
 const alterado = computed(() => JSON.stringify(dados.value) !== inicial.value)
 
 const erros = ref<string[]>([])
+
+// Peso só para testar as regras no editor — nunca é salvo.
+const pesoTesteDigitado = ref<number | null>(null)
+const pesoTeste = computed(() => {
+  const p = pesoTesteDigitado.value
+  return p !== null && p > 0 && Number.isInteger(limpar(p * 10)) ? p : null
+})
 const caixaErros = ref<HTMLElement | null>(null)
 
 // ===== Categoria =====
@@ -235,6 +245,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', avisoAoFechar))
     <!-- Itens -->
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-2 text-lg font-semibold">Itens *</legend>
+      <div class="flex items-center gap-3">
+        <Label for="peso-teste" class="shrink-0">Testar com peso</Label>
+        <CampoNumero id="peso-teste" v-model="pesoTesteDigitado" sufixo="kg" class="w-32" />
+        <span class="text-muted-foreground text-xs">não é salvo</span>
+      </div>
       <div
         v-for="(item, i) in dados.itens"
         :key="item.id"
@@ -260,6 +275,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', avisoAoFechar))
           </Button>
         </div>
         <Textarea v-model="item.texto" :aria-label="`Texto do item ${i + 1}`" class="min-h-20" />
+        <EditorRegraDose v-model:regra="item.regraDose" :chave="`item-${i}`" :texto="item.texto" :peso-teste="pesoTeste" />
 
         <!-- Alternativas do item -->
         <div v-for="(alt, j) in item.alternativas" :key="alt.id" class="border-primary/50 flex flex-col gap-2 border-l-2 pl-3">
@@ -271,6 +287,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', avisoAoFechar))
           </div>
           <Input v-model="alt.motivo" class="h-11" placeholder="Motivo (ex.: alergia a …)" :aria-label="`Motivo da alternativa ${j + 1} do item ${i + 1}`" />
           <Textarea v-model="alt.texto" placeholder="Texto da alternativa" :aria-label="`Texto da alternativa ${j + 1} do item ${i + 1}`" />
+          <EditorRegraDose v-model:regra="alt.regraDose" :chave="`item-${i}-alt-${j}`" :texto="alt.texto" :peso-teste="pesoTeste" />
         </div>
         <Button type="button" variant="ghost" size="touch" class="self-start" @click="adicionarAlternativa(i)">
           <Plus /> Alternativa

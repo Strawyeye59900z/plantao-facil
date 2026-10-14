@@ -85,7 +85,13 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Marcadores: `{dose}`, `{volume}`, `{dose_diaria}`, `{tomadas}` (valor com unidade).
 - Peso: **até 1 casa decimal**, rejeita zero/negativo/não numérico; **sem limite máximo e sem confirmação** de valor alto.
 - Copiar: **apenas os itens, numerados** ("1. …"), um por linha, **sem linha em branco** entre itens; quebras de linha dentro do item **não** são copiadas. Alternativa escolhida entra no lugar do item.
-- Números: **vírgula decimal, sem zeros sobrando** ("2,5 mL", "300 mg").
+- Números: **vírgula decimal, sem zeros sobrando, sem separador de milhar** ("2,5 mL", "300 mg", "1000 mg"), sempre com a unidade cadastrada.
+- **Dose sempre inteira**: arredondamento = inteiro mais próximo ou múltiplo de passo inteiro (baixo/próximo/cima). Volume: casas decimais (0–3) ou múltiplo.
+- Ordem do cálculo (src/dominio/dose/calculo.ts): peso limite (peso **>** X, estritamente; dose fixa sem arredondamento) → dose/kg × peso (÷ tomadas se "por dia") → arredondamento → **tetos por último** (por tomada e diário ÷ tomadas; se o teto não for inteiro/múltiplo, ajusta para baixo) → dose diária → volume. Se o volume arredondado equivaler a mais que a dose máxima, arredonda o volume **para baixo** com aviso. Dose ou volume zero = erro (bloqueia copiar).
+- Peso é obrigatório para copiar **só se algum item efetivo** (com a alternativa escolhida) tiver regra de dose. Campo de peso aparece se qualquer item/alternativa tiver regra.
+- Sem peso, marcadores aparecem como "[dose]", "[volume]"; {tomadas} sai com o valor.
+- Editor: "Testar com peso" (não salvo) mostra prévia e memória de cálculo de cada regra.
+- Regra nova: base "por tomada", arredondamento do volume 1 casa decimal (padrões de formulário, editáveis).
 
 ### Backup (Fase 3)
 - JSON com `formato` + `versaoFormato`; inclui itens na lixeira (para propagar exclusões).

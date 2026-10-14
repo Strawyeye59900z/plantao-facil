@@ -6,6 +6,7 @@ import {
   moverItem,
   normalizarTags,
   prescricaoVazia,
+  regraDoseVazia,
   removerItem,
   validarPrescricao,
 } from './editar'
@@ -129,6 +130,24 @@ describe('validarPrescricao', () => {
       'Item 1, alternativa 1: texto vazio.',
       'Item 1, alternativa 1: informe o motivo.',
       'Alerta 1: texto vazio.',
+    ])
+  })
+
+  it('valida regra de dose e marcadores de itens e alternativas', () => {
+    const dados = prescricaoTeste({
+      itens: [
+        {
+          id: 'i-1',
+          texto: 'Medicamento Teste A {dose}',
+          regraDose: regraDoseVazia(),
+          alternativas: [{ id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B {dose}', regraDose: null }],
+        },
+      ],
+    })
+    expect(validarPrescricao(dados, existe)).toEqual([
+      'Item 1, regra de dose: dose por kg deve ser maior que zero.',
+      'Item 1, regra de dose: informe a unidade.',
+      'Item 1, alternativa 1: usa {dose} mas não tem regra de dose.',
     ])
   })
 

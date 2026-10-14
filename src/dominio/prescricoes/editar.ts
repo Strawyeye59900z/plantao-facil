@@ -1,4 +1,6 @@
-import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, UUID } from '@/dominio/tipos'
+import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, RegraDose, UUID } from '@/dominio/tipos'
+import { validarMarcadores } from '@/dominio/dose/marcadores'
+import { validarRegraDose } from '@/dominio/dose/validarRegra'
 
 export type DadosPrescricao = DadosNovos<Prescricao>
 type GerarId = () => UUID
@@ -27,6 +29,22 @@ export function itemVazio(gerarId: GerarId = idPadrao): ItemPrescricao {
 
 export function alternativaVazia(gerarId: GerarId = idPadrao): Alternativa {
   return { id: gerarId(), motivo: '', texto: '', regraDose: null }
+}
+
+/** Regra nova: campos numéricos vazios (NaN) para o usuário preencher; dose sempre inteira. */
+export function regraDoseVazia(): RegraDose {
+  return {
+    dosePorKg: Number.NaN,
+    unidade: '',
+    baseDoseKg: 'por_tomada',
+    tomadasPorDia: null,
+    doseMaximaPorTomada: null,
+    doseMaximaDiaria: null,
+    pesoLimite: null,
+    concentracao: null,
+    arredondamentoDose: { modo: 'inteiro' },
+    arredondamentoVolume: { modo: 'casas_decimais', casas: 1 },
+  }
 }
 
 export function alertaVazio(gerarId: GerarId = idPadrao): Alerta {
@@ -108,11 +126,19 @@ export function validarPrescricao(dados: DadosPrescricao, categoriaExiste: (id: 
   if (!dados.categoriaId || !categoriaExiste(dados.categoriaId)) erros.push('Escolha a categoria.')
   if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
 
+  const validarDose = (prefixo: string, texto: string, regra: RegraDose | null) => {
+    if (regra) for (const e of validarRegraDose(regra)) erros.push(`${prefixo}, regra de dose: ${e}`)
+    for (const e of validarMarcadores(texto, regra)) erros.push(`${prefixo}: ${e}`)
+  }
+
   dados.itens.forEach((item, i) => {
     if (!item.texto.trim()) erros.push(`Item ${i + 1}: texto vazio.`)
+    validarDose(`Item ${i + 1}`, item.texto, item.regraDose)
     item.alternativas.forEach((alt, j) => {
-      if (!alt.texto.trim()) erros.push(`Item ${i + 1}, alternativa ${j + 1}: texto vazio.`)
-      if (!alt.motivo.trim()) erros.push(`Item ${i + 1}, alternativa ${j + 1}: informe o motivo.`)
+      const prefixo = `Item ${i + 1}, alternativa ${j + 1}`
+      if (!alt.texto.trim()) erros.push(`${prefixo}: texto vazio.`)
+      if (!alt.motivo.trim()) erros.push(`${prefixo}: informe o motivo.`)
+      validarDose(prefixo, alt.texto, alt.regraDose)
     })
   })
   dados.alertas.forEach((alerta, i) => {
