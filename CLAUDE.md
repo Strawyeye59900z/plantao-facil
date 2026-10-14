@@ -44,6 +44,7 @@ src/
     dose/       motor de cálculo de dose, marcadores, peso
     backup/     esquema (valibot), exportar/ler, planejar e aplicar mesclagem
     calculadoras/ motor de pontos, fórmula (mathjs restrito), interpretação, editor
+    ia/         provedores (Gemini/Claude/ChatGPT), prompt, formato da resposta, rascunhos
   db/           Dexie (banco.ts), repositório-base, armazenamento persistente
   stores/       Pinia
   router/
@@ -137,7 +138,20 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Testado (puppeteer-core, fora do projeto) em **Chrome, Edge e Firefox 158** abrindo como `file://`: IndexedDB persiste, carregar/atualizar/apagar, dose, Copiar e bloqueio de rotas OK. Fallback em memória não foi exercitado (nenhum dos três bloqueou).
 
 ### IA (Fase 5)
-- Chave de API no IndexedDB, nunca no backup, com botão para apagar.
+- Provedores: **Gemini, Claude e ChatGPT**, atrás da mesma interface (`src/dominio/ia/provedores.ts`: montar requisição / ler resposta). Chamada **direto do navegador** (CORS conferido em 14/10/2026; Claude exige `anthropic-dangerous-direct-browser-access: true`).
+  - Gemini: `v1beta/models/{modelo}:generateContent`, PDF `inline_data`, `responseSchema` (tipos em maiúsculas, sem additionalProperties). Limite 50 MB / 1000 págs. Chave: https://aistudio.google.com/apikey
+  - Claude: `/v1/messages`, bloco `document` base64, `output_config.format` json_schema. Limite requisição 32 MB (PDF ~23 MB) / 600 págs. Chave: https://platform.claude.com/settings/keys
+  - ChatGPT: `/v1/responses`, `input_file` com data URI, `text.format` json_schema strict. Limite 50 MB (PDF ~37 MB), páginas não informadas. Chave: https://platform.openai.com/api-keys
+- **Usuário escolhe o modelo** (lista com 3 por provedor — equilíbrio/mais barato/mais capaz — + "Outro"); padrão = o de equilíbrio (`gemini-3.8-flash`, `claude-sonnet-5-5`, `gpt-6.1-sol`).
+- Chave de API no IndexedDB (configuracoes), nunca no backup nem no pen drive, com mostrar/ocultar, link "Obter chave" e apagar.
+- Prompt (`src/dominio/ia/prompt.ts`): só o que está no PDF; nunca completar/corrigir/calcular doses; dúvidas em "duvidas". Resposta validada com valibot (`src/dominio/ia/resposta.ts`); inválida → erro claro + "Tentar de novo".
+- **IA não cria regra de dose**: doses só como texto no item; o usuário cadastra a regra na revisão.
+- Categoria sugerida: se bater (sem maiúsculas/acentos) com categoria existente, já seleciona; senão **"Sem categoria"** (aprovação aceita sem categoria).
+- **Dúvidas gerais do documento só na tela de revisão**; dúvidas de cada prescrição ficam salvas em `duvidasImportacao`.
+- Intervalo de páginas recortado no aparelho com `pdf-lib`; limites conferidos antes do envio. **Caixa de confirmação a cada envio** ("não contém dados de pacientes").
+- Revisão: cada prescrição com Editar (mesmo `FormularioPrescricao` do editor), Descartar, Aprovar. Aprovada = salva como "importada — não revisada". Sair com pendentes pede confirmação.
+- Mensagens de validação (backup e IA) em português via `descreverProblemas`.
+- Testado com rede simulada (sem chamadas reais). **Teste com chave real fica com o usuário.**
 
 ## Pendências (perguntar ao usuário)
 

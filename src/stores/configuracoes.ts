@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db } from '@/db/banco'
-import type { Configuracoes, Tema } from '@/dominio/tipos'
+import type { Configuracoes, IdProvedor, Tema } from '@/dominio/tipos'
+import { PROVEDORES } from '@/dominio/ia/provedores'
 
 /** Cópia do tema no localStorage só para aplicar antes do primeiro desenho (sem piscar). */
 export const CHAVE_TEMA_CACHE = 'plantao-facil:tema'
@@ -33,6 +34,8 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
   async function carregar() {
     const salvo = await db.configuracoes.get('local')
     config.value = { ...padrao(), ...salvo }
+    // Configurações salvas antes de algum campo existir.
+    config.value.ia = { ...padrao().ia, ...config.value.ia }
     aplicarTema(config.value.tema)
   }
 
@@ -57,5 +60,38 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
     await salvar()
   }
 
-  return { config, carregar, definirTema, registrarBackup, registrarBibliotecaPenDrive }
+  // ===== IA (chaves só neste aparelho; configurações não entram no backup) =====
+  async function definirProvedor(provedor: IdProvedor) {
+    config.value.ia.provedor = provedor
+    await salvar()
+  }
+
+  async function definirChave(provedor: IdProvedor, chave: string) {
+    const limpa = chave.trim()
+    if (limpa) config.value.ia.chaves[provedor] = limpa
+    else delete config.value.ia.chaves[provedor]
+    await salvar()
+  }
+
+  async function definirModelo(provedor: IdProvedor, modelo: string) {
+    config.value.ia.modelos[provedor] = modelo.trim()
+    await salvar()
+  }
+
+  /** Modelo escolhido (ou o padrão do provedor). */
+  function modeloDe(provedor: IdProvedor): string {
+    return config.value.ia.modelos[provedor] || PROVEDORES[provedor].modeloPadrao
+  }
+
+  return {
+    config,
+    carregar,
+    definirTema,
+    registrarBackup,
+    registrarBibliotecaPenDrive,
+    definirProvedor,
+    definirChave,
+    definirModelo,
+    modeloDe,
+  }
 })

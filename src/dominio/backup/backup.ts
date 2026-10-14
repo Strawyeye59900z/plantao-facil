@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { descreverProblemas } from '@/dominio/texto/validacao'
 import type { ArquivoBackup, Calculadora, Categoria, Entidade, ISODate, Prescricao, UUID } from '@/dominio/tipos'
 import { normalizarTexto } from '@/dominio/texto/normalizar'
 import { esquemaArquivoBackup, FORMATO_BACKUP, VERSAO_FORMATO_ATUAL } from './esquema'
@@ -53,10 +54,7 @@ export function lerBackup(texto: string): LeituraBackup {
 
   const resultado = v.safeParse(esquemaArquivoBackup, bruto)
   if (!resultado.success) {
-    const detalhes = resultado.issues
-      .slice(0, 3)
-      .map((i) => `${v.getDotPath(i) ?? '(raiz)'}: ${i.message}`)
-      .join('; ')
+    const detalhes = descreverProblemas(resultado.issues)
     return { ok: false, erro: `O backup tem dados inválidos e não foi importado (${detalhes}).` }
   }
 

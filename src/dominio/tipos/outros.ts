@@ -1,4 +1,4 @@
-import type { Categoria, Entidade, ISODate } from './base'
+import type { Categoria, ISODate } from './base'
 import type { Calculadora } from './calculadora'
 import type { Prescricao } from './prescricao'
 
@@ -14,33 +14,8 @@ export interface ArquivoBackup {
   categorias: Categoria[]
 }
 
-// ===== Módulo 5 — IA =====
-export type IdProvedor = 'gemini' | 'anthropic'
-
-export type PrescricaoImportadaIA = Omit<
-  Prescricao,
-  keyof Entidade | 'favorito' | 'origem' | 'revisada' | 'categoriaId'
-> & {
-  /** Nome sugerido pela IA; o usuário escolhe a categoria da lista na revisão. */
-  categoriaSugerida: string
-}
-
-/** Formato exigido no prompt e validado ao chegar. */
-export interface RespostaImportacaoIA {
-  prescricoes: PrescricaoImportadaIA[]
-  /** Dúvidas gerais do documento. */
-  duvidas: string[]
-}
-
-export interface ProvedorIA {
-  id: IdProvedor
-  /** Conferidos na documentação de cada API na Fase 5. */
-  limites: { bytesMax: number; paginasMax: number }
-  extrair(
-    pdf: Blob,
-    opcoes: { modelo: string; chave: string; sinal?: AbortSignal },
-  ): Promise<unknown>
-}
+// ===== Módulo 5 — IA (provedores e formato da resposta em src/dominio/ia) =====
+export type IdProvedor = 'gemini' | 'anthropic' | 'openai'
 
 // ===== Dados locais do aparelho (fora do backup e da sincronização) =====
 export type Tema = 'escuro' | 'claro'

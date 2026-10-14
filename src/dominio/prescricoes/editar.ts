@@ -120,10 +120,19 @@ export function normalizarTags(tags: string[]): string[] {
 }
 
 /** Erros que impedem salvar. Lista vazia = válido. */
-export function validarPrescricao(dados: DadosPrescricao, categoriaExiste: (id: UUID) => boolean): string[] {
+/**
+ * `aceitarSemCategoria`: na revisão de importação por IA, sem categoria correspondente
+ * a prescrição pode ser salva como "Sem categoria" (decisão do usuário).
+ */
+export function validarPrescricao(
+  dados: DadosPrescricao,
+  categoriaExiste: (id: UUID) => boolean,
+  opcoes: { aceitarSemCategoria?: boolean } = {},
+): string[] {
   const erros: string[] = []
   if (!dados.titulo.trim()) erros.push('Informe o título.')
-  if (!dados.categoriaId || !categoriaExiste(dados.categoriaId)) erros.push('Escolha a categoria.')
+  const semCategoriaOk = opcoes.aceitarSemCategoria && dados.categoriaId === null
+  if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha a categoria.')
   if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
 
   const validarDose = (prefixo: string, texto: string, regra: RegraDose | null) => {

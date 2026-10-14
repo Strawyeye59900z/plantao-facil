@@ -15,6 +15,7 @@ import { useConfiguracoesStore } from '@/stores/configuracoes'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
+import ConfiguracaoIA from '@/components/ia/ConfiguracaoIA.vue'
 import { apagarDadosDestePc, carregarBibliotecaDoArquivo } from '@/lib/penDrive'
 import { armazenamento, MODO_PENDRIVE } from '@/modo'
 
@@ -116,6 +117,9 @@ async function apagar() {
         </Button>
       </CardContent>
     </Card>
+
+    <!-- Importação por IA (desativada no pen drive: a chave nunca fica em PC do hospital) -->
+    <ConfiguracaoIA v-if="!MODO_PENDRIVE" />
 
     <!-- No PC estes itens também estão no menu lateral -->
     <Card v-if="!MODO_PENDRIVE" class="py-1">
