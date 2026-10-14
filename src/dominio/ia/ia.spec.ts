@@ -17,8 +17,16 @@ const respostaValida: RespostaIA = {
       categoria: 'categoria teste a',
       tags: ['tag teste', 'Tag Teste'],
       itens: [
-        { texto: 'Medicamento Teste A', alternativas: [{ motivo: 'Motivo Teste', texto: 'Medicamento Teste B' }] },
-        { texto: 'Medicamento Teste C', alternativas: [] },
+        { texto: 'Medicamento Teste A', alternativas: [{ motivo: 'Motivo Teste', texto: 'Medicamento Teste B' }], opcoesEquivalentes: false },
+        { texto: 'Medicamento Teste C', alternativas: [], opcoesEquivalentes: false },
+        {
+          texto: 'Opção Teste 1',
+          alternativas: [
+            { motivo: '', texto: 'Opção Teste 2' },
+            { motivo: '', texto: 'Opção Teste 3' },
+          ],
+          opcoesEquivalentes: true,
+        },
       ],
       alertas: [
         { tipo: 'atencao', gravidade: 'critico', texto: 'Alerta Teste Geral', item: 0 },
@@ -33,7 +41,7 @@ const respostaValida: RespostaIA = {
       titulo: 'Situação Teste B',
       categoria: 'Categoria Que Não Existe',
       tags: [],
-      itens: [{ texto: 'Medicamento Teste D', alternativas: [] }],
+      itens: [{ texto: 'Medicamento Teste D', alternativas: [], opcoesEquivalentes: true }],
       alertas: [],
       observacoes: '',
       referencia: '',
@@ -165,6 +173,14 @@ describe('rascunhos a partir da resposta', () => {
     expect(d.itens.every((i) => i.regraDose === null && i.alternativas.every((a) => a.regraDose === null))).toBe(true)
     expect(d.duvidasImportacao[0]).toBe('Dúvida Teste')
     expect(d.tags).toEqual(['tag teste'])
+  })
+
+  it('opções "OU" viram item de opções equivalentes; sem alternativas, a marca é ignorada', () => {
+    const ou = rascunhos[0]!.dados.itens[2]!
+    expect(ou.opcoesEquivalentes).toBe(true)
+    expect([ou.texto, ...ou.alternativas.map((a) => a.texto)]).toEqual(['Opção Teste 1', 'Opção Teste 2', 'Opção Teste 3'])
+    expect(rascunhos[0]!.dados.itens[0]!.opcoesEquivalentes).toBe(false)
+    expect(rascunhos[1]!.dados.itens[0]!.opcoesEquivalentes).toBe(false)
   })
 
   it('liga alertas aos itens; item inexistente vira alerta geral + dúvida', () => {

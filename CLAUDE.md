@@ -79,6 +79,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Obrigatórios ao salvar: **título, categoria e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
 - Reordenar itens: botões ↑/↓.
 - Excluir categoria: prescrições ficam **"Sem categoria"** (categoria vai para exclusão lógica; não aparece na Lixeira).
+- **Opções equivalentes ("OU")**: item com `opcoesEquivalentes: true` — texto principal = opção 1, alternativas = opções 2, 3… (motivo opcional, vira rótulo). Na tela: **todas as opções por extenso** (com doses calculadas), **nenhuma pré-escolhida**, Copiar bloqueado até escolher ("Escolha uma opção no item N"); copia só a escolhida. Precisa de ≥2 opções. No editor: chave por item (ligar cria a opção 2). A IA marca `opcoesEquivalentes` quando o documento lista opções intercambiáveis ("OU"). Ausente em dados antigos = false.
 - Recentes: conta ao abrir a prescrição. Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
 - Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
 - Observações/referência: texto simples com quebras de linha.

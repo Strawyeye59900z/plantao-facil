@@ -20,6 +20,7 @@ export const esquemaRespostaIA = v.object({
         v.object({
           texto: v.string(),
           alternativas: v.array(v.object({ motivo: v.string(), texto: v.string() })),
+          opcoesEquivalentes: v.boolean(),
         }),
       ),
       alertas: v.array(
@@ -62,6 +63,7 @@ export const JSON_SCHEMA_RESPOSTA = objeto({
         items: objeto({
           texto,
           alternativas: { type: 'array', items: objeto({ motivo: texto, texto }) },
+          opcoesEquivalentes: { type: 'boolean' },
         }),
       },
       alertas: {

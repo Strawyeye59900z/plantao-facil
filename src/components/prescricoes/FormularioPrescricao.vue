@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import CampoNumero from '@/components/comum/CampoNumero.vue'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
@@ -74,6 +75,13 @@ function remover(itemId: UUID) {
 
 function adicionarAlternativa(indiceItem: number) {
   dados.value.itens[indiceItem]!.alternativas.push(alternativaVazia())
+}
+
+/** Liga/desliga opções equivalentes; ao ligar sem nenhuma alternativa, já cria a opção 2. */
+function alternarOpcoes(indiceItem: number, ligado: boolean) {
+  const item = dados.value.itens[indiceItem]!
+  item.opcoesEquivalentes = ligado
+  if (ligado && item.alternativas.length === 0) item.alternativas.push(alternativaVazia())
 }
 
 function removerAlternativa(indiceItem: number, altId: UUID) {
@@ -175,28 +183,54 @@ function removerAlerta(alertaId: UUID) {
             <Trash2 class="text-destructive" />
           </Button>
         </div>
+        <!-- Opções equivalentes (OU): texto principal = opção 1; alternativas = opções 2, 3… -->
+        <Label class="flex items-center justify-between gap-3 font-normal">
+          <span>
+            Opções equivalentes (“OU”)
+            <span class="text-muted-foreground block text-xs">Na prescrição, uma delas precisa ser escolhida antes de copiar.</span>
+          </span>
+          <Switch
+            :model-value="!!item.opcoesEquivalentes"
+            :aria-label="`Opções equivalentes no item ${i + 1}`"
+            @update:model-value="(v: boolean) => alternarOpcoes(i, v)"
+          />
+        </Label>
+
+        <span v-if="item.opcoesEquivalentes" class="text-muted-foreground -mb-2 text-sm font-medium">Opção 1</span>
         <Textarea v-model="item.texto" :aria-label="`Texto do item ${i + 1}`" class="min-h-20" />
         <EditorRegraDose v-model:regra="item.regraDose" :chave="id(`item-${i}`)" :texto="item.texto" :peso-teste="pesoTeste" />
 
-        <!-- Alternativas do item -->
+        <!-- Alternativas (ou opções 2, 3… quando equivalentes) -->
         <div v-for="(alt, j) in item.alternativas" :key="alt.id" class="border-primary/50 flex flex-col gap-2 border-l-2 pl-3">
           <div class="flex items-center gap-2">
-            <span class="text-muted-foreground flex-1 text-sm font-medium">Alternativa {{ j + 1 }}</span>
-            <Button type="button" variant="ghost" size="icon-touch" aria-label="Remover alternativa" @click="removerAlternativa(i, alt.id)">
+            <span class="text-muted-foreground flex-1 text-sm font-medium">
+              {{ item.opcoesEquivalentes ? `Opção ${j + 2}` : `Alternativa ${j + 1}` }}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-touch"
+              :aria-label="item.opcoesEquivalentes ? 'Remover opção' : 'Remover alternativa'"
+              @click="removerAlternativa(i, alt.id)"
+            >
               <X />
             </Button>
           </div>
           <Input
             v-model="alt.motivo"
             class="h-11"
-            placeholder="Motivo (ex.: alergia a …)"
-            :aria-label="`Motivo da alternativa ${j + 1} do item ${i + 1}`"
+            :placeholder="item.opcoesEquivalentes ? 'Rótulo (opcional)' : 'Motivo (ex.: alergia a …)'"
+            :aria-label="`${item.opcoesEquivalentes ? 'Rótulo da opção' : 'Motivo da alternativa'} ${j + 1} do item ${i + 1}`"
           />
-          <Textarea v-model="alt.texto" placeholder="Texto da alternativa" :aria-label="`Texto da alternativa ${j + 1} do item ${i + 1}`" />
+          <Textarea
+            v-model="alt.texto"
+            :placeholder="item.opcoesEquivalentes ? 'Texto da opção' : 'Texto da alternativa'"
+            :aria-label="`Texto da alternativa ${j + 1} do item ${i + 1}`"
+          />
           <EditorRegraDose v-model:regra="alt.regraDose" :chave="id(`item-${i}-alt-${j}`)" :texto="alt.texto" :peso-teste="pesoTeste" />
         </div>
         <Button type="button" variant="ghost" size="touch" class="self-start" @click="adicionarAlternativa(i)">
-          <Plus /> Alternativa
+          <Plus /> {{ item.opcoesEquivalentes ? 'Opção' : 'Alternativa' }}
         </Button>
       </div>
       <Button type="button" variant="outline" size="touch" @click="adicionarItem"><Plus /> Adicionar item</Button>

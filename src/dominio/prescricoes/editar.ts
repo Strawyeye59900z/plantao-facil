@@ -142,11 +142,15 @@ export function validarPrescricao(
 
   dados.itens.forEach((item, i) => {
     if (!item.texto.trim()) erros.push(`Item ${i + 1}: texto vazio.`)
+    if (item.opcoesEquivalentes && item.alternativas.length === 0) {
+      erros.push(`Item ${i + 1}: opções equivalentes precisam de pelo menos 2 opções.`)
+    }
     validarDose(`Item ${i + 1}`, item.texto, item.regraDose)
     item.alternativas.forEach((alt, j) => {
       const prefixo = `Item ${i + 1}, alternativa ${j + 1}`
       if (!alt.texto.trim()) erros.push(`${prefixo}: texto vazio.`)
-      if (!alt.motivo.trim()) erros.push(`${prefixo}: informe o motivo.`)
+      // Em opções equivalentes (OU) o motivo é opcional.
+      if (!item.opcoesEquivalentes && !alt.motivo.trim()) erros.push(`${prefixo}: informe o motivo.`)
       validarDose(prefixo, alt.texto, alt.regraDose)
     })
   })

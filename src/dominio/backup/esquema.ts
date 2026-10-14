@@ -68,6 +68,7 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
       alternativas: v.array(
         v.object({ id, motivo: v.string(), texto: v.string(), regraDose: v.nullable(esquemaRegraDose) }),
       ),
+      opcoesEquivalentes: v.optional(v.boolean()),
     }),
   ),
   alertas: v.array(

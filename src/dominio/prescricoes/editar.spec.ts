@@ -151,6 +151,16 @@ describe('validarPrescricao', () => {
     ])
   })
 
+  it('opções equivalentes: motivo opcional, mas exige pelo menos 2 opções', () => {
+    const item = { id: 'i-1', texto: 'Medicamento Teste A', regraDose: null, opcoesEquivalentes: true }
+    expect(
+      validarPrescricao(prescricaoTeste({ itens: [{ ...item, alternativas: [{ id: 'a', motivo: '', texto: 'Medicamento Teste B', regraDose: null }] }] }), existe),
+    ).toEqual([])
+    expect(validarPrescricao(prescricaoTeste({ itens: [{ ...item, alternativas: [] }] }), existe)).toEqual([
+      'Item 1: opções equivalentes precisam de pelo menos 2 opções.',
+    ])
+  })
+
   it('prescrição completa é válida', () => {
     expect(validarPrescricao(prescricaoTeste(), existe)).toEqual([])
   })

@@ -16,7 +16,8 @@ Formato:
 - Cada prescrição corresponde a uma doença ou situação clínica do documento.
 - "titulo": o nome da doença/situação como aparece no documento.
 - "categoria": a categoria ou seção do documento a que a prescrição pertence; texto vazio se não houver.
-- "itens": cada linha de prescrição em "texto" (doses só como texto). "alternativas": apenas as que o documento apresenta explicitamente como substituição de um item, com o "motivo" escrito no documento.
+- "itens": cada linha de prescrição em "texto" (doses só como texto). "alternativas": apenas as que o documento apresenta explicitamente como substituição de um item, com o "motivo" escrito no documento; nesse caso "opcoesEquivalentes": false.
+- Opções intercambiáveis para o mesmo passo (por exemplo, várias linhas com o mesmo número ligadas por "OU", ou "opção 1 / opção 2"), em que só uma deve ser usada: crie UM único item, com a primeira opção em "texto", as demais em "alternativas" ("motivo" vazio, ou o rótulo que o documento der a cada opção) e "opcoesEquivalentes": true. Copie cada opção inteira, sem juntar nem resumir. Itens sem esse tipo de opção usam "opcoesEquivalentes": false.
 - "alertas": apenas avisos explícitos do documento. "tipo": contraindicacao, ajuste_renal, gestacao, interacao, atencao ou outro. "gravidade": informativo, atencao ou critico, conforme o destaque dado no documento; se não houver destaque, use "atencao" e registre a dúvida. "item": 0 se o alerta vale para a prescrição inteira, ou o número do item (1, 2, …) a que ele se refere.
 - "observacoes" e "referencia": copie do documento, se houver.`
 

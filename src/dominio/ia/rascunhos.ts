@@ -35,6 +35,8 @@ export function criarRascunhos(
       texto: item.texto,
       regraDose: null,
       alternativas: item.alternativas.map((a) => ({ id: gerarId(), motivo: a.motivo, texto: a.texto, regraDose: null })),
+      // Opções "OU" só fazem sentido com pelo menos 2 opções.
+      opcoesEquivalentes: item.opcoesEquivalentes && item.alternativas.length > 0,
     }))
 
     const alertas = p.alertas.map((a, i) => {

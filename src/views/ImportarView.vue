@@ -238,10 +238,19 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
             <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Categoria" />
             <ol class="list-decimal pl-5 text-sm">
               <li v-for="item in r.dados.itens" :key="item.id" class="whitespace-pre-line">
-                {{ item.texto }}
-                <span v-if="item.alternativas.length" class="text-muted-foreground">
-                  ({{ item.alternativas.length }} {{ item.alternativas.length === 1 ? 'alternativa' : 'alternativas' }})
-                </span>
+                <template v-if="item.opcoesEquivalentes">
+                  <span class="text-primary text-xs font-semibold">Opções equivalentes (escolher uma):</span>
+                  <ul class="list-disc pl-4">
+                    <li>{{ item.texto }}</li>
+                    <li v-for="alt in item.alternativas" :key="alt.id">{{ alt.texto }}</li>
+                  </ul>
+                </template>
+                <template v-else>
+                  {{ item.texto }}
+                  <span v-if="item.alternativas.length" class="text-muted-foreground">
+                    ({{ item.alternativas.length }} {{ item.alternativas.length === 1 ? 'alternativa' : 'alternativas' }})
+                  </span>
+                </template>
               </li>
             </ol>
             <p v-if="r.dados.alertas.length" class="text-muted-foreground text-sm">

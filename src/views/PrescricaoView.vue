@@ -29,7 +29,8 @@ const id = computed(() => String(route.params.id))
 const prescricao = computed(() => prescricoes.obter(id.value))
 
 /** Alternativa escolhida por item — só na memória desta tela. */
-const escolhidas = ref<Record<UUID, UUID | null>>({})
+/** Alternativa/opção escolhida por item (id, OPCAO_PRINCIPAL ou null) — só na memória desta tela. */
+const escolhidas = ref<Record<UUID, string | null>>({})
 /** Peso digitado — só na memória desta tela, nunca salvo. */
 const pesoDigitado = ref('')
 
@@ -70,6 +71,10 @@ const calculada = computed(() =>
 
 const motivoBloqueio = computed(() => {
   if (calculada.value.podeCopiar) return null
+  const semEscolha = calculada.value.itensSemEscolha
+  if (semEscolha.length) {
+    return semEscolha.length === 1 ? `Escolha uma opção no item ${semEscolha[0]}.` : `Escolha uma opção nos itens ${semEscolha.join(', ')}.`
+  }
   if (pesoKg.value === null) return 'Informe o peso para copiar.'
   return 'Há erro no cálculo de algum item.'
 })
@@ -91,7 +96,7 @@ function opcoesItem(item: ItemPrescricao) {
   ]
 }
 
-function escolher(itemId: UUID, altId: UUID | null) {
+function escolher(itemId: UUID, altId: string | null) {
   escolhidas.value = { ...escolhidas.value, [itemId]: altId }
 }
 
@@ -220,7 +225,47 @@ async function moverParaLixeira() {
           <span class="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
             {{ i + 1 }}
           </span>
-          <div class="min-w-0 flex-1">
+          <!-- Opções equivalentes (OU): todas por extenso; escolher uma é obrigatório para copiar -->
+          <div
+            v-if="calculada.linhas[i]!.opcoesEquivalentes"
+            class="flex min-w-0 flex-1 flex-col gap-1.5"
+            role="radiogroup"
+            :aria-label="`Opções do item ${i + 1}`"
+          >
+            <p :class="cn('text-xs font-semibold tracking-wide uppercase', calculada.linhas[i]!.escolhaPendente ? 'text-atencao' : 'text-muted-foreground')">
+              {{ calculada.linhas[i]!.escolhaPendente ? 'Escolha uma opção' : 'Opção escolhida' }}
+            </p>
+            <button
+              v-for="(opcao, k) in calculada.linhas[i]!.opcoes"
+              :key="opcao.id"
+              type="button"
+              role="radio"
+              :aria-checked="escolhidas[item.id] === opcao.id"
+              :class="cn(
+                'flex items-start gap-2.5 rounded-lg border p-2.5 text-left transition-opacity',
+                escolhidas[item.id] === opcao.id
+                  ? 'border-primary bg-primary/10'
+                  : calculada.linhas[i]!.escolhaPendente
+                    ? 'hover:bg-muted'
+                    : 'opacity-50 hover:opacity-100',
+              )"
+              @click="escolher(item.id, opcao.id)"
+            >
+              <span
+                :class="cn(
+                  'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2',
+                  escolhidas[item.id] === opcao.id ? 'border-primary' : 'border-muted-foreground/50',
+                )"
+              >
+                <span v-if="escolhidas[item.id] === opcao.id" class="bg-primary size-2.5 rounded-full" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="text-muted-foreground block text-xs">Opção {{ k + 1 }}<template v-if="opcao.rotulo"> · {{ opcao.rotulo }}</template></span>
+                <span class="text-base whitespace-pre-line">{{ opcao.texto }}</span>
+              </span>
+            </button>
+          </div>
+          <div v-else class="min-w-0 flex-1">
             <p v-if="calculada.linhas[i]!.motivoAlternativa" class="text-primary mb-1 flex items-center gap-1 text-xs font-semibold">
               <Replace class="size-3.5" /> Alternativa: {{ calculada.linhas[i]!.motivoAlternativa }}
             </p>
@@ -228,7 +273,7 @@ async function moverParaLixeira() {
           </div>
           <!-- Troca pela alternativa -->
           <CampoSelect
-            v-if="item.alternativas.length"
+            v-if="item.alternativas.length && !calculada.linhas[i]!.opcoesEquivalentes"
             :model-value="escolhidas[item.id] ?? null"
             :opcoes="opcoesItem(item)"
             class="w-36 shrink-0 sm:w-48"

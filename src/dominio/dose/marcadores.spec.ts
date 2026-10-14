@@ -4,7 +4,7 @@ import type { ItemPrescricao, RegraDose } from '@/dominio/tipos'
 import { calcularDose } from './calculo'
 import { substituirMarcadores, textoTomadas, validarMarcadores } from './marcadores'
 import { formatarNumero } from './numeros'
-import { calcularPrescricao, montarTextoCopia } from './prescricaoCalculada'
+import { calcularPrescricao, montarTextoCopia, OPCAO_PRINCIPAL } from './prescricaoCalculada'
 import { validarRegraDose } from './validarRegra'
 
 const base: RegraDose = {
@@ -138,6 +138,49 @@ describe('calcularPrescricao e cópia', () => {
     expect(c.precisaPeso).toBe(false)
     expect(c.podeCopiar).toBe(true)
     expect(montarTextoCopia(c.linhas)).toBe('1. Medicamento Teste B\n2. Medicamento Teste C')
+  })
+
+  describe('opções equivalentes (OU)', () => {
+    const itemOu: ItemPrescricao = {
+      id: 'ou',
+      texto: 'Medicamento Teste E {dose}',
+      regraDose: base,
+      opcoesEquivalentes: true,
+      alternativas: [
+        { id: 'o2', motivo: '', texto: 'Medicamento Teste F', regraDose: null },
+        { id: 'o3', motivo: 'Rótulo Teste', texto: 'Medicamento Teste G', regraDose: null },
+      ],
+    }
+    const lista = [itemOu, itens[1]!]
+
+    it('nenhuma vem escolhida: copiar bloqueado e item listado como pendente', () => {
+      const c = calcularPrescricao(lista, {}, 10)
+      expect(c.itensSemEscolha).toEqual([1])
+      expect(c.podeCopiar).toBe(false)
+      expect(c.linhas[0]!.escolhaPendente).toBe(true)
+      // todas as opções calculadas para mostrar por extenso
+      expect(c.linhas[0]!.opcoes.map((o) => o.texto)).toEqual(['Medicamento Teste E 100 mg', 'Medicamento Teste F', 'Medicamento Teste G'])
+    })
+
+    it('escolher a opção 1 (principal) usa o texto do item e sua regra', () => {
+      const c = calcularPrescricao(lista, { ou: OPCAO_PRINCIPAL }, 10)
+      expect(c.podeCopiar).toBe(true)
+      expect(montarTextoCopia(c.linhas)).toBe('1. Medicamento Teste E 100 mg\n2. Medicamento Teste C')
+    })
+
+    it('escolher outra opção copia só ela; sem regra, dispensa o peso', () => {
+      const c = calcularPrescricao(lista, { ou: 'o3' }, null)
+      expect(c.precisaPeso).toBe(false)
+      expect(c.podeCopiar).toBe(true)
+      expect(montarTextoCopia(c.linhas)).toBe('1. Medicamento Teste G\n2. Medicamento Teste C')
+    })
+
+    it('opção 1 com regra e sem peso: escolhida mas ainda precisa do peso', () => {
+      const c = calcularPrescricao(lista, { ou: OPCAO_PRINCIPAL }, null)
+      expect(c.itensSemEscolha).toEqual([])
+      expect(c.precisaPeso).toBe(true)
+      expect(c.podeCopiar).toBe(false)
+    })
   })
 
   it('erro de cálculo bloqueia copiar', () => {

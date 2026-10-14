@@ -41,6 +41,11 @@ export interface ItemPrescricao {
   texto: string
   regraDose: RegraDose | null
   alternativas: Alternativa[]
+  /**
+   * Opções equivalentes ("OU"): o texto principal é a opção 1 e as alternativas são as opções 2, 3…;
+   * nenhuma vem escolhida e copiar fica bloqueado até escolher. Motivo opcional. Ausente em dados antigos = false.
+   */
+  opcoesEquivalentes?: boolean
 }
 
 export type OrigemPrescricao = 'manual' | 'importada_ia'
