@@ -1,29 +1,33 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import 'vue-sonner/style.css'
-import './style.css'
-import App from './App.vue'
-import { router } from './router'
-import { pedirArmazenamentoPersistente } from './db/armazenamento'
-import { useCategoriasStore } from './stores/categorias'
-import { useConfiguracoesStore } from './stores/configuracoes'
-import { usePrescricoesStore } from './stores/prescricoes'
+import { armazenamento, MODO_PENDRIVE } from './modo'
+
+/** Testa se o navegador deixa usar o IndexedDB (alguns bloqueiam em páginas abertas como arquivo). */
+async function indexedDbDisponivel(): Promise<boolean> {
+  try {
+    if (!globalThis.indexedDB) return false
+    return await new Promise<boolean>((resolve) => {
+      const pedido = indexedDB.open('plantao-facil-teste')
+      pedido.onsuccess = () => {
+        pedido.result.close()
+        indexedDB.deleteDatabase('plantao-facil-teste')
+        resolve(true)
+      }
+      pedido.onerror = () => resolve(false)
+      setTimeout(() => resolve(false), 3000)
+    })
+  } catch {
+    return false
+  }
+}
 
 async function iniciar() {
-  const app = createApp(App)
-  app.use(createPinia())
-  app.use(router)
-
-  // A biblioteca é pequena: carrega tudo na abertura para a busca ser instantânea.
-  await Promise.all([
-    useConfiguracoesStore().carregar(),
-    useCategoriasStore().carregar(),
-    usePrescricoesStore().carregar(),
-  ])
-  app.mount('#app')
-
-  // Não bloqueia a abertura do app; o status aparece em Ajustes.
-  void pedirArmazenamentoPersistente()
+  // Pen drive sem IndexedDB: banco só na memória da aba (o usuário carrega o backup a cada uso).
+  // Precisa vir antes de carregar o Dexie, por isso o restante do app é importado depois.
+  if (MODO_PENDRIVE && !(await indexedDbDisponivel())) {
+    await import('fake-indexeddb/auto')
+    armazenamento.emMemoria = true
+  }
+  const { montarApp } = await import('./app')
+  await montarApp()
 }
 
 void iniciar()

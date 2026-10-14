@@ -12,6 +12,7 @@ function padrao(): Configuracoes {
     tema: 'escuro',
     ia: { provedor: 'gemini', chaves: {}, modelos: {} },
     ultimoBackupEm: null,
+    bibliotecaPenDriveDe: null,
   }
 }
 
@@ -51,5 +52,10 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
     await salvar()
   }
 
-  return { config, carregar, definirTema, registrarBackup }
+  async function registrarBibliotecaPenDrive(de: string | null) {
+    config.value.bibliotecaPenDriveDe = de
+    await salvar()
+  }
+
+  return { config, carregar, definirTema, registrarBackup, registrarBibliotecaPenDrive }
 })

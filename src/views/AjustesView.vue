@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ChevronRight, HardDrive, Moon } from '@lucide/vue'
+import { ChevronRight, FileUp, HardDrive, Moon, Trash2 } from '@lucide/vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -12,6 +12,11 @@ import {
   type StatusArmazenamento,
 } from '@/db/armazenamento'
 import { useConfiguracoesStore } from '@/stores/configuracoes'
+import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
+import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
+import { apagarDadosDestePc, carregarBibliotecaDoArquivo } from '@/lib/penDrive'
+import { armazenamento, MODO_PENDRIVE } from '@/modo'
 
 const configuracoes = useConfiguracoesStore()
 
@@ -47,7 +52,33 @@ function formatarBytes(bytes: number): string {
 
 const versao = __APP_VERSION__
 
-onMounted(atualizarStatus)
+onMounted(() => {
+  if (!MODO_PENDRIVE) void atualizarStatus()
+})
+
+// ===== Modo pen drive =====
+const router = useRouter()
+const entradaBackup = ref<HTMLInputElement | null>(null)
+const confirmarApagar = ref(false)
+const dataBiblioteca = computed(() => {
+  const de = configuracoes.config.bibliotecaPenDriveDe
+  return de ? new Date(de).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : null
+})
+
+async function atualizarBiblioteca(evento: Event) {
+  const arquivo = (evento.target as HTMLInputElement).files?.[0]
+  if (!arquivo) return
+  const erro = await carregarBibliotecaDoArquivo(arquivo)
+  if (entradaBackup.value) entradaBackup.value.value = ''
+  if (erro) toast.error(erro)
+  else toast.success('Biblioteca atualizada.')
+}
+
+async function apagar() {
+  await apagarDadosDestePc()
+  toast.success('Dados apagados deste PC.')
+  router.replace('/carregar')
+}
 </script>
 
 <template>
@@ -64,7 +95,7 @@ onMounted(atualizarStatus)
       </CardContent>
     </Card>
 
-    <Card>
+    <Card v-if="!MODO_PENDRIVE">
       <CardHeader>
         <CardTitle class="flex items-center gap-2"><HardDrive class="size-5" /> Armazenamento</CardTitle>
         <CardDescription>Os dados ficam apenas neste aparelho.</CardDescription>
@@ -87,7 +118,7 @@ onMounted(atualizarStatus)
     </Card>
 
     <!-- No PC estes itens também estão no menu lateral -->
-    <Card class="py-1">
+    <Card v-if="!MODO_PENDRIVE" class="py-1">
       <nav class="flex flex-col" aria-label="Dados">
         <RouterLink
           v-for="item in NAVEGACAO_SECUNDARIA"
@@ -101,6 +132,36 @@ onMounted(atualizarStatus)
         </RouterLink>
       </nav>
     </Card>
+
+    <!-- Modo pen drive: biblioteca deste PC -->
+    <Card v-if="MODO_PENDRIVE">
+      <CardHeader>
+        <CardTitle class="flex items-center gap-2"><HardDrive class="size-5" /> Biblioteca deste PC</CardTitle>
+        <CardDescription>
+          {{ dataBiblioteca ? `Backup de ${dataBiblioteca}.` : 'Nenhuma biblioteca carregada.' }}
+          <template v-if="armazenamento.emMemoria"> Este navegador não salva dados: a biblioteca some ao fechar a aba.</template>
+        </CardDescription>
+      </CardHeader>
+      <CardContent class="flex flex-col gap-3">
+        <input ref="entradaBackup" type="file" accept="application/json,.json" class="hidden" @change="atualizarBiblioteca" />
+        <Button size="touch" variant="outline" class="self-start" @click="entradaBackup?.click()">
+          <FileUp /> Atualizar biblioteca
+        </Button>
+        <p class="text-muted-foreground text-xs">Troca toda a biblioteca deste PC pelo backup escolhido.</p>
+        <Button size="touch" variant="destructive" class="self-start" @click="confirmarApagar = true">
+          <Trash2 /> Apagar dados deste PC
+        </Button>
+      </CardContent>
+    </Card>
+
+    <DialogoConfirmar
+      v-model:aberto="confirmarApagar"
+      titulo="Apagar dados deste PC?"
+      descricao="A biblioteca e as configurações salvas neste navegador serão apagadas. O pen drive não é alterado."
+      rotulo-confirmar="Apagar"
+      perigoso
+      @confirmar="apagar"
+    />
 
     <p class="text-muted-foreground text-center text-xs">Plantão Fácil · versão {{ versao }}</p>
   </section>

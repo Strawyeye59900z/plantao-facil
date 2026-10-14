@@ -1,4 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { MODO_PENDRIVE, rotaBloqueadaNoPenDrive } from '@/modo'
+import { useConfiguracoesStore } from '@/stores/configuracoes'
 
 /**
  * Hash history (/#/rota): o GitHub Pages não tem fallback de SPA,
@@ -69,6 +71,12 @@ export const router = createRouter({
       meta: { titulo: 'Importar PDF' },
     },
     {
+      path: '/carregar',
+      name: 'carregar',
+      component: () => import('@/views/CarregarBibliotecaView.vue'),
+      meta: { titulo: 'Carregar biblioteca' },
+    },
+    {
       path: '/lixeira',
       name: 'lixeira',
       component: () => import('@/views/LixeiraView.vue'),
@@ -82,6 +90,18 @@ export const router = createRouter({
     },
   ],
 })
+
+// Modo pen drive: somente leitura, e nada funciona antes de carregar a biblioteca do pen drive.
+if (MODO_PENDRIVE) {
+  router.beforeEach((para) => {
+    if (rotaBloqueadaNoPenDrive(para.path)) return '/prescricoes'
+    const carregada = useConfiguracoesStore().config.bibliotecaPenDriveDe !== null
+    if (!carregada && para.path !== '/carregar') return '/carregar'
+    if (carregada && para.path === '/carregar') return '/prescricoes'
+  })
+} else {
+  router.beforeEach((para) => (para.path === '/carregar' ? '/prescricoes' : undefined))
+}
 
 declare module 'vue-router' {
   interface RouteMeta {

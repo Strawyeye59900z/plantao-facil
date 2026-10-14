@@ -56,6 +56,8 @@ export interface Configuracoes {
   }
   /** Data do último backup exportado neste aparelho (para o lembrete). */
   ultimoBackupEm: ISODate | null
+  /** Modo pen drive: data (exportadoEm) do backup carregado neste PC; null = nenhum. */
+  bibliotecaPenDriveDe: ISODate | null
 }
 
 /** Recentes vivem só na memória enquanto o app está aberto (máx. 5). */

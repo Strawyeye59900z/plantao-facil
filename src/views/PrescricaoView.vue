@@ -11,6 +11,7 @@ import ResultadoDose from '@/components/prescricoes/ResultadoDose.vue'
 import { lerPeso } from '@/dominio/dose/peso'
 import { calcularPrescricao, montarTextoCopia } from '@/dominio/dose/prescricaoCalculada'
 import { copiarTexto } from '@/lib/areaTransferencia'
+import { MODO_PENDRIVE } from '@/modo'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import type { ItemPrescricao, UUID } from '@/dominio/tipos'
 import { cn } from '@/lib/utils'
@@ -130,7 +131,14 @@ async function moverParaLixeira() {
       </p>
       <div class="flex items-start gap-2">
         <h1 class="flex-1 text-2xl leading-tight font-semibold">{{ prescricao.titulo }}</h1>
+        <!-- Pen drive: favorito só exibido (a próxima atualização da biblioteca apagaria a mudança) -->
+        <Star
+          v-if="MODO_PENDRIVE"
+          :class="cn('m-2.5 size-6 shrink-0', prescricao.favorito ? 'fill-atencao text-atencao' : 'hidden')"
+          aria-label="Favorita"
+        />
         <Button
+          v-else
           variant="ghost"
           size="icon-touch"
           :aria-label="prescricao.favorito ? 'Remover dos favoritos' : 'Favoritar'"
@@ -157,7 +165,7 @@ async function moverParaLixeira() {
       <ul v-if="prescricao.duvidasImportacao.length" class="list-disc pl-5 text-sm">
         <li v-for="(duvida, i) in prescricao.duvidasImportacao" :key="i">{{ duvida }}</li>
       </ul>
-      <Button size="touch" variant="outline" class="self-start" @click="marcarRevisada">
+      <Button v-if="!MODO_PENDRIVE" size="touch" variant="outline" class="self-start" @click="marcarRevisada">
         <CircleCheck /> Marcar como revisada
       </Button>
     </div>
@@ -250,7 +258,7 @@ async function moverParaLixeira() {
     </div>
 
     <!-- Ações -->
-    <div v-if="!prescricao.excluidoEm" class="grid grid-cols-3 gap-2 border-t pt-4">
+    <div v-if="!prescricao.excluidoEm && !MODO_PENDRIVE" class="grid grid-cols-3 gap-2 border-t pt-4">
       <Button variant="outline" size="touch" as-child>
         <RouterLink :to="`/prescricoes/${prescricao.id}/editar`"><Pencil /> Editar</RouterLink>
       </Button>

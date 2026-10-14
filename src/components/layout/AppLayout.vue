@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search, X } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 import { NAVEGACAO_PRINCIPAL, NAVEGACAO_SECUNDARIA } from './navegacao'
 import AvisoAtualizacao from './AvisoAtualizacao.vue'
 import LogoApp from './LogoApp.vue'
+import { armazenamento, MODO_PENDRIVE } from '@/modo'
+import { useConfiguracoesStore } from '@/stores/configuracoes'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,15 +43,24 @@ function limparBusca() {
   if (route.path === '/prescricoes') router.replace({ path: '/prescricoes' })
 }
 
+// Modo pen drive: faixa de aviso; na tela de carregar a biblioteca, sem menus.
+const configuracoes = useConfiguracoesStore()
+const telaCarregar = computed(() => route.path === '/carregar')
+const dataBiblioteca = computed(() => {
+  const de = configuracoes.config.bibliotecaPenDriveDe
+  return de ? new Date(de).toLocaleDateString('pt-BR') : null
+})
+
 function ativo(rota: string) {
   return route.path === rota || route.path.startsWith(`${rota}/`)
 }
 </script>
 
 <template>
-  <div class="min-h-dvh md:grid md:grid-cols-[15rem_1fr]">
+  <div :class="cn('min-h-dvh', !telaCarregar && 'md:grid md:grid-cols-[15rem_1fr]')">
     <!-- Menu lateral (PC/tablet) -->
     <aside
+      v-if="!telaCarregar"
       class="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-dvh flex-col gap-1 border-r p-3 md:flex"
     >
       <RouterLink to="/prescricoes" class="mb-4 flex items-center gap-2 px-2 py-1">
@@ -70,6 +81,7 @@ function ativo(rota: string) {
           {{ item.rotulo }}
         </RouterLink>
       </nav>
+      <template v-if="!MODO_PENDRIVE">
       <div class="text-muted-foreground mt-4 px-3 text-xs font-medium uppercase tracking-wide">Dados</div>
       <nav class="flex flex-col gap-1" aria-label="Dados">
         <RouterLink
@@ -85,11 +97,13 @@ function ativo(rota: string) {
           {{ item.rotulo }}
         </RouterLink>
       </nav>
+      </template>
     </aside>
 
     <div class="flex min-h-dvh min-w-0 flex-col">
       <!-- Barra superior com busca -->
       <header
+        v-if="!telaCarregar"
         class="bg-background/90 sticky top-0 z-20 border-b backdrop-blur pt-[env(safe-area-inset-top)]"
       >
         <div class="mx-auto flex h-14 max-w-3xl items-center gap-2 px-3">
@@ -117,6 +131,13 @@ function ativo(rota: string) {
             </button>
           </form>
         </div>
+        <p
+          v-if="MODO_PENDRIVE"
+          class="bg-atencao/15 text-foreground border-t px-3 py-1 text-center text-xs font-medium"
+        >
+          Modo pen drive — somente leitura<span v-if="dataBiblioteca"> · biblioteca de {{ dataBiblioteca }}</span>
+          <span v-if="armazenamento.emMemoria" class="text-destructive"> · dados só nesta aba</span>
+        </p>
       </header>
 
       <main class="mx-auto w-full max-w-3xl flex-1 px-3 pt-4 pb-24 md:pb-8">
@@ -127,6 +148,7 @@ function ativo(rota: string) {
 
       <!-- Navegação inferior (celular) -->
       <nav
+        v-if="!telaCarregar"
         class="bg-background/95 fixed inset-x-0 bottom-0 z-20 border-t backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="Navegação principal"
       >

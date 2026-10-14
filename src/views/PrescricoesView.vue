@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 import { usePrescricoesStore } from '@/stores/prescricoes'
 import { useRecentesStore } from '@/stores/recentes'
+import { MODO_PENDRIVE } from '@/modo'
 
 const SEM_CATEGORIA = '__sem__'
 
@@ -86,7 +87,7 @@ function filtrar(chave: string | null) {
   <section class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-2">
       <h1 class="text-2xl font-semibold">Prescrições</h1>
-      <Button size="touch" class="hidden md:inline-flex" as-child>
+      <Button v-if="!MODO_PENDRIVE" size="touch" class="hidden md:inline-flex" as-child>
         <RouterLink to="/prescricoes/nova"><Plus /> Nova</RouterLink>
       </Button>
     </div>
@@ -136,7 +137,7 @@ function filtrar(chave: string | null) {
       class="text-muted-foreground flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center"
     >
       <p>Nenhuma prescrição cadastrada.</p>
-      <Button size="touch" as-child>
+      <Button v-if="!MODO_PENDRIVE" size="touch" as-child>
         <RouterLink to="/prescricoes/nova"><Plus /> Criar a primeira</RouterLink>
       </Button>
     </div>
@@ -205,6 +206,7 @@ function filtrar(chave: string | null) {
 
     <!-- Botão flutuante (celular) -->
     <Button
+      v-if="!MODO_PENDRIVE"
       size="icon-touch"
       class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg md:hidden"
       aria-label="Nova prescrição"

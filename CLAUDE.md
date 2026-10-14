@@ -118,7 +118,12 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Importação de PDF por IA desativada nesse modo (chave de API nunca fica em PC do hospital).
 - Biblioteca **salva no navegador do PC** (carregada do backup do pen drive; abre direto nas próximas vezes). Precisa de "atualizar biblioteca" (substituir pelo backup novo) e "apagar dados deste PC".
 - Navegadores-alvo: desconhecidos → testar em Chrome, Edge e Firefox.
-- Entra como **Fase 3b**, logo após o backup.
+- Implementação (Fase 3b): `npm run build:pendrive` → `dist-pendrive/plantao-facil.html` (vite `--mode pendrive` + `vite-plugin-singlefile`; sem PWA — `virtual:pwa-register/vue` vira stub; favicon embutido). `MODO_PENDRIVE` em `src/modo.ts`.
+- Rotas de edição bloqueadas (`rotaBloqueadaNoPenDrive`); sem biblioteca carregada → `/carregar`. Somem: Nova, Editar, Duplicar, Excluir, Marcar revisada, Categorias, Lixeira, Backup, Importar. Favorito só exibido (não alterável). Não revisadas aparecem com aviso.
+- Faixa "Modo pen drive — somente leitura · biblioteca de dd/mm/aaaa". Ajustes: tema, **Atualizar biblioteca** (substitui tudo) e **Apagar dados deste PC**. Aviso de privacidade na tela Carregar.
+- Se o IndexedDB não funcionar no `file://`, usa `fake-indexeddb` em memória (só na aba) e avisa. `main.ts` detecta antes de importar o app.
+- **Ordem de inicialização (`src/app.ts`)**: carregar stores **antes** de `app.use(router)` — a navegação inicial começa no install do router e as guardas precisam das configurações.
+- Testado (puppeteer-core, fora do projeto) em **Chrome, Edge e Firefox 158** abrindo como `file://`: IndexedDB persiste, carregar/atualizar/apagar, dose, Copiar e bloqueio de rotas OK. Fallback em memória não foi exercitado (nenhum dos três bloqueou).
 
 ### IA (Fase 5)
 - Chave de API no IndexedDB, nunca no backup, com botão para apagar.
@@ -134,4 +139,5 @@ npm run dev        # desenvolvimento (http://localhost:5173)
 npm test           # testes (Vitest)
 npm run build      # checagem de tipos + build de produção (dist/)
 npm run preview    # serve o build (http://localhost:4173) — para testar PWA/offline
+npm run build:pendrive  # arquivo único dist-pendrive/plantao-facil.html (modo pen drive)
 ```
