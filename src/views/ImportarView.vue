@@ -1,7 +1,24 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { toast } from 'vue-sonner'
-import { Check, ClipboardCopy, FileUp, Loader2, MessagesSquare, Pencil, ShieldAlert, Sparkles, Trash2, TriangleAlert, X } from '@lucide/vue'
+import {
+  Check,
+  Circle,
+  CircleAlert,
+  CircleCheck,
+  ClipboardCopy,
+  Download,
+  FileUp,
+  Loader2,
+  MessagesSquare,
+  Pencil,
+  Scissors,
+  ShieldAlert,
+  Sparkles,
+  Trash2,
+  TriangleAlert,
+  X,
+} from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,11 +28,14 @@ import CampoSelect from '@/components/comum/CampoSelect.vue'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import FormularioPrescricao from '@/components/prescricoes/FormularioPrescricao.vue'
 import { useAvisoSaida } from '@/composables/useAvisoSaida'
+import { encontrarDuplicatas } from '@/dominio/ia/duplicatas'
+import { descreverTrecho, dividirEmLotes, dividirTrecho, nomeArquivoLote, PAGINAS_POR_LOTE, type Trecho } from '@/dominio/ia/lotes'
 import { PROVEDORES } from '@/dominio/ia/provedores'
 import { criarRascunhos, type RascunhoImportado } from '@/dominio/ia/rascunhos'
 import { validarPrescricao } from '@/dominio/prescricoes/editar'
 import { enviarParaIA } from '@/lib/enviarParaIA'
 import { copiarTexto } from '@/lib/areaTransferencia'
+import { baixarArquivo } from '@/lib/arquivo'
 import { montarPromptChat } from '@/dominio/ia/prompt'
 import { lerRespostaIA, type RespostaIA } from '@/dominio/ia/resposta'
 import { contarPaginas, recortarPaginas } from '@/lib/pdf'
@@ -52,7 +72,6 @@ async function aoEscolher(evento: Event) {
   if (!f) return
   erroArquivo.value = null
   arquivo.value = null
-  erroEnvio.value = null
   try {
     const bytes = new Uint8Array(await f.arrayBuffer())
     arquivo.value = { nome: f.name, bytes, paginas: await contarPaginas(bytes) }
@@ -64,123 +83,230 @@ async function aoEscolher(evento: Event) {
   }
 }
 
-const intervalo = computed(() =>
-  usarIntervalo.value && paginaDe.value !== null && paginaAte.value !== null ? { de: paginaDe.value, ate: paginaAte.value } : null,
-)
-const paginasEnviadas = computed(() =>
-  !arquivo.value ? 0 : intervalo.value ? intervalo.value.ate - intervalo.value.de + 1 : arquivo.value.paginas,
-)
-
-/** Motivo para não poder enviar ainda (null = pode). */
-const bloqueio = computed(() => {
+const erroIntervalo = computed(() => {
   const a = arquivo.value
-  if (!a) return 'Escolha um PDF.'
+  if (!a || !usarIntervalo.value) return null
+  const de = paginaDe.value
+  const ate = paginaAte.value
+  if (de === null || ate === null || !Number.isInteger(de) || !Number.isInteger(ate) || de < 1 || ate > a.paginas || de > ate) {
+    return `Intervalo inválido: use páginas de 1 a ${a.paginas}, com "de" ≤ "até".`
+  }
+  return null
+})
+
+/** Lotes que serão usados (intervalo escolhido ou o PDF inteiro). */
+const trechosPlanejados = computed<Trecho[]>(() => {
+  const a = arquivo.value
+  if (!a || erroIntervalo.value) return []
+  return usarIntervalo.value ? dividirEmLotes(paginaDe.value!, paginaAte.value!) : dividirEmLotes(1, a.paginas)
+})
+const resumoLotes = computed(() => {
+  const t = trechosPlanejados.value
+  if (!t.length) return ''
+  const total = { de: t[0]!.de, ate: t.at(-1)!.ate }
+  return t.length === 1
+    ? `1 lote (${descreverTrecho(total)}).`
+    : `${t.length} lotes de até ${PAGINAS_POR_LOTE} páginas (${descreverTrecho(total)}); cada lote repete a última página do anterior.`
+})
+
+/** Motivo para não poder enviar pela API ainda (null = pode). */
+const bloqueioApi = computed(() => {
+  if (!arquivo.value) return 'Escolha um PDF.'
   if (!chave.value) return `Cadastre a chave de API do ${provedor.value.nome} em Ajustes.`
-  if (usarIntervalo.value) {
-    const { de, ate } = { de: paginaDe.value, ate: paginaAte.value }
-    if (de === null || ate === null || !Number.isInteger(de) || !Number.isInteger(ate) || de < 1 || ate > a.paginas || de > ate) {
-      return `Intervalo inválido: use páginas de 1 a ${a.paginas}, com "de" ≤ "até".`
-    }
-  }
-  const limitePaginas = provedor.value.limites.paginas
-  if (limitePaginas !== null && paginasEnviadas.value > limitePaginas) {
-    return `${provedor.value.nome} aceita até ${limitePaginas} páginas por envio: escolha um intervalo menor.`
-  }
-  if (!usarIntervalo.value && a.bytes.length > provedor.value.limites.bytesPdf) {
-    return `PDF grande demais para ${provedor.value.nome} (${provedor.value.limites.descricao}): escolha um intervalo de páginas.`
-  }
+  if (erroIntervalo.value) return erroIntervalo.value
   if (!confirmado.value) return 'Confirme o envio na caixa acima.'
   return null
 })
 
-// ===== Envio =====
-const enviando = ref(false)
-const erroEnvio = ref<string | null>(null)
+// ===== Sessão de importação (lotes) =====
+type EstadoLote = 'pendente' | 'enviando' | 'concluido' | 'erro'
+interface Lote {
+  id: string
+  rotulo: string
+  trecho: Trecho
+  estado: EstadoLote
+  erro: string | null
+  prescricoes: number
+  duvidas: string[]
+}
+
+const modo = ref<'api' | 'chat' | null>(null)
+const lotes = ref<Lote[]>([])
+/** API: envio parado (cancelado ou sem internet); os lotes pendentes esperam "Continuar". */
+const pausado = ref(false)
 let controlador: AbortController | null = null
+let processando = false
 
 const rascunhos = ref<RascunhoImportado[]>([])
-const duvidasGerais = ref<string[]>([])
 const editando = ref<string | null>(null)
 const errosPorRascunho = ref<Record<string, string[]>>({})
 const aprovadas = ref(0)
 
-async function enviar() {
-  if (bloqueio.value || !arquivo.value) return
+const novoLote = (rotulo: string, trecho: Trecho): Lote => ({
+  id: crypto.randomUUID(),
+  rotulo,
+  trecho,
+  estado: 'pendente',
+  erro: null,
+  prescricoes: 0,
+  duvidas: [],
+})
+
+const enviando = computed(() => lotes.value.some((l) => l.estado === 'enviando'))
+const concluidos = computed(() => lotes.value.filter((l) => l.estado === 'concluido').length)
+const lotesTerminados = computed(() => lotes.value.length > 0 && concluidos.value === lotes.value.length)
+const temPendentesApi = computed(() => modo.value === 'api' && lotes.value.some((l) => l.estado === 'pendente'))
+
+function iniciar(m: 'api' | 'chat') {
+  if (!trechosPlanejados.value.length) return
+  if (m === 'api' && bloqueioApi.value) return
+  modo.value = m
+  lotes.value = trechosPlanejados.value.map((t, i) => novoLote(`Lote ${i + 1}`, t))
+  rascunhos.value = []
+  errosPorRascunho.value = {}
+  aprovadas.value = 0
+  pausado.value = false
+  confirmado.value = false // a confirmação vale para este envio (todos os lotes)
+  loteAberto.value = lotes.value[0]!.id
+  if (m === 'api') void processarFila()
+}
+
+/** O PDF do lote é o documento inteiro? Então o prompt não fala em trecho. */
+const ehDocumentoInteiro = (t: Trecho) => t.de === 1 && t.ate === arquivo.value?.paginas
+const trechoDoPrompt = (t: Trecho) => (ehDocumentoInteiro(t) ? null : t)
+
+async function pdfDoLote(t: Trecho): Promise<Uint8Array> {
+  const a = arquivo.value!
+  return ehDocumentoInteiro(t) ? a.bytes : recortarPaginas(a.bytes, t.de, t.ate)
+}
+
+/** Recebe a resposta de um lote: as prescrições entram na revisão (dá para revisar enquanto os outros chegam). */
+function receber(lote: Lote, resposta: RespostaIA) {
+  const novos = criarRascunhos(resposta, categorias.todas, undefined, { rotulo: lote.rotulo, trecho: lote.trecho })
+  rascunhos.value.push(...novos)
+  lote.estado = 'concluido'
+  lote.erro = null
+  lote.prescricoes = novos.length
+  lote.duvidas = resposta.duvidas
+}
+
+/** Troca o lote por duas metades. false = lote de 1 página, não dá para dividir. */
+function dividir(lote: Lote, motivo: string): boolean {
+  const metades = dividirTrecho(lote.trecho)
+  const i = lotes.value.findIndex((l) => l.id === lote.id)
+  if (!metades || i === -1) return false
+  const filhos = metades.map((t, k) => novoLote(`${lote.rotulo}.${k + 1}`, t))
+  lotes.value.splice(i, 1, ...filhos)
+  if (loteAberto.value === lote.id) loteAberto.value = filhos[0]!.id
+  toast(`${lote.rotulo}: ${motivo} Dividido em 2 lotes menores.`)
+  return true
+}
+
+function falhar(lote: Lote, erro: string) {
+  lote.estado = 'erro'
+  lote.erro = erro
+}
+
+// ----- API: um lote por vez -----
+async function processarFila() {
+  if (processando) return
+  processando = true
+  pausado.value = false
+  try {
+    for (;;) {
+      const lote = lotes.value.find((l) => l.estado === 'pendente')
+      if (!lote || pausado.value || modo.value !== 'api') break
+      await enviarLote(lote)
+    }
+  } finally {
+    processando = false
+  }
+}
+
+async function enviarLote(lote: Lote) {
   if (!navigator.onLine) {
-    erroEnvio.value = 'Sem internet. A importação por IA é a única função do app que precisa de conexão.'
+    pausado.value = true
+    falhar(lote, 'Sem internet. A importação por IA é a única função do app que precisa de conexão.')
     return
   }
-  enviando.value = true
-  erroEnvio.value = null
-  controlador = new AbortController()
+  lote.estado = 'enviando'
+  lote.erro = null
+  const sinal = (controlador = new AbortController()).signal
   try {
-    let pdf = arquivo.value.bytes
-    if (intervalo.value) pdf = await recortarPaginas(pdf, intervalo.value.de, intervalo.value.ate)
+    const pdf = await pdfDoLote(lote.trecho)
+    if (sinal.aborted) {
+      lote.estado = 'pendente'
+      return
+    }
     if (pdf.length > provedor.value.limites.bytesPdf) {
-      erroEnvio.value = `O trecho escolhido tem ${tamanho(pdf.length)}, acima do limite do ${provedor.value.nome} (${provedor.value.limites.descricao}). Escolha menos páginas.`
+      const motivo = `o trecho tem ${tamanho(pdf.length)}, acima do limite do ${provedor.value.nome} (${provedor.value.limites.descricao}).`
+      if (!dividir(lote, `${motivo.charAt(0).toUpperCase()}${motivo.slice(1)}`)) falhar(lote, `Página grande demais: ${motivo}`)
       return
     }
     const r = await enviarParaIA(provedor.value, {
       pdf,
-      intervalo: intervalo.value,
+      trecho: trechoDoPrompt(lote.trecho),
+      totalPaginas: arquivo.value!.paginas,
       modelo: modelo.value,
       chave: chave.value,
-      sinal: controlador.signal,
+      sinal,
     })
-    if (!r.ok) {
-      erroEnvio.value = r.erro
+    if (sinal.aborted) {
+      lote.estado = 'pendente'
       return
     }
-    if (!iniciarRevisao(r.resposta)) erroEnvio.value = 'A IA não encontrou prescrições neste PDF.'
+    if (r.ok) receber(lote, r.resposta)
+    else if (!(r.cortada && dividir(lote, r.erro))) falhar(lote, r.erro)
   } catch (e) {
-    erroEnvio.value = e instanceof Error ? e.message : String(e)
+    falhar(lote, e instanceof Error ? e.message : String(e))
   } finally {
-    enviando.value = false
-    confirmado.value = false // confirmação vale para um envio só
     controlador = null
   }
 }
 
-/** Abre a revisão com a resposta (da API ou colada do chat). Retorna false se não veio nenhuma prescrição. */
-function iniciarRevisao(resposta: RespostaIA): boolean {
-  rascunhos.value = criarRascunhos(resposta, categorias.todas)
-  duvidasGerais.value = resposta.duvidas
-  errosPorRascunho.value = {}
-  aprovadas.value = 0
-  return rascunhos.value.length > 0
+function cancelar() {
+  pausado.value = true
+  controlador?.abort()
 }
 
-// ===== Chat no navegador (sem chave) =====
-const promptChat = montarPromptChat()
-const verPrompt = ref(false)
-const respostaColada = ref('')
-const erroColado = ref<string | null>(null)
+function tentarDeNovo(lote: Lote) {
+  lote.estado = 'pendente'
+  lote.erro = null
+  void processarFila()
+}
 
-async function copiarPrompt() {
+// ----- Chat no navegador: um lote por vez, colando a resposta -----
+const loteAberto = ref<string | null>(null)
+const verPrompt = ref(false)
+const respostas = ref<Record<string, string>>({})
+
+async function baixarLote(lote: Lote) {
   try {
-    await copiarTexto(promptChat)
-    toast.success('Prompt copiado. Cole no chat junto com o PDF.')
+    baixarArquivo(nomeArquivoLote(arquivo.value!.nome, lote.trecho), await pdfDoLote(lote.trecho), 'application/pdf')
+  } catch (e) {
+    toast.error(`Não foi possível gerar o PDF do lote: ${e instanceof Error ? e.message : String(e)}`)
+  }
+}
+
+async function copiarPrompt(lote: Lote) {
+  try {
+    await copiarTexto(montarPromptChat(trechoDoPrompt(lote.trecho), arquivo.value!.paginas))
+    toast.success('Prompt copiado. Cole no chat junto com o PDF do lote.')
   } catch {
     toast.error('Não foi possível copiar. Use "Ver prompt" e copie manualmente.')
   }
 }
 
-function revisarColado() {
-  const r = lerRespostaIA(respostaColada.value)
+function revisarColado(lote: Lote) {
+  const r = lerRespostaIA(respostas.value[lote.id] ?? '')
   if (!r.ok) {
-    erroColado.value = r.erro
+    falhar(lote, r.erro)
     return
   }
-  erroColado.value = null
-  if (!iniciarRevisao(r.resposta)) {
-    erroColado.value = 'A resposta não tem nenhuma prescrição.'
-    return
-  }
-  respostaColada.value = ''
-}
-
-function cancelar() {
-  controlador?.abort()
+  receber(lote, r.resposta)
+  delete respostas.value[lote.id]
+  verPrompt.value = false
+  loteAberto.value = lotes.value.find((l) => l.estado !== 'concluido')?.id ?? null
 }
 
 // ===== Revisão =====
@@ -188,6 +314,18 @@ const opcoesCategoria = computed(() => [
   { valor: null as string | null, rotulo: ROTULO_SEM_CATEGORIA },
   ...categorias.dePrescricoes.map((c) => ({ valor: c.id as string | null, rotulo: c.nome })),
 ])
+
+const origemDe = (r: RascunhoImportado) => (r.lote ? `${r.lote.rotulo}, ${descreverTrecho(r.lote.trecho)}` : 'importada')
+
+/** Mesmo título entre as importadas ou com uma já salva: só marca, o usuário decide. */
+const duplicatas = computed(() =>
+  encontrarDuplicatas(
+    rascunhos.value.map((r) => ({ chave: r.chave, titulo: r.dados.titulo, origem: origemDe(r) })),
+    prescricoes.ativas.map((p) => p.titulo),
+  ),
+)
+
+const lotesComDuvidas = computed(() => lotes.value.filter((l) => l.duvidas.length))
 
 function remover(chaveRascunho: string) {
   rascunhos.value = rascunhos.value.filter((r) => r.chave !== chaveRascunho)
@@ -217,31 +355,143 @@ function descartar(r: RascunhoImportado) {
 }
 
 function recomecar() {
+  pausado.value = true
+  controlador?.abort()
+  modo.value = null
+  lotes.value = []
   rascunhos.value = []
-  duvidasGerais.value = []
+  respostas.value = {}
   aprovadas.value = 0
   arquivo.value = null
 }
 
-// Sair da tela com prescrições ainda não aprovadas as descarta.
-const pendentes = computed(() => rascunhos.value.length > 0)
+// Sair (ou encerrar) com prescrições não aprovadas ou lotes faltando descarta o que não foi salvo.
+const pendentes = computed(() => rascunhos.value.length > 0 || (modo.value !== null && !lotesTerminados.value))
 const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
+const confirmarEncerrar = ref(false)
+
+function encerrar() {
+  if (pendentes.value) confirmarEncerrar.value = true
+  else recomecar()
+}
+
+onBeforeUnmount(() => {
+  pausado.value = true
+  controlador?.abort()
+})
 </script>
 
 <template>
   <section class="flex flex-col gap-4 pb-6">
     <h1 class="flex items-center gap-2 text-2xl font-semibold"><Sparkles class="size-6" /> Importar PDF</h1>
 
-    <!-- ===== Revisão ===== -->
-    <template v-if="rascunhos.length || aprovadas">
-      <div v-if="duvidasGerais.length" class="border-atencao bg-atencao/12 rounded-xl border p-3">
+    <!-- ===== Importação em andamento: lotes + revisão ===== -->
+    <template v-if="modo && arquivo">
+      <Card>
+        <CardHeader>
+          <CardTitle class="break-all">{{ arquivo.nome }}</CardTitle>
+          <CardDescription>
+            {{ modo === 'api' ? `${provedor.nome} · modelo ${modelo}` : 'Chat no navegador' }} ·
+            {{ concluidos }} de {{ lotes.length }} {{ lotes.length === 1 ? 'lote concluído' : 'lotes concluídos' }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-2">
+          <p v-if="modo === 'chat'" class="text-muted-foreground text-sm">
+            Para cada lote: baixe o PDF do lote, anexe no chat (<strong>sem dados de pacientes</strong>) com o prompt e cole a
+            resposta aqui.
+          </p>
+
+          <ul class="flex flex-col divide-y rounded-lg border">
+            <li v-for="l in lotes" :key="l.id" class="flex flex-col gap-2 p-2.5">
+              <div class="flex min-h-11 flex-wrap items-center gap-2">
+                <Loader2 v-if="l.estado === 'enviando'" class="text-primary size-5 shrink-0 animate-spin" />
+                <CircleCheck v-else-if="l.estado === 'concluido'" class="text-primary size-5 shrink-0" />
+                <CircleAlert v-else-if="l.estado === 'erro'" class="text-critico size-5 shrink-0" />
+                <Circle v-else class="text-muted-foreground size-5 shrink-0" />
+                <button
+                  v-if="modo === 'chat' && l.estado !== 'concluido'"
+                  type="button"
+                  class="min-h-11 flex-1 text-left text-sm font-medium"
+                  :aria-expanded="loteAberto === l.id"
+                  @click="loteAberto = loteAberto === l.id ? null : l.id"
+                >
+                  {{ l.rotulo }} · {{ descreverTrecho(l.trecho) }}
+                </button>
+                <span v-else class="flex-1 text-sm font-medium">{{ l.rotulo }} · {{ descreverTrecho(l.trecho) }}</span>
+                <span v-if="l.estado === 'concluido'" class="text-muted-foreground text-sm">
+                  {{ l.prescricoes === 0 ? 'nenhuma prescrição' : l.prescricoes === 1 ? '1 prescrição' : `${l.prescricoes} prescrições` }}
+                </span>
+                <span v-else-if="l.estado === 'enviando'" class="text-muted-foreground text-sm">enviando…</span>
+                <Button v-if="modo === 'api' && l.estado === 'erro'" size="touch" variant="outline" :disabled="!chave" @click="tentarDeNovo(l)">
+                  Tentar de novo
+                </Button>
+              </div>
+              <p v-if="l.erro" role="alert" class="text-critico text-sm">{{ l.erro }}</p>
+
+              <!-- Chat: ações do lote aberto -->
+              <div v-if="modo === 'chat' && loteAberto === l.id && l.estado !== 'concluido'" class="flex flex-col gap-3 pb-1">
+                <div class="flex flex-wrap gap-2">
+                  <Button size="touch" variant="outline" @click="baixarLote(l)"><Download /> Baixar PDF do lote</Button>
+                  <Button size="touch" @click="copiarPrompt(l)"><ClipboardCopy /> Copiar prompt</Button>
+                  <Button size="touch" variant="outline" @click="verPrompt = !verPrompt">
+                    {{ verPrompt ? 'Ocultar prompt' : 'Ver prompt' }}
+                  </Button>
+                </div>
+                <pre
+                  v-if="verPrompt"
+                  class="bg-muted max-h-80 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                >{{ montarPromptChat(trechoDoPrompt(l.trecho), arquivo.paginas) }}</pre>
+                <div class="flex flex-col gap-1.5">
+                  <Label :for="`resposta-${l.id}`">Resposta do chat para o {{ l.rotulo.toLowerCase() }}</Label>
+                  <Textarea
+                    :id="`resposta-${l.id}`"
+                    v-model="respostas[l.id]"
+                    class="min-h-32 font-mono text-xs"
+                    placeholder="Cole aqui o JSON devolvido pelo chat"
+                    spellcheck="false"
+                  />
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <Button size="touch" :disabled="!respostas[l.id]?.trim()" @click="revisarColado(l)"><Check /> Revisar prescrições</Button>
+                  <Button
+                    v-if="l.trecho.ate > l.trecho.de"
+                    size="touch"
+                    variant="outline"
+                    @click="dividir(l, 'Dividido a pedido (resposta grande demais para o chat).')"
+                  >
+                    <Scissors /> Dividir em 2
+                  </Button>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <template v-if="modo === 'api'">
+            <div v-if="enviando" class="flex flex-wrap items-center gap-2">
+              <Button size="touch" variant="outline" @click="cancelar">Cancelar envio</Button>
+              <p class="text-muted-foreground text-xs">Cada lote pode levar alguns minutos. Já dá para revisar o que chegou.</p>
+            </div>
+            <div v-else-if="temPendentesApi" class="flex flex-wrap items-center gap-2">
+              <Button size="touch" :disabled="!chave" @click="processarFila"><Sparkles /> Continuar envio</Button>
+              <p class="text-muted-foreground text-sm">Envio pausado.</p>
+            </div>
+          </template>
+
+          <Button size="touch" variant="ghost" class="self-start" @click="encerrar"><X /> Encerrar importação</Button>
+        </CardContent>
+      </Card>
+
+      <div v-if="lotesComDuvidas.length" class="border-atencao bg-atencao/12 rounded-xl border p-3">
         <p class="flex items-center gap-2 font-semibold"><TriangleAlert class="text-atencao size-4" /> Dúvidas da IA sobre o documento</p>
-        <ul class="mt-1 list-disc pl-5 text-sm">
-          <li v-for="(d, i) in duvidasGerais" :key="i">{{ d }}</li>
-        </ul>
+        <div v-for="l in lotesComDuvidas" :key="l.id" class="mt-2 text-sm">
+          <p class="font-medium">{{ l.rotulo }} · {{ descreverTrecho(l.trecho) }}</p>
+          <ul class="list-disc pl-5">
+            <li v-for="(d, i) in l.duvidas" :key="i">{{ d }}</li>
+          </ul>
+        </div>
       </div>
 
-      <p class="text-muted-foreground text-sm">
+      <p v-if="rascunhos.length || aprovadas" class="text-muted-foreground text-sm">
         {{ rascunhos.length }} {{ rascunhos.length === 1 ? 'prescrição para revisar' : 'prescrições para revisar' }}
         <template v-if="aprovadas"> · {{ aprovadas }} {{ aprovadas === 1 ? 'aprovada' : 'aprovadas' }}</template>.
         Nada é salvo sem sua aprovação.
@@ -250,9 +500,20 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
       <Card v-for="r in rascunhos" :key="r.chave">
         <CardHeader>
           <CardTitle>{{ r.dados.titulo || 'Sem título' }}</CardTitle>
-          <CardDescription v-if="r.categoriaSugerida">Categoria no documento: “{{ r.categoriaSugerida }}”</CardDescription>
+          <CardDescription>
+            <template v-if="r.lote">{{ r.lote.rotulo }} · {{ descreverTrecho(r.lote.trecho) }}</template>
+            <template v-if="r.lote && r.categoriaSugerida"> · </template>
+            <template v-if="r.categoriaSugerida">Categoria no documento: “{{ r.categoriaSugerida }}”</template>
+          </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-3">
+          <div v-if="duplicatas[r.chave]" class="border-atencao bg-atencao/12 rounded-lg border p-2.5 text-sm">
+            <p class="flex items-center gap-1.5 font-semibold"><TriangleAlert class="text-atencao size-4" /> Possível duplicata de:</p>
+            <ul class="list-disc pl-5">
+              <li v-for="d in duplicatas[r.chave]" :key="d">{{ d }}</li>
+            </ul>
+          </div>
+
           <div v-if="r.dados.duvidasImportacao.length" class="border-atencao bg-atencao/12 rounded-lg border p-2.5 text-sm">
             <p class="font-semibold">Dúvidas da IA</p>
             <ul class="list-disc pl-5">
@@ -307,28 +568,26 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
         </CardContent>
       </Card>
 
-      <div v-if="!rascunhos.length" class="flex flex-col items-start gap-3 rounded-xl border border-dashed p-4">
-        <p>Revisão concluída. As aprovadas estão na lista como “importada — não revisada”.</p>
-        <div class="flex gap-2">
-          <Button size="touch" as-child><RouterLink to="/prescricoes">Ver prescrições</RouterLink></Button>
+      <div v-if="!rascunhos.length && lotesTerminados" class="flex flex-col items-start gap-3 rounded-xl border border-dashed p-4">
+        <p v-if="aprovadas">Revisão concluída. As aprovadas estão na lista como “importada — não revisada”.</p>
+        <p v-else>Importação concluída sem nenhuma prescrição aprovada.</p>
+        <div class="flex flex-wrap gap-2">
+          <Button v-if="aprovadas" size="touch" as-child><RouterLink to="/prescricoes">Ver prescrições</RouterLink></Button>
           <Button size="touch" variant="outline" @click="recomecar">Importar outro PDF</Button>
         </div>
       </div>
     </template>
 
-    <!-- ===== Escolha e envio ===== -->
+    <!-- ===== Escolha do PDF e do modo ===== -->
     <template v-else>
       <Card>
         <CardHeader>
           <CardTitle>Escolher PDF</CardTitle>
-          <CardDescription>
-            Provedor: {{ provedor.nome }} · modelo {{ modelo }} ({{ provedor.limites.descricao }}).
-            <RouterLink to="/ajustes" class="text-primary underline-offset-2 hover:underline">Alterar em Ajustes</RouterLink>
-          </CardDescription>
+          <CardDescription>PDFs grandes são enviados em lotes de {{ PAGINAS_POR_LOTE }} páginas, um de cada vez.</CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
           <input ref="entrada" type="file" accept="application/pdf,.pdf" class="hidden" @change="aoEscolher" />
-          <Button size="touch" variant="outline" class="self-start" :disabled="enviando" @click="entrada?.click()">
+          <Button size="touch" variant="outline" class="self-start" @click="entrada?.click()">
             <FileUp /> {{ arquivo ? 'Trocar PDF' : 'Escolher PDF' }}
           </Button>
           <p v-if="erroArquivo" role="alert" class="text-destructive text-sm">{{ erroArquivo }}</p>
@@ -339,43 +598,48 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
 
           <template v-if="arquivo">
             <label class="flex items-center gap-2 text-sm">
-              <input v-model="usarIntervalo" type="checkbox" class="accent-primary size-5" :disabled="enviando" />
-              Enviar só um intervalo de páginas
+              <input v-model="usarIntervalo" type="checkbox" class="accent-primary size-5" />
+              Importar só um intervalo de páginas
             </label>
             <div v-if="usarIntervalo" class="flex items-center gap-2">
               <CampoNumero v-model="paginaDe" class="w-24" aria-label="Da página" />
               <span class="text-muted-foreground text-sm">até</span>
               <CampoNumero v-model="paginaAte" class="w-24" aria-label="Até a página" />
             </div>
-
-            <label class="border-atencao bg-atencao/12 flex items-start gap-3 rounded-xl border p-3 text-sm">
-              <input v-model="confirmado" type="checkbox" class="accent-primary mt-0.5 size-5 shrink-0" :disabled="enviando" />
-              <span>
-                <ShieldAlert class="text-atencao mr-1 inline size-4" />
-                Confirmo que este PDF <strong>não contém dados de pacientes</strong> e autorizo enviá-lo ao
-                <strong>{{ provedor.nome }}</strong>.
-              </span>
-            </label>
+            <p v-if="erroIntervalo" role="alert" class="text-destructive text-sm">{{ erroIntervalo }}</p>
+            <p v-else class="text-muted-foreground text-sm">{{ resumoLotes }}</p>
           </template>
+        </CardContent>
+      </Card>
 
-          <p v-if="bloqueio && arquivo" class="text-muted-foreground text-sm">{{ bloqueio }}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2"><Sparkles class="size-5" /> Enviar pela API</CardTitle>
+          <CardDescription>
+            Provedor: {{ provedor.nome }} · modelo {{ modelo }}.
+            <RouterLink to="/ajustes" class="text-primary underline-offset-2 hover:underline">Alterar em Ajustes</RouterLink>
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+          <label v-if="arquivo && trechosPlanejados.length" class="border-atencao bg-atencao/12 flex items-start gap-3 rounded-xl border p-3 text-sm">
+            <input v-model="confirmado" type="checkbox" class="accent-primary mt-0.5 size-5 shrink-0" />
+            <span>
+              <ShieldAlert class="text-atencao mr-1 inline size-4" />
+              Confirmo que este PDF <strong>não contém dados de pacientes</strong> e autorizo enviar
+              {{ trechosPlanejados.length === 1 ? 'o lote' : `os ${trechosPlanejados.length} lotes` }} ao
+              <strong>{{ provedor.nome }}</strong>.
+            </span>
+          </label>
+
+          <p v-if="bloqueioApi && arquivo && !erroIntervalo" class="text-muted-foreground text-sm">{{ bloqueioApi }}</p>
           <p v-if="!arquivo && !chave" class="text-muted-foreground text-sm">
             Cadastre a chave de API em <RouterLink to="/ajustes" class="text-primary underline">Ajustes</RouterLink>.
           </p>
 
-          <div v-if="erroEnvio" role="alert" class="border-critico bg-critico/12 flex flex-col gap-2 rounded-lg border p-3 text-sm">
-            <p>{{ erroEnvio }}</p>
-            <p class="text-muted-foreground text-xs">Marque a confirmação de novo para tentar outra vez.</p>
-          </div>
-
-          <div class="flex gap-2">
-            <Button size="touch" :disabled="!!bloqueio || enviando" @click="enviar">
-              <Loader2 v-if="enviando" class="animate-spin" /><Sparkles v-else />
-              {{ enviando ? 'Enviando…' : erroEnvio ? 'Tentar de novo' : 'Enviar para a IA' }}
-            </Button>
-            <Button v-if="enviando" size="touch" variant="outline" @click="cancelar">Cancelar</Button>
-          </div>
-          <p v-if="enviando" class="text-muted-foreground text-xs">Pode levar alguns minutos em PDFs grandes.</p>
+          <Button size="touch" class="self-start" :disabled="!!bloqueioApi" @click="iniciar('api')">
+            <Sparkles />
+            {{ trechosPlanejados.length > 1 ? `Enviar ${trechosPlanejados.length} lotes para a IA` : 'Enviar para a IA' }}
+          </Button>
         </CardContent>
       </Card>
 
@@ -387,34 +651,13 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
           <ol class="list-decimal pl-5 text-sm">
-            <li>Copie o prompt abaixo.</li>
-            <li>No chat, anexe o PDF (<strong>sem dados de pacientes</strong>) e cole o prompt.</li>
-            <li>Copie a resposta do chat (o JSON) e cole no campo abaixo.</li>
+            <li>Escolha o PDF acima. O app divide em lotes.</li>
+            <li>Para cada lote, baixe o PDF do lote e copie o prompt.</li>
+            <li>No chat, anexe o PDF do lote (<strong>sem dados de pacientes</strong>) e cole o prompt.</li>
+            <li>Copie a resposta do chat (o JSON) e cole no campo do lote.</li>
           </ol>
-          <div class="flex flex-wrap gap-2">
-            <Button size="touch" @click="copiarPrompt"><ClipboardCopy /> Copiar prompt</Button>
-            <Button size="touch" variant="outline" @click="verPrompt = !verPrompt">
-              {{ verPrompt ? 'Ocultar prompt' : 'Ver prompt' }}
-            </Button>
-          </div>
-          <pre
-            v-if="verPrompt"
-            class="bg-muted max-h-80 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
-          >{{ promptChat }}</pre>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="resposta-chat">Resposta do chat</Label>
-            <Textarea
-              id="resposta-chat"
-              v-model="respostaColada"
-              class="min-h-32 font-mono text-xs"
-              placeholder="Cole aqui o JSON devolvido pelo chat"
-              spellcheck="false"
-            />
-          </div>
-          <p v-if="erroColado" role="alert" class="border-critico bg-critico/12 rounded-lg border p-3 text-sm">{{ erroColado }}</p>
-          <Button size="touch" class="self-start" :disabled="!respostaColada.trim()" @click="revisarColado">
-            <Check /> Revisar prescrições
+          <Button size="touch" class="self-start" :disabled="!trechosPlanejados.length" @click="iniciar('chat')">
+            <MessagesSquare /> {{ trechosPlanejados.length > 1 ? `Importar pelo chat (${trechosPlanejados.length} lotes)` : 'Importar pelo chat' }}
           </Button>
         </CardContent>
       </Card>
@@ -422,12 +665,20 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(pendentes)
 
     <DialogoConfirmar
       v-model:aberto="confirmarSaida"
-      titulo="Sair da revisão?"
-      descricao="As prescrições ainda não aprovadas serão descartadas."
+      titulo="Sair da importação?"
+      descricao="As prescrições ainda não aprovadas serão descartadas e os lotes que faltam não serão importados."
       rotulo-confirmar="Sair e descartar"
       perigoso
       @confirmar="responderSaida(true)"
       @cancelar="responderSaida(false)"
+    />
+    <DialogoConfirmar
+      v-model:aberto="confirmarEncerrar"
+      titulo="Encerrar a importação?"
+      descricao="As prescrições ainda não aprovadas serão descartadas e os lotes que faltam não serão importados. As já aprovadas continuam salvas."
+      rotulo-confirmar="Encerrar e descartar"
+      perigoso
+      @confirmar="recomecar"
     />
   </section>
 </template>

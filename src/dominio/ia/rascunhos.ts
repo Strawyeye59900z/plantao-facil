@@ -1,6 +1,7 @@
 import type { Categoria, UUID } from '@/dominio/tipos'
 import { normalizarTags, type DadosPrescricao } from '@/dominio/prescricoes/editar'
 import { normalizarTexto } from '@/dominio/texto/normalizar'
+import type { Trecho } from './lotes'
 import type { RespostaIA } from './resposta'
 
 export interface RascunhoImportado {
@@ -9,6 +10,8 @@ export interface RascunhoImportado {
   dados: DadosPrescricao
   /** Categoria escrita pela IA (mostrada na revisão). */
   categoriaSugerida: string
+  /** Lote de onde veio (null = PDF enviado inteiro). */
+  lote: { rotulo: string; trecho: Trecho } | null
 }
 
 /**
@@ -22,6 +25,7 @@ export function criarRascunhos(
   resposta: RespostaIA,
   categorias: Categoria[],
   gerarId: () => UUID = () => crypto.randomUUID(),
+  lote: RascunhoImportado['lote'] = null,
 ): RascunhoImportado[] {
   const ativas = categorias.filter((c) => c.escopo === 'prescricao' && c.excluidoEm === null)
 
@@ -51,6 +55,7 @@ export function criarRascunhos(
     return {
       chave: gerarId(),
       categoriaSugerida: sugerida,
+      lote,
       dados: {
         titulo: p.titulo,
         categoriaId: categoria?.id ?? null,

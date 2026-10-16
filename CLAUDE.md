@@ -151,9 +151,15 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **IA não cria regra de dose**: doses só como texto no item; o usuário cadastra a regra na revisão.
 - Categoria sugerida: se bater (sem maiúsculas/acentos) com categoria existente, já seleciona; senão **"Sem categoria"** (aprovação aceita sem categoria).
 - **Dúvidas gerais do documento só na tela de revisão**; dúvidas de cada prescrição ficam salvas em `duvidasImportacao`.
-- Intervalo de páginas recortado no aparelho com `pdf-lib`; limites conferidos antes do envio. **Caixa de confirmação a cada envio** ("não contém dados de pacientes").
+- Intervalo de páginas recortado no aparelho com `pdf-lib`; limites conferidos antes do envio. **Caixa de confirmação a cada importação** ("não contém dados de pacientes"; vale para todos os lotes dela).
 - Revisão: cada prescrição com Editar (mesmo `FormularioPrescricao` do editor), Descartar, Aprovar. Aprovada = salva como "importada — não revisada". Sair com pendentes pede confirmação.
 - **Chat no navegador (sem chave)**: na tela Importar PDF, "Copiar prompt"/"Ver prompt" (`montarPromptChat`: mesmas regras + formato JSON descrito por extenso) e campo para colar a resposta do chat → mesma validação e revisão. A leitura aceita texto antes/depois do JSON e cercas ```json.
+- **Importação em lotes** (`src/dominio/ia/lotes.ts`): sempre em lotes **fixos de 10 páginas novas**, cada lote repetindo a **última página do anterior** (1–10, 10–20, 20–30…), dentro do intervalo escolhido. Motivo: PDFs de ~100 páginas estouravam o limite de saída (32 mil tokens) e cortes manuais vinham incompletos.
+  - Prompt de cada lote informa "páginas X a Y do documento original, que tem Z páginas" e que o trecho pode cortar uma prescrição (registrar nas dúvidas). Regra extra no prompt: extrair **todas** as prescrições/itens, sem resumir nem pular.
+  - API: **uma confirmação para o envio inteiro**; lotes enviados **um por vez**; lote com erro fica com "Tentar de novo" e os outros seguem; Cancelar pausa ("Continuar envio"). Resposta **cortada** (`cortada: true` em `lerResposta`) ou lote acima do limite de bytes → **divide automaticamente em 2** (repetindo a página do meio; "Lote 3.1", "3.2").
+  - Chat (sem chave): mesmos lotes; para cada um, **baixar o PDF do lote**, copiar o prompt do lote e colar a resposta; botão "Dividir em 2" manual.
+  - **Revisão liberada enquanto os lotes chegam**; cada prescrição mostra o lote/páginas; dúvidas gerais agrupadas por lote.
+  - **Possível duplicata** (`src/dominio/ia/duplicatas.ts`): mesmo título (sem maiúsculas/acentos) entre as importadas **ou com uma já salva** na biblioteca → só marca; o usuário decide.
 - Mensagens de validação (backup e IA) em português via `descreverProblemas`.
 - Testado com rede simulada (sem chamadas reais). **Teste com chave real fica com o usuário.**
 

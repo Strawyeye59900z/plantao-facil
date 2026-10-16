@@ -1,6 +1,6 @@
-/** Baixa um arquivo de texto (no Android vai para Downloads). */
-export function baixarArquivo(nome: string, conteudo: string, tipo = 'application/json') {
-  const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }))
+/** Baixa um arquivo (texto ou bytes; no Android vai para Downloads). */
+export function baixarArquivo(nome: string, conteudo: string | Uint8Array, tipo = 'application/json') {
+  const url = URL.createObjectURL(new Blob([conteudo as BlobPart], { type: tipo }))
   const link = document.createElement('a')
   link.href = url
   link.download = nome

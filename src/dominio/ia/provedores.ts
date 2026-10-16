@@ -16,8 +16,8 @@ export interface ProvedorIA {
   /** Tamanho máximo do PDF (bytes, já descontado o aumento do base64) e de páginas (null = não informado). */
   limites: { bytesPdf: number; paginas: number | null; descricao: string }
   montarRequisicao(p: { pdfBase64: string; pedido: string; modelo: string; chave: string }): { url: string; init: RequestInit }
-  /** Extrai o texto gerado; erro legível se a API recusou/cortou a resposta. */
-  lerResposta(json: unknown): { ok: true; texto: string } | { ok: false; erro: string }
+  /** Extrai o texto gerado; erro legível se a API recusou/cortou a resposta (`cortada`: passou do limite de saída). */
+  lerResposta(json: unknown): { ok: true; texto: string } | { ok: false; erro: string; cortada?: true }
 }
 
 const MB = 1024 * 1024
@@ -71,7 +71,7 @@ export const gemini: ProvedorIA = {
     if (bloqueio) return { ok: false, erro: `O Gemini bloqueou o pedido (${String(bloqueio)}).` }
     const candidato = obj(lista(obj(json).candidates)[0])
     const fim = candidato.finishReason
-    if (fim === 'MAX_TOKENS') return { ok: false, erro: 'A resposta do Gemini foi cortada (muito longa). Tente um intervalo menor de páginas.' }
+    if (fim === 'MAX_TOKENS') return { ok: false, erro: 'A resposta do Gemini foi cortada (muito longa).', cortada: true }
     const texto = lista(obj(candidato.content).parts)
       .map((p) => obj(p).text)
       .filter((t): t is string => typeof t === 'string')
@@ -127,7 +127,7 @@ export const anthropic: ProvedorIA = {
   lerResposta(json) {
     const r = obj(json)
     if (r.stop_reason === 'refusal') return { ok: false, erro: 'O Claude recusou o pedido.' }
-    if (r.stop_reason === 'max_tokens') return { ok: false, erro: 'A resposta do Claude foi cortada (muito longa). Tente um intervalo menor de páginas.' }
+    if (r.stop_reason === 'max_tokens') return { ok: false, erro: 'A resposta do Claude foi cortada (muito longa).', cortada: true }
     const texto = lista(r.content)
       .filter((b) => obj(b).type === 'text')
       .map((b) => String(obj(b).text ?? ''))
@@ -177,12 +177,8 @@ export const openai: ProvedorIA = {
     const r = obj(json)
     if (r.status === 'incomplete') {
       const motivo = obj(r.incomplete_details).reason
-      return {
-        ok: false,
-        erro: motivo === 'max_output_tokens'
-          ? 'A resposta do ChatGPT foi cortada (muito longa). Tente um intervalo menor de páginas.'
-          : `A resposta do ChatGPT ficou incompleta${motivo ? ` (${String(motivo)})` : ''}.`,
-      }
+      if (motivo === 'max_output_tokens') return { ok: false, erro: 'A resposta do ChatGPT foi cortada (muito longa).', cortada: true }
+      return { ok: false, erro: `A resposta do ChatGPT ficou incompleta${motivo ? ` (${String(motivo)})` : ''}.` }
     }
     const partes = lista(r.output)
       .filter((i) => obj(i).type === 'message')

@@ -1,3 +1,5 @@
+import type { Trecho } from './lotes'
+
 /**
  * Instruções enviadas à IA. Regra central do projeto: extrair apenas o que está no PDF,
  * nunca completar ou corrigir doses, e listar em "duvidas" tudo que for ambíguo.
@@ -9,8 +11,9 @@ Regras obrigatórias:
 2. NUNCA complete, corrija, arredonde, converta ou calcule doses, vias, frequências ou durações. Copie exatamente como estão no documento, dentro do texto do item.
 3. Não invente alertas, alternativas, observações, referências, tags ou categorias. Use listas vazias ou texto vazio quando o PDF não trouxer a informação.
 4. Mantenha a ordem dos itens como aparecem no documento.
-5. Tudo que estiver ambíguo, ilegível, incompleto, contraditório ou que você não tiver certeza de como interpretar deve ser descrito em "duvidas": na prescrição correspondente, ou nas dúvidas gerais se for sobre o documento inteiro.
-6. Responda apenas com o JSON no formato pedido, em português do Brasil.
+5. Extraia TODAS as prescrições e TODOS os itens do documento, do início ao fim, sem resumir, agrupar ou pular nenhum.
+6. Tudo que estiver ambíguo, ilegível, incompleto, contraditório ou que você não tiver certeza de como interpretar deve ser descrito em "duvidas": na prescrição correspondente, ou nas dúvidas gerais se for sobre o documento inteiro.
+7. Responda apenas com o JSON no formato pedido, em português do Brasil.
 
 Formato:
 - Cada prescrição corresponde a uma doença ou situação clínica do documento.
@@ -26,7 +29,10 @@ Formato:
  * Como o chat não tem saída estruturada, o formato vai descrito por extenso; a resposta colada
  * de volta no app passa pela mesma validação.
  */
-export function montarPromptChat(): string {
+export function montarPromptChat(trecho: Trecho | null = null, totalPaginas?: number): string {
+  const pedido = trecho
+    ? `O PDF anexado contém só as ${descreverOrigem(trecho, totalPaginas)}. ${AVISO_TRECHO} Extraia as prescrições do PDF anexado seguindo as regras.`
+    : 'Extraia as prescrições do PDF anexado seguindo as regras.'
   return `${INSTRUCOES_SISTEMA}
 
 Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), exatamente nesta estrutura. Os valores abaixo só mostram o tipo de cada campo:
@@ -57,10 +63,18 @@ Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), ex
 
 Todos os campos são obrigatórios (use "" ou [] quando não houver). "item" é número inteiro. "opcoesEquivalentes" é true ou false.
 
-Extraia as prescrições do PDF anexado seguindo as regras.`
+${pedido}`
 }
 
-export function montarPedido(intervalo: { de: number; ate: number } | null): string {
-  const paginas = intervalo ? ` (páginas ${intervalo.de} a ${intervalo.ate} do documento original)` : ''
-  return `Extraia as prescrições deste PDF${paginas} seguindo as regras.`
+/** Usado quando o PDF enviado é só um trecho (lote ou intervalo) do documento original. */
+const AVISO_TRECHO =
+  'Este trecho pode começar ou terminar no meio de uma prescrição: extraia o que aparece nele e registre nas dúvidas dessa prescrição que ela pode continuar em outra página.'
+
+const descreverOrigem = ({ de, ate }: Trecho, totalPaginas?: number) =>
+  `páginas ${de} a ${ate} do documento original${totalPaginas ? `, que tem ${totalPaginas} páginas` : ''}`
+
+/** Pedido que acompanha o PDF na API. `trecho` = null quando o PDF é o documento inteiro. */
+export function montarPedido(trecho: Trecho | null, totalPaginas?: number): string {
+  if (!trecho) return 'Extraia as prescrições deste PDF seguindo as regras.'
+  return `Extraia as prescrições deste PDF (${descreverOrigem(trecho, totalPaginas)}) seguindo as regras. ${AVISO_TRECHO}`
 }

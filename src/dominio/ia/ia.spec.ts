@@ -108,20 +108,20 @@ describe('provedores: leitura da resposta', () => {
   it('Gemini', () => {
     expect(gemini.lerResposta({ candidates: [{ content: { parts: [{ text: '{"a":' }, { text: '1}' }] }, finishReason: 'STOP' }] })).toEqual({ ok: true, texto: '{"a":1}' })
     expect(gemini.lerResposta({ promptFeedback: { blockReason: 'SAFETY' } }).ok).toBe(false)
-    expect(gemini.lerResposta({ candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }] })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/) })
+    expect(gemini.lerResposta({ candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }] })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/), cortada: true })
   })
 
   it('Claude', () => {
     expect(anthropic.lerResposta({ content: [{ type: 'text', text: '{}' }], stop_reason: 'end_turn' })).toEqual({ ok: true, texto: '{}' })
     expect(anthropic.lerResposta({ content: [], stop_reason: 'refusal' })).toMatchObject({ ok: false })
-    expect(anthropic.lerResposta({ content: [{ type: 'text', text: '{' }], stop_reason: 'max_tokens' })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/) })
+    expect(anthropic.lerResposta({ content: [{ type: 'text', text: '{' }], stop_reason: 'max_tokens' })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/), cortada: true })
   })
 
   it('ChatGPT', () => {
     const msg = (content: unknown[]) => ({ status: 'completed', output: [{ type: 'reasoning' }, { type: 'message', content }] })
     expect(openai.lerResposta(msg([{ type: 'output_text', text: '{}' }]))).toEqual({ ok: true, texto: '{}' })
     expect(openai.lerResposta(msg([{ type: 'refusal', refusal: 'não' }]))).toMatchObject({ ok: false })
-    expect(openai.lerResposta({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/) })
+    expect(openai.lerResposta({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } })).toMatchObject({ ok: false, erro: expect.stringMatching(/cortada/), cortada: true })
   })
 
   it('mensagens de erro HTTP legíveis', () => {
@@ -212,7 +212,7 @@ describe('rascunhos a partir da resposta', () => {
 
 describe('envio (rede simulada)', () => {
   const pdf = new Uint8Array([1, 2, 3])
-  const base = { pdf, intervalo: null, modelo: 'modelo-teste', chave: 'chave-teste', sinal: new AbortController().signal }
+  const base = { pdf, trecho: null, modelo: 'modelo-teste', chave: 'chave-teste', sinal: new AbortController().signal }
 
   it('sucesso devolve a resposta validada', async () => {
     const falso = vi.fn(async () => new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(respostaValida) }] }), { status: 200 }))

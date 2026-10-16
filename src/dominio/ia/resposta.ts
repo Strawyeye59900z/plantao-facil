@@ -99,7 +99,7 @@ export function paraEsquemaGemini(esquema: unknown): unknown {
   return saida
 }
 
-export type LeituraRespostaIA = { ok: true; resposta: RespostaIA } | { ok: false; erro: string }
+export type LeituraRespostaIA = { ok: true; resposta: RespostaIA } | { ok: false; erro: string; cortada?: true }
 
 /** Lê o texto devolvido pela IA (aceita JSON cercado por ```json … ```) e valida o formato. */
 export function lerRespostaIA(textoBruto: string): LeituraRespostaIA {

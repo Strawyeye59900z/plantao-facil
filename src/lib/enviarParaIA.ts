@@ -1,3 +1,4 @@
+import type { Trecho } from '@/dominio/ia/lotes'
 import { montarPedido } from '@/dominio/ia/prompt'
 import { mensagemErroHttp, type ProvedorIA } from '@/dominio/ia/provedores'
 import { lerRespostaIA, type LeituraRespostaIA } from '@/dominio/ia/resposta'
@@ -5,16 +6,17 @@ import { paraBase64 } from './pdf'
 
 /**
  * Envia o PDF (já recortado, se for o caso) ao provedor e devolve a resposta validada.
+ * `trecho` = páginas do documento original que o PDF contém (null = documento inteiro).
  * A chave vai só no cabeçalho da requisição ao provedor escolhido.
  */
 export async function enviarParaIA(
   provedor: ProvedorIA,
-  p: { pdf: Uint8Array; intervalo: { de: number; ate: number } | null; modelo: string; chave: string; sinal: AbortSignal },
+  p: { pdf: Uint8Array; trecho: Trecho | null; totalPaginas?: number; modelo: string; chave: string; sinal: AbortSignal },
   requisitar: typeof fetch = fetch,
 ): Promise<LeituraRespostaIA> {
   const { url, init } = provedor.montarRequisicao({
     pdfBase64: paraBase64(p.pdf),
-    pedido: montarPedido(p.intervalo),
+    pedido: montarPedido(p.trecho, p.totalPaginas),
     modelo: p.modelo,
     chave: p.chave,
   })
