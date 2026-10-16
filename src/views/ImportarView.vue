@@ -556,6 +556,14 @@ onBeforeUnmount(() => {
             <p v-if="r.dados.alertas.length" class="text-muted-foreground text-sm">
               {{ r.dados.alertas.length }} {{ r.dados.alertas.length === 1 ? 'alerta' : 'alertas' }}
             </p>
+            <div v-if="r.dados.receita" class="flex flex-col gap-1 text-sm">
+              <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Receita pronta</p>
+              <p class="bg-muted/50 rounded-lg border p-2.5 whitespace-pre-line">{{ r.dados.receita }}</p>
+            </div>
+            <div v-if="r.dados.observacoes" class="flex flex-col gap-1 text-sm">
+              <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Observações</p>
+              <p class="whitespace-pre-line">{{ r.dados.observacoes }}</p>
+            </div>
           </template>
 
           <div class="grid grid-cols-3 gap-2">

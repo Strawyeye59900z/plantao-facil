@@ -20,6 +20,7 @@ const ROTULOS: Record<string, string> = {
   tags: 'tags',
   itens: 'itens',
   alertas: 'alertas',
+  receita: 'receita pronta',
   observacoes: 'observações',
   referencia: 'referência',
   favorito: 'favorito',

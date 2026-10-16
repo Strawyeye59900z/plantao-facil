@@ -13,6 +13,7 @@ const lista = [
     categoriaId: 'c-2',
     tags: ['etiqueta-x'],
     observacoes: 'Nota Zeta',
+    receita: 'Receita Sigma',
     itens: [
       {
         id: 'i-2',
@@ -57,8 +58,9 @@ describe('filtrarPrescricoes', () => {
     expect(ids('kappa')).toEqual(['p-2'])
   })
 
-  it('busca nas observações', () => {
+  it('busca nas observações e na receita pronta', () => {
     expect(ids('zeta')).toEqual(['p-2'])
+    expect(ids('sigma')).toEqual(['p-2'])
   })
 
   it('todas as palavras precisam aparecer (em campos diferentes vale)', () => {

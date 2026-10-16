@@ -65,6 +65,18 @@ describe('exportar e ler', () => {
     }
   })
 
+  it('backup antigo sem receita pronta é aceito (receita vazia) e não gera conflito', () => {
+    const antigo = montarBackup(biblioteca({ prescricoes: [prescricaoTeste()] }), T1, '0.1.0')
+    delete (antigo.prescricoes[0] as Partial<typeof antigo.prescricoes[0]>).receita
+    const lido = lerBackup(JSON.stringify(antigo))
+    expect(lido.ok).toBe(true)
+    if (lido.ok) {
+      expect(lido.backup.prescricoes[0]!.receita).toBe('')
+      const plano = planejarMesclagem(biblioteca({ prescricoes: [prescricaoTeste()] }), lido.backup)
+      expect(plano.prescricoes[0]!.situacao).toBe('igual')
+    }
+  })
+
   it('nome do arquivo com data e hora local', () => {
     expect(nomeArquivoBackup(new Date(2026, 9, 4, 7, 5))).toBe('plantao-facil-backup-2026-10-04-0705.json')
   })

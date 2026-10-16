@@ -31,6 +31,8 @@ export const esquemaRespostaIA = v.object({
           item: v.pipe(v.number(), v.integer(), v.minValue(0)),
         }),
       ),
+      // Opcional só na leitura: respostas coladas de prompts antigos não têm o campo.
+      receita: v.optional(v.string(), ''),
       observacoes: v.string(),
       referencia: v.string(),
       duvidas: v.array(v.string()),
@@ -75,6 +77,7 @@ export const JSON_SCHEMA_RESPOSTA = objeto({
           item: { type: 'integer' },
         }),
       },
+      receita: texto,
       observacoes: texto,
       referencia: texto,
       duvidas: listaTexto,

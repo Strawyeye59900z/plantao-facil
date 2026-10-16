@@ -8,8 +8,12 @@ export async function lerBiblioteca(banco: BancoPlantao = db): Promise<Bibliotec
     banco.calculadoras.toArray(),
     banco.categorias.toArray(),
   ])
-  // Categorias criadas antes dos ícones não têm o campo: normaliza para não gerar falso conflito.
-  return { prescricoes, calculadoras, categorias: categorias.map((c) => ({ ...c, icone: c.icone ?? null })) }
+  // Registros criados antes dos ícones/receita não têm o campo: normaliza para não gerar falso conflito.
+  return {
+    prescricoes: prescricoes.map((p) => ({ ...p, receita: p.receita ?? '' })),
+    calculadoras,
+    categorias: categorias.map((c) => ({ ...c, icone: c.icone ?? null })),
+  }
 }
 
 /** Cópia simples: o IndexedDB não aceita os proxies reativos do Vue. */

@@ -12,6 +12,7 @@ export function prescricaoTeste(parcial: Partial<Prescricao> = {}): Prescricao {
     tags: [],
     itens: [{ id: 'i-1', texto: 'Medicamento Teste A', regraDose: null, alternativas: [] }],
     alertas: [],
+    receita: '',
     observacoes: '',
     referencia: '',
     favorito: false,

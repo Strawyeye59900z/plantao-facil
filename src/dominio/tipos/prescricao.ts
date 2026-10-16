@@ -58,6 +58,8 @@ export interface Prescricao extends Entidade {
   /** A ordem do array é a ordem de exibição. */
   itens: ItemPrescricao[]
   alertas: Alerta[]
+  /** Receita pronta (texto simples, quebras de linha preservadas). Ausente em dados antigos = ''. */
+  receita: string
   observacoes: string
   referencia: string
   favorito: boolean

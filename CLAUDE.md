@@ -77,7 +77,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ### Prescrições e dose (Fases 1–2)
 - Lista: Recentes e Favoritos no topo; depois **agrupada por categoria** (ordem cadastrada), títulos em ordem alfabética, **grupos colapsáveis** (estado só em memória; durante a busca todos abrem). Chips filtram por categoria.
-- Busca (tempo real, sem acentos, todas as palavras): título, categoria, tags, texto dos itens, **motivo e texto das alternativas, observações**.
+- Busca (tempo real, sem acentos, todas as palavras): título, categoria, tags, texto dos itens, **motivo e texto das alternativas, receita pronta, observações**.
 - Obrigatórios ao salvar: **título, categoria e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
 - Reordenar itens: botões ↑/↓.
 - Excluir categoria: prescrições ficam **"Sem categoria"** (categoria vai para exclusão lógica; não aparece na Lixeira).
@@ -85,6 +85,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Recentes: conta ao abrir a prescrição. Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
 - Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
 - Observações/referência: texto simples com quebras de linha.
+- **Receita pronta** (`receita`): texto simples com quebras de linha, **sem marcadores/cálculo**. Seção própria na tela da prescrição com botão **"Copiar receita"** (copia o texto como cadastrado, separado do Copiar dos itens; também no pen drive). Entra na busca e no backup; dados/backups antigos sem o campo = `''`.
 - Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo. Remover um item transforma seus alertas em alertas da prescrição inteira.
 - Editor avisa ao sair com alterações não salvas.
 - Dose/kg pode ser **por tomada ou por dia** (`baseDoseKg`).
@@ -149,6 +150,8 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Chave de API no IndexedDB (configuracoes), nunca no backup nem no pen drive, com mostrar/ocultar, link "Obter chave" e apagar.
 - Prompt (`src/dominio/ia/prompt.ts`): só o que está no PDF; nunca completar/corrigir/calcular doses; dúvidas em "duvidas". Resposta validada com valibot (`src/dominio/ia/resposta.ts`); inválida → erro claro + "Tentar de novo".
 - **IA não cria regra de dose**: doses só como texto no item; o usuário cadastra a regra na revisão.
+- **Receita e observações na extração**: a IA preenche `receita` (receita pronta do documento: "Uso oral/tópico", itens numerados, quantidade, "Tomar…"; inteira, com quebras de linha, separada dos itens) e `observacoes` ("Obs:" e "# Cuidados:" juntos, **mantendo os rótulos**, um parágrafo cada). Na leitura, `receita` ausente = `''` (respostas de prompts antigos).
+- **Única correção de formatação permitida à IA**: recolocar **espaços entre palavras grudadas** do PDF, sem alterar letras, números, unidades, abreviações ou pontuação, registrando isso nas dúvidas da prescrição.
 - Categoria sugerida: se bater (sem maiúsculas/acentos) com categoria existente, já seleciona; senão **"Sem categoria"** (aprovação aceita sem categoria).
 - **Dúvidas gerais do documento só na tela de revisão**; dúvidas de cada prescrição ficam salvas em `duvidasImportacao`.
 - Intervalo de páginas recortado no aparelho com `pdf-lib`; limites conferidos antes do envio. **Caixa de confirmação a cada importação** ("não contém dados de pacientes"; vale para todos os lotes dela).

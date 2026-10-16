@@ -9,6 +9,7 @@ export const INSTRUCOES_SISTEMA = `Você extrai prescrições médicas de um doc
 Regras obrigatórias:
 1. Extraia SOMENTE o que está escrito no PDF. Não acrescente, não deduza e não use conhecimento próprio.
 2. NUNCA complete, corrija, arredonde, converta ou calcule doses, vias, frequências ou durações. Copie exatamente como estão no documento, dentro do texto do item.
+   Única exceção de formatação: se o texto do PDF vier com palavras grudadas, recoloque apenas os espaços entre as palavras, sem alterar, acrescentar ou remover nenhuma letra, número, unidade, abreviação ou pontuação, e registre nas dúvidas da prescrição que os espaços foram recolocados.
 3. Não invente alertas, alternativas, observações, referências, tags ou categorias. Use listas vazias ou texto vazio quando o PDF não trouxer a informação.
 4. Mantenha a ordem dos itens como aparecem no documento.
 5. Extraia TODAS as prescrições e TODOS os itens do documento, do início ao fim, sem resumir, agrupar ou pular nenhum.
@@ -22,7 +23,9 @@ Formato:
 - "itens": cada linha de prescrição em "texto" (doses só como texto). "alternativas": apenas as que o documento apresenta explicitamente como substituição de um item, com o "motivo" escrito no documento; nesse caso "opcoesEquivalentes": false.
 - Opções intercambiáveis para o mesmo passo (por exemplo, várias linhas com o mesmo número ligadas por "OU", ou "opção 1 / opção 2"), em que só uma deve ser usada: crie UM único item, com a primeira opção em "texto", as demais em "alternativas" ("motivo" vazio, ou o rótulo que o documento der a cada opção) e "opcoesEquivalentes": true. Copie cada opção inteira, sem juntar nem resumir. Itens sem esse tipo de opção usam "opcoesEquivalentes": false.
 - "alertas": apenas avisos explícitos do documento. "tipo": contraindicacao, ajuste_renal, gestacao, interacao, atencao ou outro. "gravidade": informativo, atencao ou critico, conforme o destaque dado no documento; se não houver destaque, use "atencao" e registre a dúvida. "item": 0 se o alerta vale para a prescrição inteira, ou o número do item (1, 2, …) a que ele se refere.
-- "observacoes" e "referencia": copie do documento, se houver.`
+- "receita": a receita pronta para entregar ao paciente, quando o documento trouxer uma (em geral com "Uso oral", "Uso tópico" etc., itens numerados com quantidade e instruções como "Tomar…"). Copie a receita inteira, na ordem e com as quebras de linha do documento (inclusive linhas de preenchimento como "____"). Ela é separada dos "itens": não repita a receita nos itens nem os itens na receita. Texto vazio se não houver. Se não estiver claro a qual prescrição a receita pertence, registre a dúvida.
+- "observacoes": observações, cuidados e orientações do documento (por exemplo, trechos que começam com "Obs:" ou "Cuidados:"). Mantenha os rótulos como estão e um parágrafo para cada trecho. Texto vazio se não houver.
+- "referencia": copie do documento, se houver.`
 
 /**
  * Versão para colar num chat no navegador (ChatGPT, Claude, Gemini), junto com o PDF.
@@ -53,6 +56,7 @@ Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), ex
       "alertas": [
         { "tipo": "atencao", "gravidade": "atencao", "texto": "texto", "item": 0 }
       ],
+      "receita": "texto",
       "observacoes": "texto",
       "referencia": "texto",
       "duvidas": ["texto"]

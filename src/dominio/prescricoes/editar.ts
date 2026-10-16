@@ -14,6 +14,7 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
     tags: [],
     itens: [itemVazio(gerarId)],
     alertas: [],
+    receita: '',
     observacoes: '',
     referencia: '',
     favorito: false,

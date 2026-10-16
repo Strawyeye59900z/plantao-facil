@@ -23,7 +23,8 @@ export const usePrescricoesStore = defineStore('prescricoes', () => {
   const favoritas = computed(() => ativas.value.filter((p) => p.favorito))
 
   async function carregar() {
-    todas.value = await db.prescricoes.toArray()
+    // Prescrições criadas antes da receita pronta não têm o campo.
+    todas.value = (await db.prescricoes.toArray()).map((p) => ({ ...p, receita: p.receita ?? '' }))
   }
 
   function obter(id: UUID): Prescricao | undefined {

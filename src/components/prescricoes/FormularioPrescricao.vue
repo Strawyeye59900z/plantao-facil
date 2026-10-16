@@ -260,8 +260,12 @@ function removerAlerta(alertaId: UUID) {
       <Button type="button" variant="outline" size="touch" @click="adicionarAlerta"><Plus /> Adicionar alerta</Button>
     </fieldset>
 
-    <!-- Observações e referência -->
+    <!-- Receita pronta, observações e referência -->
     <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <Label :for="id('receita')">Receita pronta</Label>
+        <Textarea :id="id('receita')" v-model="dados.receita" class="min-h-32" placeholder="Opcional. Copiada como está, com as quebras de linha." />
+      </div>
       <div class="flex flex-col gap-1.5">
         <Label :for="id('observacoes')">Observações</Label>
         <Textarea :id="id('observacoes')" v-model="dados.observacoes" class="min-h-20" />

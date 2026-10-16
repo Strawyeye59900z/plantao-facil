@@ -62,6 +62,7 @@ export function criarRascunhos(
         tags: normalizarTags(p.tags),
         itens,
         alertas,
+        receita: p.receita,
         observacoes: p.observacoes,
         referencia: p.referencia,
         favorito: false,

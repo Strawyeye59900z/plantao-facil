@@ -80,6 +80,7 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
       itemId: v.nullable(id),
     }),
   ),
+  receita: v.optional(v.string(), ''),
   observacoes: v.string(),
   referencia: v.string(),
   favorito: v.boolean(),

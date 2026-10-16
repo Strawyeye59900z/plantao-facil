@@ -10,6 +10,8 @@ import { anthropic, gemini, mensagemErroHttp, openai, PROVEDORES } from './prove
 import { criarRascunhos } from './rascunhos'
 import { JSON_SCHEMA_RESPOSTA, lerRespostaIA, paraEsquemaGemini, type RespostaIA } from './resposta'
 
+const RECEITA_TESTE = 'Uso Teste\n1) Medicamento Teste E ____ 1 unidade\nInstrução Teste'
+
 const respostaValida: RespostaIA = {
   prescricoes: [
     {
@@ -33,6 +35,7 @@ const respostaValida: RespostaIA = {
         { tipo: 'interacao', gravidade: 'atencao', texto: 'Alerta Teste Item 2', item: 2 },
         { tipo: 'outro', gravidade: 'informativo', texto: 'Alerta Teste Item Inexistente', item: 7 },
       ],
+      receita: RECEITA_TESTE,
       observacoes: 'Observação Teste',
       referencia: 'Referência Teste',
       duvidas: ['Dúvida Teste'],
@@ -43,6 +46,7 @@ const respostaValida: RespostaIA = {
       tags: [],
       itens: [{ texto: 'Medicamento Teste D', alternativas: [], opcoesEquivalentes: true }],
       alertas: [],
+      receita: '',
       observacoes: '',
       referencia: '',
       duvidas: [],
@@ -144,6 +148,19 @@ describe('validação da resposta da IA', () => {
     expect(lerRespostaIA(colado).ok).toBe(true)
   })
 
+  it('resposta colada sem "receita" (prompt antigo) é aceita com receita vazia', () => {
+    const semReceita = { ...respostaValida, prescricoes: respostaValida.prescricoes.map(({ receita: _, ...p }) => p) }
+    const r = lerRespostaIA(JSON.stringify(semReceita))
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.resposta.prescricoes[0]!.receita).toBe('')
+  })
+
+  it('formato pedido à IA exige a receita', () => {
+    const prescricao = (JSON_SCHEMA_RESPOSTA.properties.prescricoes as { items: { required: string[] } }).items
+    expect(prescricao.required).toContain('receita')
+    expect(montarPromptChat()).toContain('"receita": "texto"')
+  })
+
   it('prompt de chat traz as regras, o formato e pede só JSON', () => {
     const p = montarPromptChat()
     expect(p).toContain(INSTRUCOES_SISTEMA)
@@ -185,6 +202,8 @@ describe('rascunhos a partir da resposta', () => {
     expect(d.itens.every((i) => i.regraDose === null && i.alternativas.every((a) => a.regraDose === null))).toBe(true)
     expect(d.duvidasImportacao[0]).toBe('Dúvida Teste')
     expect(d.tags).toEqual(['tag teste'])
+    expect(d.receita).toBe(RECEITA_TESTE)
+    expect(rascunhos[1]!.dados.receita).toBe('')
   })
 
   it('opções "OU" viram item de opções equivalentes; sem alternativas, a marca é ignorada', () => {

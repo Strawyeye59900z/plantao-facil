@@ -89,6 +89,17 @@ async function copiar() {
   }
 }
 
+/** Receita pronta: copiada como cadastrada, com as quebras de linha (só texto, sem cálculo). */
+async function copiarReceita() {
+  if (!prescricao.value?.receita) return
+  try {
+    await copiarTexto(prescricao.value.receita)
+    toast.success('Receita copiada para a área de transferência.')
+  } catch {
+    toast.error('Não foi possível copiar.')
+  }
+}
+
 function opcoesItem(item: ItemPrescricao) {
   return [
     { valor: null as UUID | null, rotulo: 'Padrão' },
@@ -291,6 +302,14 @@ async function moverParaLixeira() {
         </p>
       </li>
     </ol>
+
+    <div v-if="prescricao.receita" class="flex flex-col gap-2">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Receita pronta</h2>
+        <Button variant="outline" size="touch" @click="copiarReceita"><ClipboardCopy /> Copiar receita</Button>
+      </div>
+      <p class="bg-muted/50 rounded-lg border p-3 whitespace-pre-line">{{ prescricao.receita }}</p>
+    </div>
 
     <div v-if="prescricao.observacoes" class="flex flex-col gap-1">
       <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Observações</h2>
