@@ -60,6 +60,8 @@ Testes ficam ao lado do código: `*.spec.ts`.
 ### Geral
 - Nome: **Plantão Fácil**. Ícone: prancheta com check, fundo azul (`public/favicon.svg`; PNGs gerados com `@vite-pwa/assets-generator`, maskable feito à parte).
 - Publicação: **GitHub Pages** via `.github/workflows/deploy.yml` (`BASE_PATH=/<repositorio>/`). Hash routing por não haver fallback de SPA no Pages.
+  - Repositório (público): https://github.com/Strawyeye59900z/plantao-facil — Pages com origem **GitHub Actions**; cada push na `main` testa, gera e publica.
+  - App publicado: https://strawyeye59900z.github.io/plantao-facil/
 - Celular principal: **Android**.
 - Código: nomes de domínio em português; termos técnicos genéricos em inglês.
 - Git iniciado; commit ao fim de cada fase.
