@@ -4,7 +4,8 @@ import { descreverProblemas } from '@/dominio/texto/validacao'
 /**
  * Formato que a IA deve devolver (pedido no prompt e na saída estruturada de cada provedor)
  * e validado ao chegar. Sem campos opcionais/nulos para funcionar nos três provedores:
- * `item` do alerta = 0 (prescrição inteira) ou número do item (1, 2, …).
+ * `item` do alerta = 0 (prescrição inteira) ou número do item (1, 2, …);
+ * `condicao` do item = 0 ("Sempre") ou número da condição em `condicoes` (1, 2, …).
  * Dose sempre como texto dentro do item (decisão do usuário: a IA não preenche regra de dose).
  */
 const TIPOS_ALERTA = ['contraindicacao', 'ajuste_renal', 'gestacao', 'interacao', 'atencao', 'outro'] as const
@@ -21,8 +22,11 @@ export const esquemaRespostaIA = v.object({
           texto: v.string(),
           alternativas: v.array(v.object({ motivo: v.string(), texto: v.string() })),
           opcoesEquivalentes: v.boolean(),
+          // Opcional só na leitura: respostas coladas de prompts antigos não têm o campo.
+          condicao: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
         }),
       ),
+      condicoes: v.optional(v.array(v.string()), []),
       alertas: v.array(
         v.object({
           tipo: v.picklist(TIPOS_ALERTA),
@@ -66,8 +70,10 @@ export const JSON_SCHEMA_RESPOSTA = objeto({
           texto,
           alternativas: { type: 'array', items: objeto({ motivo: texto, texto }) },
           opcoesEquivalentes: { type: 'boolean' },
+          condicao: { type: 'integer' },
         }),
       },
+      condicoes: listaTexto,
       alertas: {
         type: 'array',
         items: objeto({

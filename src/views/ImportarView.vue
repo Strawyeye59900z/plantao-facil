@@ -325,6 +325,9 @@ const duplicatas = computed(() =>
   ),
 )
 
+const nomeCondicao = (r: RascunhoImportado, condicaoId: string | null | undefined) =>
+  condicaoId ? (r.dados.condicoes.find((c) => c.id === condicaoId)?.nome ?? null) : null
+
 const lotesComDuvidas = computed(() => lotes.value.filter((l) => l.duvidas.length))
 
 function remover(chaveRascunho: string) {
@@ -538,6 +541,9 @@ onBeforeUnmount(() => {
             <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Categoria" />
             <ol class="list-decimal pl-5 text-sm">
               <li v-for="item in r.dados.itens" :key="item.id" class="whitespace-pre-line">
+                <span v-if="nomeCondicao(r, item.condicaoId)" class="text-primary block text-xs font-semibold">
+                  Condição: {{ nomeCondicao(r, item.condicaoId) }}
+                </span>
                 <template v-if="item.opcoesEquivalentes">
                   <span class="text-primary text-xs font-semibold">Opções equivalentes (escolher uma):</span>
                   <ul class="list-disc pl-4">

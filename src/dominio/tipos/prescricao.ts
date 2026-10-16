@@ -46,6 +46,17 @@ export interface ItemPrescricao {
    * nenhuma vem escolhida e copiar fica bloqueado até escolher. Motivo opcional. Ausente em dados antigos = false.
    */
   opcoesEquivalentes?: boolean
+  /** Condição em que o item entra (ex.: "Refratário após 5 min"). null/ausente = "Sempre". */
+  condicaoId?: UUID | null
+}
+
+/**
+ * Condição/etapa da prescrição. Os itens dela só entram no Copiar quando a condição
+ * está marcada na tela (marcação só em memória; nenhuma vem marcada).
+ */
+export interface Condicao {
+  id: UUID
+  nome: string
 }
 
 export type OrigemPrescricao = 'manual' | 'importada_ia'
@@ -55,8 +66,10 @@ export interface Prescricao extends Entidade {
   titulo: string
   categoriaId: UUID | null
   tags: string[]
-  /** A ordem do array é a ordem de exibição. */
+  /** A ordem do array é a ordem de exibição (o editor mantém "Sempre" primeiro e depois cada condição). */
   itens: ItemPrescricao[]
+  /** Condições na ordem de exibição. Ausente em dados antigos = []. */
+  condicoes: Condicao[]
   alertas: Alerta[]
   /** Receita pronta (texto simples, quebras de linha preservadas). Ausente em dados antigos = ''. */
   receita: string

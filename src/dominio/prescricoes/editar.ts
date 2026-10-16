@@ -1,4 +1,5 @@
 import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, RegraDose, UUID } from '@/dominio/tipos'
+import { ordenarPorCondicao } from './condicoes'
 import { validarMarcadores } from '@/dominio/dose/marcadores'
 import { validarRegraDose } from '@/dominio/dose/validarRegra'
 
@@ -13,6 +14,7 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
     categoriaId: null,
     tags: [],
     itens: [itemVazio(gerarId)],
+    condicoes: [],
     alertas: [],
     receita: '',
     observacoes: '',
@@ -24,8 +26,8 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
   }
 }
 
-export function itemVazio(gerarId: GerarId = idPadrao): ItemPrescricao {
-  return { id: gerarId(), texto: '', regraDose: null, alternativas: [] }
+export function itemVazio(gerarId: GerarId = idPadrao, condicaoId: UUID | null = null): ItemPrescricao {
+  return { id: gerarId(), texto: '', regraDose: null, alternativas: [], condicaoId }
 }
 
 export function alternativaVazia(gerarId: GerarId = idPadrao): Alternativa {
@@ -56,18 +58,27 @@ export function alertaVazio(gerarId: GerarId = idPadrao): Alerta {
 export function paraDados(p: Prescricao): DadosPrescricao {
   const { id: _id, criadoEm: _c, atualizadoEm: _a, excluidoEm: _e, ...dados } = p
   // Cópia via JSON (os dados são JSON puro): structuredClone falha com os proxies reativos do Vue.
-  return JSON.parse(JSON.stringify(dados)) as DadosPrescricao
+  const copia = JSON.parse(JSON.stringify(dados)) as DadosPrescricao
+  // O editor mostra os itens agrupados ("Sempre" primeiro, depois cada condição).
+  copia.itens = ordenarPorCondicao(copia.itens, copia.condicoes)
+  return copia
 }
 
 /**
- * Duplica com IDs novos em itens, alternativas e alertas (mantendo o vínculo alerta→item).
+ * Duplica com IDs novos em itens, alternativas, condições e alertas (mantendo os vínculos alerta→item e item→condição).
  * Título recebe "(cópia)", sai sem favorito; origem e status de revisão são mantidos,
  * para uma cópia de importação não revisada continuar não revisada.
  */
 export function duplicarPrescricao(p: Prescricao, gerarId: GerarId = idPadrao): DadosPrescricao {
   const dados = paraDados(p)
   const novoIdItem = new Map<UUID, UUID>()
+  const novoIdCondicao = new Map<UUID, UUID>()
 
+  dados.condicoes = dados.condicoes.map((c) => {
+    const id = gerarId()
+    novoIdCondicao.set(c.id, id)
+    return { ...c, id }
+  })
   dados.itens = dados.itens.map((item) => {
     const id = gerarId()
     novoIdItem.set(item.id, id)
@@ -75,6 +86,7 @@ export function duplicarPrescricao(p: Prescricao, gerarId: GerarId = idPadrao): 
       ...item,
       id,
       alternativas: item.alternativas.map((alt) => ({ ...alt, id: gerarId() })),
+      condicaoId: item.condicaoId ? (novoIdCondicao.get(item.condicaoId) ?? null) : null,
     }
   })
   dados.alertas = dados.alertas.map((alerta) => ({
@@ -102,6 +114,19 @@ export function removerItem(dados: DadosPrescricao, itemId: UUID): DadosPrescric
     ...dados,
     itens: dados.itens.filter((i) => i.id !== itemId),
     alertas: dados.alertas.map((a) => (a.itemId === itemId ? { ...a, itemId: null } : a)),
+  }
+}
+
+/** Remove uma condição; os itens dela passam a valer "Sempre" (e vão para o grupo "Sempre"). */
+export function removerCondicao(dados: DadosPrescricao, condicaoId: UUID): DadosPrescricao {
+  const condicoes = dados.condicoes.filter((c) => c.id !== condicaoId)
+  return {
+    ...dados,
+    condicoes,
+    itens: ordenarPorCondicao(
+      dados.itens.map((i) => (i.condicaoId === condicaoId ? { ...i, condicaoId: null } : i)),
+      condicoes,
+    ),
   }
 }
 
@@ -157,6 +182,9 @@ export function validarPrescricao(
   })
   dados.alertas.forEach((alerta, i) => {
     if (!alerta.texto.trim()) erros.push(`Alerta ${i + 1}: texto vazio.`)
+  })
+  dados.condicoes.forEach((c, i) => {
+    if (!c.nome.trim()) erros.push(`Condição ${i + 1}: informe o nome.`)
   })
   return erros
 }

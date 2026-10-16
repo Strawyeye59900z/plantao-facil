@@ -8,9 +8,9 @@ export async function lerBiblioteca(banco: BancoPlantao = db): Promise<Bibliotec
     banco.calculadoras.toArray(),
     banco.categorias.toArray(),
   ])
-  // Registros criados antes dos ícones/receita não têm o campo: normaliza para não gerar falso conflito.
+  // Registros criados antes dos ícones/receita/condições não têm o campo: normaliza para não gerar falso conflito.
   return {
-    prescricoes: prescricoes.map((p) => ({ ...p, receita: p.receita ?? '' })),
+    prescricoes: prescricoes.map((p) => ({ ...p, receita: p.receita ?? '', condicoes: p.condicoes ?? [] })),
     calculadoras,
     categorias: categorias.map((c) => ({ ...c, icone: c.icone ?? null })),
   }

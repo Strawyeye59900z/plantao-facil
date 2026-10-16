@@ -19,8 +19,8 @@ const respostaValida: RespostaIA = {
       categoria: 'categoria teste a',
       tags: ['tag teste', 'Tag Teste'],
       itens: [
-        { texto: 'Medicamento Teste A', alternativas: [{ motivo: 'Motivo Teste', texto: 'Medicamento Teste B' }], opcoesEquivalentes: false },
-        { texto: 'Medicamento Teste C', alternativas: [], opcoesEquivalentes: false },
+        { texto: 'Medicamento Teste A', alternativas: [{ motivo: 'Motivo Teste', texto: 'Medicamento Teste B' }], opcoesEquivalentes: false, condicao: 0 },
+        { texto: 'Medicamento Teste C', alternativas: [], opcoesEquivalentes: false, condicao: 0 },
         {
           texto: 'Opção Teste 1',
           alternativas: [
@@ -28,8 +28,10 @@ const respostaValida: RespostaIA = {
             { motivo: '', texto: 'Opção Teste 3' },
           ],
           opcoesEquivalentes: true,
+          condicao: 0,
         },
       ],
+      condicoes: [],
       alertas: [
         { tipo: 'atencao', gravidade: 'critico', texto: 'Alerta Teste Geral', item: 0 },
         { tipo: 'interacao', gravidade: 'atencao', texto: 'Alerta Teste Item 2', item: 2 },
@@ -44,7 +46,8 @@ const respostaValida: RespostaIA = {
       titulo: 'Situação Teste B',
       categoria: 'Categoria Que Não Existe',
       tags: [],
-      itens: [{ texto: 'Medicamento Teste D', alternativas: [], opcoesEquivalentes: true }],
+      itens: [{ texto: 'Medicamento Teste D', alternativas: [], opcoesEquivalentes: true, condicao: 0 }],
+      condicoes: [],
       alertas: [],
       receita: '',
       observacoes: '',
@@ -181,6 +184,62 @@ describe('validação da resposta da IA', () => {
     expect(g).not.toContain('additionalProperties')
     expect(g).toContain('"type":"ARRAY"')
     expect(g).not.toContain('"type":"object"')
+  })
+})
+
+describe('condições na importação', () => {
+  const base = respostaValida.prescricoes[1]!
+  const comCondicoes: RespostaIA = {
+    prescricoes: [
+      {
+        ...base,
+        condicoes: ['Condição Teste A', 'Condição Teste B'],
+        itens: [
+          { texto: 'Medicamento Teste B1', alternativas: [], opcoesEquivalentes: false, condicao: 2 },
+          { texto: 'Medicamento Teste S', alternativas: [], opcoesEquivalentes: false, condicao: 0 },
+          { texto: 'Medicamento Teste A1', alternativas: [], opcoesEquivalentes: false, condicao: 1 },
+          { texto: 'Medicamento Teste X', alternativas: [], opcoesEquivalentes: false, condicao: 9 },
+        ],
+        alertas: [{ tipo: 'contraindicacao', gravidade: 'atencao', texto: 'Alerta Teste', item: 1 }],
+      },
+    ],
+    duvidas: [],
+  }
+
+  it('cria as condições, liga os itens e ordena ("Sempre" primeiro); alerta segue o item certo', () => {
+    let n = 0
+    const d = criarRascunhos(comCondicoes, [], () => `c${++n}`)[0]!.dados
+    expect(d.condicoes.map((c) => c.nome)).toEqual(['Condição Teste A', 'Condição Teste B'])
+    const [ca, cb] = d.condicoes
+    expect(d.itens.map((i) => [i.texto, i.condicaoId])).toEqual([
+      ['Medicamento Teste S', null],
+      ['Medicamento Teste X', null],
+      ['Medicamento Teste A1', ca!.id],
+      ['Medicamento Teste B1', cb!.id],
+    ])
+    expect(d.alertas[0]!.itemId).toBe(d.itens.find((i) => i.texto === 'Medicamento Teste B1')!.id)
+    expect(d.duvidasImportacao.some((x) => x.includes('condição 9'))).toBe(true)
+  })
+
+  it('resposta colada sem condições (prompt antigo) vale tudo "Sempre"', () => {
+    const antigo = JSON.parse(JSON.stringify(respostaValida))
+    for (const p of antigo.prescricoes) {
+      delete p.condicoes
+      for (const i of p.itens) delete i.condicao
+    }
+    const r = lerRespostaIA(JSON.stringify(antigo))
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.resposta.prescricoes[0]!.condicoes).toEqual([])
+      expect(r.resposta.prescricoes[0]!.itens[0]!.condicao).toBe(0)
+    }
+  })
+
+  it('formato pedido exige condições e o prompt explica', () => {
+    const json = JSON.stringify(JSON_SCHEMA_RESPOSTA)
+    expect(json).toContain('"condicoes"')
+    expect(json).toContain('"condicao"')
+    expect(montarPromptChat()).toContain('"condicao": 0')
   })
 })
 

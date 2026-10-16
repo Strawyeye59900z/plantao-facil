@@ -16,9 +16,11 @@ import {
   alternativaVazia,
   itemVazio,
   moverItem,
+  removerCondicao,
   removerItem,
   type DadosPrescricao,
 } from '@/dominio/prescricoes/editar'
+import { condicaoDoItem, condicaoVazia, ordenarPorCondicao } from '@/dominio/prescricoes/condicoes'
 import { GRAVIDADES, ROTULO_GRAVIDADE, ROTULO_TIPO_ALERTA, type Gravidade, type TipoAlerta, type UUID } from '@/dominio/tipos'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 
@@ -60,13 +62,60 @@ async function salvarNovaCategoria() {
   dados.value.categoriaId = categoria.id
 }
 
+// ===== Condições =====
+// Itens ficam sempre agrupados: "Sempre" primeiro, depois cada condição na ordem.
+const reordenarItens = () => {
+  dados.value.itens = ordenarPorCondicao(dados.value.itens, dados.value.condicoes)
+}
+
+function adicionarCondicao() {
+  dados.value.condicoes.push(condicaoVazia())
+}
+
+function moverCondicao(indice: number, direcao: -1 | 1) {
+  dados.value.condicoes = moverItem(dados.value.condicoes, indice, direcao)
+  reordenarItens()
+}
+
+function excluirCondicao(condicaoId: UUID) {
+  dados.value = removerCondicao(dados.value, condicaoId)
+}
+
+const opcoesCondicao = computed(() => [
+  { valor: null as string | null, rotulo: 'Sempre' },
+  ...dados.value.condicoes.map((c, i) => ({ valor: c.id as string | null, rotulo: c.nome.trim() || `Condição ${i + 1}` })),
+])
+
+function definirCondicao(indiceItem: number, condicaoId: string | null) {
+  dados.value.itens[indiceItem]!.condicaoId = condicaoId
+  reordenarItens()
+}
+
+const grupoDe = (indiceItem: number) => condicaoDoItem(dados.value.itens[indiceItem]!, dados.value.condicoes)
+/** Título do grupo antes do item (só no primeiro item de cada grupo, e só se houver condições). */
+function tituloGrupo(indiceItem: number): string | null {
+  if (!dados.value.condicoes.length) return null
+  const grupo = grupoDe(indiceItem)
+  if (indiceItem > 0 && grupoDe(indiceItem - 1) === grupo) return null
+  if (grupo === null) return 'Sempre'
+  const i = dados.value.condicoes.findIndex((c) => c.id === grupo)
+  return `Condição: ${dados.value.condicoes[i]!.nome.trim() || `Condição ${i + 1}`}`
+}
+
 // ===== Itens =====
 function adicionarItem() {
   dados.value.itens.push(itemVazio())
+  reordenarItens()
+}
+
+/** ↑/↓ só dentro do mesmo grupo (para mudar de grupo, troque a condição do item). */
+const podeMover = (indice: number, direcao: -1 | 1) => {
+  const destino = indice + direcao
+  return destino >= 0 && destino < dados.value.itens.length && grupoDe(destino) === grupoDe(indice)
 }
 
 function mover(indice: number, direcao: -1 | 1) {
-  dados.value.itens = moverItem(dados.value.itens, indice, direcao)
+  if (podeMover(indice, direcao)) dados.value.itens = moverItem(dados.value.itens, indice, direcao)
 }
 
 function remover(itemId: UUID) {
@@ -151,6 +200,39 @@ function removerAlerta(alertaId: UUID) {
       </div>
     </div>
 
+    <!-- Condições: itens de uma condição só entram no Copiar quando ela é marcada na prescrição -->
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-lg font-semibold">Condições</legend>
+      <p class="text-muted-foreground -mt-1 text-sm">
+        Opcional. Itens ligados a uma condição só entram no Copiar quando ela for marcada na tela da prescrição. Itens “Sempre” entram sempre.
+      </p>
+      <div v-for="(condicao, i) in dados.condicoes" :key="condicao.id" class="flex items-center gap-1">
+        <Input
+          v-model="condicao.nome"
+          class="h-11 flex-1"
+          :placeholder="`Nome da condição ${i + 1}`"
+          :aria-label="`Nome da condição ${i + 1}`"
+        />
+        <Button type="button" variant="ghost" size="icon-touch" :disabled="i === 0" aria-label="Mover condição para cima" @click="moverCondicao(i, -1)">
+          <ArrowUp />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-touch"
+          :disabled="i === dados.condicoes.length - 1"
+          aria-label="Mover condição para baixo"
+          @click="moverCondicao(i, 1)"
+        >
+          <ArrowDown />
+        </Button>
+        <Button type="button" variant="ghost" size="icon-touch" aria-label="Remover condição" @click="excluirCondicao(condicao.id)">
+          <Trash2 class="text-destructive" />
+        </Button>
+      </div>
+      <Button type="button" variant="outline" size="touch" class="self-start" @click="adicionarCondicao"><Plus /> Adicionar condição</Button>
+    </fieldset>
+
     <!-- Itens -->
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-2 text-lg font-semibold">Itens *</legend>
@@ -159,80 +241,89 @@ function removerAlerta(alertaId: UUID) {
         <CampoNumero :id="id('peso-teste')" v-model="pesoTesteDigitado" sufixo="kg" class="w-32" />
         <span class="text-muted-foreground text-xs">não é salvo</span>
       </div>
-      <div
-        v-for="(item, i) in dados.itens"
-        :key="item.id"
-        class="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-3 ring-1"
-      >
-        <div class="flex items-center gap-1">
-          <span class="flex-1 font-semibold">Item {{ i + 1 }}</span>
-          <Button type="button" variant="ghost" size="icon-touch" :disabled="i === 0" aria-label="Mover para cima" @click="mover(i, -1)">
-            <ArrowUp />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            :disabled="i === dados.itens.length - 1"
-            aria-label="Mover para baixo"
-            @click="mover(i, 1)"
-          >
-            <ArrowDown />
-          </Button>
-          <Button type="button" variant="ghost" size="icon-touch" aria-label="Remover item" @click="remover(item.id)">
-            <Trash2 class="text-destructive" />
-          </Button>
-        </div>
-        <!-- Opções equivalentes (OU): texto principal = opção 1; alternativas = opções 2, 3… -->
-        <Label class="flex items-center justify-between gap-3 font-normal">
-          <span>
-            Opções equivalentes (“OU”)
-            <span class="text-muted-foreground block text-xs">Na prescrição, uma delas precisa ser escolhida antes de copiar.</span>
-          </span>
-          <Switch
-            :model-value="!!item.opcoesEquivalentes"
-            :aria-label="`Opções equivalentes no item ${i + 1}`"
-            @update:model-value="(v: boolean) => alternarOpcoes(i, v)"
-          />
-        </Label>
-
-        <span v-if="item.opcoesEquivalentes" class="text-muted-foreground -mb-2 text-sm font-medium">Opção 1</span>
-        <Textarea v-model="item.texto" :aria-label="`Texto do item ${i + 1}`" class="min-h-20" />
-        <EditorRegraDose v-model:regra="item.regraDose" :chave="id(`item-${i}`)" :texto="item.texto" :peso-teste="pesoTeste" />
-
-        <!-- Alternativas (ou opções 2, 3… quando equivalentes) -->
-        <div v-for="(alt, j) in item.alternativas" :key="alt.id" class="border-primary/50 flex flex-col gap-2 border-l-2 pl-3">
-          <div class="flex items-center gap-2">
-            <span class="text-muted-foreground flex-1 text-sm font-medium">
-              {{ item.opcoesEquivalentes ? `Opção ${j + 2}` : `Alternativa ${j + 1}` }}
-            </span>
+      <template v-for="(item, i) in dados.itens" :key="item.id">
+        <h3 v-if="tituloGrupo(i)" class="text-muted-foreground mt-2 text-xs font-semibold tracking-wide uppercase">{{ tituloGrupo(i) }}</h3>
+        <div class="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-3 ring-1">
+          <div class="flex items-center gap-1">
+            <span class="flex-1 font-semibold">Item {{ i + 1 }}</span>
+            <Button type="button" variant="ghost" size="icon-touch" :disabled="!podeMover(i, -1)" aria-label="Mover para cima" @click="mover(i, -1)">
+              <ArrowUp />
+            </Button>
             <Button
               type="button"
               variant="ghost"
               size="icon-touch"
-              :aria-label="item.opcoesEquivalentes ? 'Remover opção' : 'Remover alternativa'"
-              @click="removerAlternativa(i, alt.id)"
+              :disabled="!podeMover(i, 1)"
+              aria-label="Mover para baixo"
+              @click="mover(i, 1)"
             >
-              <X />
+              <ArrowDown />
+            </Button>
+            <Button type="button" variant="ghost" size="icon-touch" aria-label="Remover item" @click="remover(item.id)">
+              <Trash2 class="text-destructive" />
             </Button>
           </div>
-          <Input
-            v-model="alt.motivo"
-            class="h-11"
-            :placeholder="item.opcoesEquivalentes ? 'Rótulo (opcional)' : 'Motivo (ex.: alergia a …)'"
-            :aria-label="`${item.opcoesEquivalentes ? 'Rótulo da opção' : 'Motivo da alternativa'} ${j + 1} do item ${i + 1}`"
-          />
-          <Textarea
-            v-model="alt.texto"
-            :placeholder="item.opcoesEquivalentes ? 'Texto da opção' : 'Texto da alternativa'"
-            :aria-label="`Texto da alternativa ${j + 1} do item ${i + 1}`"
-          />
-          <EditorRegraDose v-model:regra="alt.regraDose" :chave="id(`item-${i}-alt-${j}`)" :texto="alt.texto" :peso-teste="pesoTeste" />
+          <div v-if="dados.condicoes.length" class="flex items-center gap-2">
+            <Label :for="id(`item-${i}-condicao`)" class="shrink-0">Condição</Label>
+            <CampoSelect
+              :id="id(`item-${i}-condicao`)"
+              :model-value="condicaoDoItem(item, dados.condicoes)"
+              :opcoes="opcoesCondicao"
+              class="flex-1"
+              @update:model-value="(c) => definirCondicao(i, c)"
+            />
+          </div>
+          <!-- Opções equivalentes (OU): texto principal = opção 1; alternativas = opções 2, 3… -->
+          <Label class="flex items-center justify-between gap-3 font-normal">
+            <span>
+              Opções equivalentes (“OU”)
+              <span class="text-muted-foreground block text-xs">Na prescrição, uma delas precisa ser escolhida antes de copiar.</span>
+            </span>
+            <Switch
+              :model-value="!!item.opcoesEquivalentes"
+              :aria-label="`Opções equivalentes no item ${i + 1}`"
+              @update:model-value="(v: boolean) => alternarOpcoes(i, v)"
+            />
+          </Label>
+
+          <span v-if="item.opcoesEquivalentes" class="text-muted-foreground -mb-2 text-sm font-medium">Opção 1</span>
+          <Textarea v-model="item.texto" :aria-label="`Texto do item ${i + 1}`" class="min-h-20" />
+          <EditorRegraDose v-model:regra="item.regraDose" :chave="id(`item-${i}`)" :texto="item.texto" :peso-teste="pesoTeste" />
+
+          <!-- Alternativas (ou opções 2, 3… quando equivalentes) -->
+          <div v-for="(alt, j) in item.alternativas" :key="alt.id" class="border-primary/50 flex flex-col gap-2 border-l-2 pl-3">
+            <div class="flex items-center gap-2">
+              <span class="text-muted-foreground flex-1 text-sm font-medium">
+                {{ item.opcoesEquivalentes ? `Opção ${j + 2}` : `Alternativa ${j + 1}` }}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-touch"
+                :aria-label="item.opcoesEquivalentes ? 'Remover opção' : 'Remover alternativa'"
+                @click="removerAlternativa(i, alt.id)"
+              >
+                <X />
+              </Button>
+            </div>
+            <Input
+              v-model="alt.motivo"
+              class="h-11"
+              :placeholder="item.opcoesEquivalentes ? 'Rótulo (opcional)' : 'Motivo (ex.: alergia a …)'"
+              :aria-label="`${item.opcoesEquivalentes ? 'Rótulo da opção' : 'Motivo da alternativa'} ${j + 1} do item ${i + 1}`"
+            />
+            <Textarea
+              v-model="alt.texto"
+              :placeholder="item.opcoesEquivalentes ? 'Texto da opção' : 'Texto da alternativa'"
+              :aria-label="`Texto da alternativa ${j + 1} do item ${i + 1}`"
+            />
+            <EditorRegraDose v-model:regra="alt.regraDose" :chave="id(`item-${i}-alt-${j}`)" :texto="alt.texto" :peso-teste="pesoTeste" />
+          </div>
+          <Button type="button" variant="ghost" size="touch" class="self-start" @click="adicionarAlternativa(i)">
+            <Plus /> {{ item.opcoesEquivalentes ? 'Opção' : 'Alternativa' }}
+          </Button>
         </div>
-        <Button type="button" variant="ghost" size="touch" class="self-start" @click="adicionarAlternativa(i)">
-          <Plus /> {{ item.opcoesEquivalentes ? 'Opção' : 'Alternativa' }}
-        </Button>
-      </div>
+      </template>
       <Button type="button" variant="outline" size="touch" @click="adicionarItem"><Plus /> Adicionar item</Button>
     </fieldset>
 

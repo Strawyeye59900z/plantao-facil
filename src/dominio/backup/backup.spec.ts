@@ -65,13 +65,15 @@ describe('exportar e ler', () => {
     }
   })
 
-  it('backup antigo sem receita pronta é aceito (receita vazia) e não gera conflito', () => {
+  it('backup antigo sem receita pronta e sem condições é aceito (vazios) e não gera conflito', () => {
     const antigo = montarBackup(biblioteca({ prescricoes: [prescricaoTeste()] }), T1, '0.1.0')
     delete (antigo.prescricoes[0] as Partial<typeof antigo.prescricoes[0]>).receita
+    delete (antigo.prescricoes[0] as Partial<typeof antigo.prescricoes[0]>).condicoes
     const lido = lerBackup(JSON.stringify(antigo))
     expect(lido.ok).toBe(true)
     if (lido.ok) {
       expect(lido.backup.prescricoes[0]!.receita).toBe('')
+      expect(lido.backup.prescricoes[0]!.condicoes).toEqual([])
       const plano = planejarMesclagem(biblioteca({ prescricoes: [prescricaoTeste()] }), lido.backup)
       expect(plano.prescricoes[0]!.situacao).toBe('igual')
     }

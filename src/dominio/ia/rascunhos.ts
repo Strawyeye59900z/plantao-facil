@@ -1,5 +1,6 @@
 import type { Categoria, UUID } from '@/dominio/tipos'
 import { normalizarTags, type DadosPrescricao } from '@/dominio/prescricoes/editar'
+import { ordenarPorCondicao } from '@/dominio/prescricoes/condicoes'
 import { normalizarTexto } from '@/dominio/texto/normalizar'
 import type { Trecho } from './lotes'
 import type { RespostaIA } from './resposta'
@@ -20,6 +21,8 @@ export interface RascunhoImportado {
  *   senão fica "Sem categoria" (decisão do usuário).
  * - Doses ficam só no texto; nenhuma regra de dose é criada.
  * - Alerta que aponta para um item inexistente vale para a prescrição inteira e vira dúvida.
+ * - Item que aponta para uma condição inexistente fica "Sempre" e vira dúvida. Itens ficam na ordem
+ *   de exibição ("Sempre" primeiro, depois cada condição); os alertas continuam ligados pelo id.
  */
 export function criarRascunhos(
   resposta: RespostaIA,
@@ -34,14 +37,24 @@ export function criarRascunhos(
     const categoria = sugerida ? ativas.find((c) => normalizarTexto(c.nome) === normalizarTexto(sugerida)) : undefined
     const duvidas = [...p.duvidas]
 
-    const itens = p.itens.map((item) => ({
-      id: gerarId(),
-      texto: item.texto,
-      regraDose: null,
-      alternativas: item.alternativas.map((a) => ({ id: gerarId(), motivo: a.motivo, texto: a.texto, regraDose: null })),
-      // Opções "OU" só fazem sentido com pelo menos 2 opções.
-      opcoesEquivalentes: item.opcoesEquivalentes && item.alternativas.length > 0,
-    }))
+    const condicoes = p.condicoes.map((nome) => ({ id: gerarId(), nome }))
+
+    const itens = p.itens.map((item, i) => {
+      let condicaoId: UUID | null = null
+      if (item.condicao > 0) {
+        condicaoId = condicoes[item.condicao - 1]?.id ?? null
+        if (!condicaoId) duvidas.push(`O item ${i + 1} citava a condição ${item.condicao}, que não existe; ficou valendo "Sempre".`)
+      }
+      return {
+        id: gerarId(),
+        texto: item.texto,
+        regraDose: null,
+        alternativas: item.alternativas.map((a) => ({ id: gerarId(), motivo: a.motivo, texto: a.texto, regraDose: null })),
+        // Opções "OU" só fazem sentido com pelo menos 2 opções.
+        opcoesEquivalentes: item.opcoesEquivalentes && item.alternativas.length > 0,
+        condicaoId,
+      }
+    })
 
     const alertas = p.alertas.map((a, i) => {
       let itemId: UUID | null = null
@@ -60,7 +73,8 @@ export function criarRascunhos(
         titulo: p.titulo,
         categoriaId: categoria?.id ?? null,
         tags: normalizarTags(p.tags),
-        itens,
+        itens: ordenarPorCondicao(itens, condicoes),
+        condicoes,
         alertas,
         receita: p.receita,
         observacoes: p.observacoes,

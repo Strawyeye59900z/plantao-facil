@@ -22,9 +22,11 @@ Formato:
 - "categoria": a categoria ou seção do documento a que a prescrição pertence; texto vazio se não houver.
 - "itens": cada linha de prescrição em "texto" (doses só como texto). "alternativas": apenas as que o documento apresenta explicitamente como substituição de um item, com o "motivo" escrito no documento; nesse caso "opcoesEquivalentes": false.
 - Opções intercambiáveis para o mesmo passo (por exemplo, várias linhas com o mesmo número ligadas por "OU", ou "opção 1 / opção 2"), em que só uma deve ser usada: crie UM único item, com a primeira opção em "texto", as demais em "alternativas" ("motivo" vazio, ou o rótulo que o documento der a cada opção) e "opcoesEquivalentes": true. Copie cada opção inteira, sem juntar nem resumir. Itens sem esse tipo de opção usam "opcoesEquivalentes": false.
-- "alertas": apenas avisos explícitos do documento. "tipo": contraindicacao, ajuste_renal, gestacao, interacao, atencao ou outro. "gravidade": informativo, atencao ou critico, conforme o destaque dado no documento; se não houver destaque, use "atencao" e registre a dúvida. "item": 0 se o alerta vale para a prescrição inteira, ou o número do item (1, 2, …) a que ele se refere.
-- "receita": a receita pronta para entregar ao paciente, quando o documento trouxer uma (em geral com "Uso oral", "Uso tópico" etc., itens numerados com quantidade e instruções como "Tomar…"). Copie a receita inteira, na ordem e com as quebras de linha do documento (inclusive linhas de preenchimento como "____"). Ela é separada dos "itens": não repita a receita nos itens nem os itens na receita. Texto vazio se não houver. Se não estiver claro a qual prescrição a receita pertence, registre a dúvida.
-- "observacoes": observações, cuidados e orientações do documento (por exemplo, trechos que começam com "Obs:" ou "Cuidados:"). Mantenha os rótulos como estão e um parágrafo para cada trecho. Texto vazio se não houver.
+- "condicoes": quando parte dos itens só deve ser usada em uma etapa ou situação indicada por um título no documento (por exemplo, um título de etapa seguido dos itens daquela etapa), liste o nome de cada condição exatamente como está escrito, na ordem do documento. Lista vazia se todos os itens valem sempre.
+- "condicao" de cada item: 0 se o item vale sempre (não está sob nenhuma condição), ou o número da condição (1, 2, …, na ordem de "condicoes") sob a qual ele aparece. Diferenças dentro de um mesmo item (por exemplo, para grupos de pacientes descritos no próprio texto do item) ficam no "texto" do item, inteiras; não viram condições.
+- "alertas": apenas avisos explícitos do documento. Listas de contraindicações do documento viram um alerta do tipo contraindicacao com "item": 0. "tipo": contraindicacao, ajuste_renal, gestacao, interacao, atencao ou outro. "gravidade": informativo, atencao ou critico, conforme o destaque dado no documento; se não houver destaque, use "atencao" e registre a dúvida. "item": 0 se o alerta vale para a prescrição inteira, ou o número do item (1, 2, …) a que ele se refere.
+- "receita": SOMENTE a receita de alta, para o paciente levar, quando o documento trouxer uma: itens com a quantidade a dispensar (por exemplo, número de comprimidos ou caixas, ou linhas de preenchimento como "____ cps"). Trechos com "Uso oral", "Uso intravenoso" etc. SEM quantidade a dispensar são "itens", não receita. Copie a receita inteira, na ordem e com as quebras de linha do documento (inclusive linhas de preenchimento como "____"). Ela é separada dos "itens": não repita a receita nos itens nem os itens na receita. Texto vazio se não houver. Se não estiver claro a qual prescrição a receita pertence, registre a dúvida.
+- "observacoes": observações, cuidados e orientações do documento (por exemplo, trechos que começam com "Obs:", "Cuidados:" ou "#Bizu"). Mantenha os rótulos como estão e um parágrafo para cada trecho. Texto vazio se não houver.
 - "referencia": copie do documento, se houver.`
 
 /**
@@ -50,9 +52,11 @@ Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), ex
         {
           "texto": "texto",
           "alternativas": [{ "motivo": "texto", "texto": "texto" }],
-          "opcoesEquivalentes": false
+          "opcoesEquivalentes": false,
+          "condicao": 0
         }
       ],
+      "condicoes": ["texto"],
       "alertas": [
         { "tipo": "atencao", "gravidade": "atencao", "texto": "texto", "item": 0 }
       ],
@@ -65,7 +69,7 @@ Responda SOMENTE com um único bloco JSON (sem nenhum texto antes ou depois), ex
   "duvidas": ["texto"]
 }
 
-Todos os campos são obrigatórios (use "" ou [] quando não houver). "item" é número inteiro. "opcoesEquivalentes" é true ou false.
+Todos os campos são obrigatórios (use "" ou [] quando não houver). "item" e "condicao" são números inteiros. "opcoesEquivalentes" é true ou false.
 
 ${pedido}`
 }

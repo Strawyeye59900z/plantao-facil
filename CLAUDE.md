@@ -86,6 +86,11 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
 - Observações/referência: texto simples com quebras de linha.
 - **Receita pronta** (`receita`): texto simples com quebras de linha, **sem marcadores/cálculo**. Seção própria na tela da prescrição com botão **"Copiar receita"** (copia o texto como cadastrado, separado do Copiar dos itens; também no pen drive). Entra na busca e no backup; dados/backups antigos sem o campo = `''`.
+- **Condições** (`condicoes` na prescrição, `condicaoId` no item; `src/dominio/prescricoes/condicoes.ts`): etapas/situações com nome livre (ex.: uma etapa "se refratário"). Item sem condição = **"Sempre"**. Itens sempre **agrupados**: "Sempre" primeiro, depois cada condição na ordem (o editor reordena ao trocar a condição; ↑/↓ só dentro do grupo; `paraDados` já ordena).
+  - Tela: cabeçalho de cada condição com **caixa de marcar**; **várias podem ser marcadas**; **nenhuma vem marcada** (só em memória). Copiar = itens "Sempre" + itens das condições marcadas, **renumerados**. Itens fora da cópia aparecem esmaecidos e não exigem peso nem escolha de opção "OU". Só condicionais e nada marcado → "Marque uma condição para copiar.".
+  - Editor: seção "Condições" (adicionar, renomear, ↑/↓, remover → itens viram "Sempre"); seletor "Condição" em cada item. Nome vazio bloqueia salvar. Duplicar gera IDs novos mantendo os vínculos.
+  - Alertas **não** se ligam a condição (ficam da prescrição ou do item). Variações dentro de um item (grupos de pacientes) ficam no texto do item.
+  - Busca inclui o nome das condições; backup: ausente = `[]`/"Sempre".
 - Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo. Remover um item transforma seus alertas em alertas da prescrição inteira.
 - Editor avisa ao sair com alterações não salvas.
 - Dose/kg pode ser **por tomada ou por dia** (`baseDoseKg`).
@@ -150,7 +155,8 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Chave de API no IndexedDB (configuracoes), nunca no backup nem no pen drive, com mostrar/ocultar, link "Obter chave" e apagar.
 - Prompt (`src/dominio/ia/prompt.ts`): só o que está no PDF; nunca completar/corrigir/calcular doses; dúvidas em "duvidas". Resposta validada com valibot (`src/dominio/ia/resposta.ts`); inválida → erro claro + "Tentar de novo".
 - **IA não cria regra de dose**: doses só como texto no item; o usuário cadastra a regra na revisão.
-- **Receita e observações na extração**: a IA preenche `receita` (receita pronta do documento: "Uso oral/tópico", itens numerados, quantidade, "Tomar…"; inteira, com quebras de linha, separada dos itens) e `observacoes` ("Obs:" e "# Cuidados:" juntos, **mantendo os rótulos**, um parágrafo cada). Na leitura, `receita` ausente = `''` (respostas de prompts antigos).
+- **Receita e observações na extração**: a IA preenche `receita` **só com a receita de alta/para levar, com quantidade a dispensar** ("28 cps", "____ cps"); trechos com "Uso oral/intravenoso" **sem** quantidade viram **itens**. Receita inteira, com quebras de linha, separada dos itens. `observacoes`: "Obs:", "# Cuidados:" e "#Bizu" juntos, **mantendo os rótulos**, um parágrafo cada. Listas de contraindicações → alerta `contraindicacao` da prescrição inteira. Na leitura, `receita` ausente = `''` (respostas de prompts antigos).
+- **Condições na extração**: a IA devolve `condicoes` (nomes dos títulos de etapa/situação, como escritos) e `condicao` em cada item (0 = "Sempre", n = n-ésima condição). Condição inexistente → "Sempre" + dúvida. Ausentes na leitura = `[]`/0.
 - **Única correção de formatação permitida à IA**: recolocar **espaços entre palavras grudadas** do PDF, sem alterar letras, números, unidades, abreviações ou pontuação, registrando isso nas dúvidas da prescrição.
 - Categoria sugerida: se bater (sem maiúsculas/acentos) com categoria existente, já seleciona; senão **"Sem categoria"** (aprovação aceita sem categoria).
 - **Dúvidas gerais do documento só na tela de revisão**; dúvidas de cada prescrição ficam salvas em `duvidasImportacao`.
