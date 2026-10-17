@@ -18,7 +18,7 @@ const opcoesGravidade = GRAVIDADES.map((g) => ({ valor: g as Gravidade, rotulo: 
     <div
       v-for="(faixa, i) in faixas"
       :key="faixa.id"
-      class="bg-card ring-foreground/10 flex flex-col gap-2 rounded-xl p-3 ring-1"
+      class="bg-card border shadow-xs flex flex-col gap-2 rounded-2xl p-3"
     >
       <div class="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
         <CampoNumero v-model="faixa.de" placeholder="de" :aria-label="`Interpretação ${i + 1}: de`" />

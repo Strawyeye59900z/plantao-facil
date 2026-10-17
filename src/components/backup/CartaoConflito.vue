@@ -52,7 +52,7 @@ const lados = computed(() => [
 </script>
 
 <template>
-  <fieldset class="bg-card ring-foreground/10 flex flex-col gap-2 rounded-xl p-3 ring-1">
+  <fieldset class="bg-card border shadow-xs flex flex-col gap-2 rounded-2xl p-3">
     <legend class="sr-only">{{ tipo }}: {{ nome(item.arquivo) }}</legend>
     <p class="text-muted-foreground text-xs">{{ tipo }} · diferenças: {{ campos }}</p>
     <div class="grid grid-cols-2 gap-2">
@@ -60,8 +60,8 @@ const lados = computed(() => [
         v-for="lado in lados"
         :key="lado.valor"
         :class="cn(
-          'flex cursor-pointer flex-col gap-1 rounded-lg border-2 p-2.5 text-sm',
-          escolha === lado.valor ? 'border-primary bg-primary/10' : 'border-transparent bg-muted/50',
+          'flex cursor-pointer flex-col gap-1 rounded-xl border-2 p-2.5 text-sm',
+          escolha === lado.valor ? 'border-primary/50 bg-primary/10' : 'border-transparent bg-muted/50',
         )"
       >
         <span class="flex items-center gap-2">

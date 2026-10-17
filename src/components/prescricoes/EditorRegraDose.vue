@@ -142,7 +142,7 @@ const previa = computed(() => {
     <Calculator /> Regra de dose
   </Button>
 
-  <div v-else class="border-primary/40 flex flex-col gap-3 rounded-lg border p-3">
+  <div v-else class="border-primary/40 flex flex-col gap-3 rounded-xl border p-3">
     <div class="flex items-center gap-2">
       <Calculator class="text-primary size-4" />
       <span class="flex-1 text-sm font-semibold">Regra de dose</span>
@@ -261,7 +261,7 @@ const previa = computed(() => {
 
     <!-- Prévia com o peso de teste -->
     <div v-if="pesoTeste !== null" class="border-t pt-3">
-      <p class="mb-1 text-xs font-semibold tracking-wide uppercase">Teste com {{ String(pesoTeste).replace('.', ',') }} kg</p>
+      <p class="mb-1 text-xs font-medium">Teste com {{ String(pesoTeste).replace('.', ',') }} kg</p>
       <template v-if="previa">
         <p class="mb-2 text-sm">{{ previa.texto }}</p>
         <ResultadoDose :resultado="previa.resultado" />

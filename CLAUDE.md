@@ -30,8 +30,8 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - Dados só no aparelho, modelados para sincronização futura: UUID, `criadoEm`, `atualizadoEm`, exclusão lógica (`excluidoEm`).
 - **Nenhum dado de paciente é salvo.** Peso e entradas das calculadoras vivem só na memória da tela.
 - Rapidez: busca no topo, favoritos, recentes.
-- Mobile-first, funciona bem no PC. Tema escuro padrão, opção de claro. Alvos de toque ≥ 44px (botões `size="touch"` / `"icon-touch"`).
-- Sem fontes ou recursos externos em tempo de execução (sistema de fontes do aparelho).
+- Mobile-first, funciona bem no PC. **Tema claro padrão**, opção de escuro. Alvos de toque ≥ 44px (botões `size="touch"` / `"icon-touch"`).
+- Sem fontes ou recursos externos em tempo de execução. Fonte **Inter embutida** (só o subconjunto latino, `src/assets/fontes/`, licença OFL junto).
 
 ## Estrutura
 
@@ -65,6 +65,14 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Celular principal: **Android**.
 - Código: nomes de domínio em português; termos técnicos genéricos em inglês.
 - Git iniciado; commit ao fim de cada fase.
+
+### Visual (redesign, branch `ui-redesign`)
+- Estilo inspirado no Claude desktop/Notion: **neutros quentes** (bege/off-white no claro, cinza quente no escuro) e **acento terracota** (`--primary`, hue 40). Tokens em `src/style.css`; `--radius: 0.75rem`.
+- Cartões `rounded-2xl border shadow-xs` (sem anel); listas sem caixa, linhas com destaque ao passar/tocar; rótulos de seção pequenos, sem maiúsculas.
+- Alertas e avisos: caixa com fundo tingido e borda suave da cor da gravidade (sem a barra grossa à esquerda).
+- Barras de ação (Copiar, Salvar/Cancelar) **flutuantes e arredondadas** acima da navegação inferior; no PC, alinhadas ao conteúdo (menu lateral de 16rem).
+- Telas de prescrição e calculadora: categoria em pílula, título maior e **Editar/Duplicar/Excluir logo abaixo do título** (antes no fim da página). No celular, o seletor de alternativa fica abaixo do texto do item.
+- Logo do app no menu usa a cor `--primary`. **O ícone do PWA (PNGs) continua azul** — trocar só se o usuário pedir.
 
 ### Dados
 - Categorias: **lista gerenciada**, separada por módulo (`escopo: 'prescricao' | 'calculadora'`). Prescrições/calculadoras referenciam `categoriaId`.

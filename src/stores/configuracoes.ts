@@ -10,7 +10,7 @@ export const CHAVE_TEMA_CACHE = 'plantao-facil:tema'
 function padrao(): Configuracoes {
   return {
     id: 'local',
-    tema: 'escuro',
+    tema: 'claro',
     ia: { provedor: 'gemini', chaves: {}, modelos: {} },
     ultimoBackupEm: null,
     bibliotecaPenDriveDe: null,

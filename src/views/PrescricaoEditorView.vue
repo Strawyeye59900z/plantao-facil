@@ -58,14 +58,14 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
 
 <template>
   <section v-if="naoEncontrada" class="flex flex-col items-start gap-4">
-    <h1 class="text-2xl font-semibold">Prescrição não encontrada</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Prescrição não encontrada</h1>
     <Button size="touch" as-child><RouterLink to="/prescricoes">Voltar para a lista</RouterLink></Button>
   </section>
 
   <form v-else class="flex flex-col gap-6 pb-24" novalidate @submit.prevent="salvar">
-    <h1 class="text-2xl font-semibold">{{ idEdicao ? 'Editar prescrição' : 'Nova prescrição' }}</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">{{ idEdicao ? 'Editar prescrição' : 'Nova prescrição' }}</h1>
 
-    <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico bg-critico/12 rounded-xl border p-3">
+    <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3">
       <p class="font-semibold">Corrija antes de salvar:</p>
       <ul class="list-disc pl-5 text-sm">
         <li v-for="erro in erros" :key="erro">{{ erro }}</li>
@@ -76,9 +76,9 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
 
     <!-- Barra de ações fixa -->
     <div
-      class="bg-background/95 fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t backdrop-blur md:bottom-0 md:left-60"
+      class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 px-3 md:bottom-4 md:left-64 md:px-8"
     >
-      <div class="mx-auto flex max-w-3xl gap-2 px-3 py-2">
+      <div class="bg-card/95 pointer-events-auto mx-auto flex max-w-[44rem] items-center gap-2 rounded-2xl border p-2 shadow-lg backdrop-blur-md">
         <Button type="button" variant="outline" size="touch" class="flex-1" @click="router.back()">Cancelar</Button>
         <Button type="submit" size="touch" class="flex-1">Salvar</Button>
       </div>

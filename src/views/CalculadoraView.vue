@@ -38,14 +38,14 @@ async function moverParaLixeira() {
 </script>
 
 <template>
-  <section v-if="calculadora" class="flex flex-col gap-4 pb-4">
-    <header class="flex flex-col gap-2">
-      <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
-        <IconeCategoria :icone="categorias.obter(calculadora.categoriaId)?.icone" />
+  <section v-if="calculadora" class="flex flex-col gap-5 pb-4">
+    <header class="flex flex-col gap-3">
+      <p class="text-muted-foreground bg-secondary flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+        <IconeCategoria :icone="categorias.obter(calculadora.categoriaId)?.icone" class="size-3.5" />
         {{ categorias.nome(calculadora.categoriaId) }}
       </p>
       <div class="flex items-start gap-2">
-        <h1 class="flex-1 text-2xl leading-tight font-semibold">{{ calculadora.nome }}</h1>
+        <h1 class="flex-1 text-2xl leading-tight font-semibold md:text-3xl">{{ calculadora.nome }}</h1>
         <Star
           v-if="MODO_PENDRIVE"
           :class="cn('m-2.5 size-6 shrink-0', calculadora.favorito ? 'fill-atencao text-atencao' : 'hidden')"
@@ -63,23 +63,24 @@ async function moverParaLixeira() {
         </Button>
       </div>
       <p v-if="calculadora.descricao" class="text-muted-foreground text-sm whitespace-pre-line">{{ calculadora.descricao }}</p>
+      <div v-if="!calculadora.excluidoEm && !MODO_PENDRIVE" class="-ml-2 flex flex-wrap gap-1">
+        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" as-child>
+          <RouterLink :to="`/calculadoras/${id}/editar`"><Pencil /> Editar</RouterLink>
+        </Button>
+        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" @click="duplicar"><Copy /> Duplicar</Button>
+        <Button variant="ghost" size="touch" class="text-muted-foreground hover:text-destructive px-3 text-sm" @click="confirmarLixeira = true">
+          <Trash2 /> Excluir
+        </Button>
+      </div>
     </header>
 
-    <div v-if="calculadora.excluidoEm" class="bg-muted rounded-xl p-3 text-sm">Esta calculadora está na lixeira.</div>
+    <div v-if="calculadora.excluidoEm" class="bg-muted rounded-2xl p-3 text-sm">Esta calculadora está na lixeira.</div>
 
     <UsoCalculadora :calculadora="calculadora" />
 
-    <div v-if="calculadora.referencia" class="flex flex-col gap-1">
-      <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Referência</h2>
+    <div v-if="calculadora.referencia" class="flex flex-col gap-1.5 border-t px-1 pt-4">
+      <h2 class="text-muted-foreground text-xs font-medium">Referência</h2>
       <p class="text-muted-foreground text-sm whitespace-pre-line">{{ calculadora.referencia }}</p>
-    </div>
-
-    <div v-if="!calculadora.excluidoEm && !MODO_PENDRIVE" class="grid grid-cols-3 gap-2 border-t pt-4">
-      <Button variant="outline" size="touch" as-child>
-        <RouterLink :to="`/calculadoras/${id}/editar`"><Pencil /> Editar</RouterLink>
-      </Button>
-      <Button variant="outline" size="touch" @click="duplicar"><Copy /> Duplicar</Button>
-      <Button variant="destructive" size="touch" @click="confirmarLixeira = true"><Trash2 /> Excluir</Button>
     </div>
 
     <DialogoConfirmar
@@ -93,7 +94,7 @@ async function moverParaLixeira() {
   </section>
 
   <section v-else class="flex flex-col items-start gap-4">
-    <h1 class="text-2xl font-semibold">Calculadora não encontrada</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Calculadora não encontrada</h1>
     <Button size="touch" as-child><RouterLink to="/calculadoras">Voltar para a lista</RouterLink></Button>
   </section>
 </template>

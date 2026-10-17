@@ -404,7 +404,7 @@ onBeforeUnmount(() => {
             resposta aqui.
           </p>
 
-          <ul class="flex flex-col divide-y rounded-lg border">
+          <ul class="flex flex-col divide-y rounded-xl border">
             <li v-for="l in lotes" :key="l.id" class="flex flex-col gap-2 p-2.5">
               <div class="flex min-h-11 flex-wrap items-center gap-2">
                 <Loader2 v-if="l.estado === 'enviando'" class="text-primary size-5 shrink-0 animate-spin" />
@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
                 </div>
                 <pre
                   v-if="verPrompt"
-                  class="bg-muted max-h-80 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                  class="bg-muted max-h-80 overflow-auto rounded-xl p-3 text-xs whitespace-pre-wrap"
                 >{{ montarPromptChat(trechoDoPrompt(l.trecho), arquivo.paginas) }}</pre>
                 <div class="flex flex-col gap-1.5">
                   <Label :for="`resposta-${l.id}`">Resposta do chat para o {{ l.rotulo.toLowerCase() }}</Label>
@@ -484,7 +484,7 @@ onBeforeUnmount(() => {
         </CardContent>
       </Card>
 
-      <div v-if="lotesComDuvidas.length" class="border-atencao bg-atencao/12 rounded-xl border p-3">
+      <div v-if="lotesComDuvidas.length" class="border-atencao/45 bg-atencao/12 rounded-xl border p-3">
         <p class="flex items-center gap-2 font-semibold"><TriangleAlert class="text-atencao size-4" /> Dúvidas da IA sobre o documento</p>
         <div v-for="l in lotesComDuvidas" :key="l.id" class="mt-2 text-sm">
           <p class="font-medium">{{ l.rotulo }} · {{ descreverTrecho(l.trecho) }}</p>
@@ -510,21 +510,21 @@ onBeforeUnmount(() => {
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-3">
-          <div v-if="duplicatas[r.chave]" class="border-atencao bg-atencao/12 rounded-lg border p-2.5 text-sm">
+          <div v-if="duplicatas[r.chave]" class="border-atencao/45 bg-atencao/12 rounded-xl border p-2.5 text-sm">
             <p class="flex items-center gap-1.5 font-semibold"><TriangleAlert class="text-atencao size-4" /> Possível duplicata de:</p>
             <ul class="list-disc pl-5">
               <li v-for="d in duplicatas[r.chave]" :key="d">{{ d }}</li>
             </ul>
           </div>
 
-          <div v-if="r.dados.duvidasImportacao.length" class="border-atencao bg-atencao/12 rounded-lg border p-2.5 text-sm">
+          <div v-if="r.dados.duvidasImportacao.length" class="border-atencao/45 bg-atencao/12 rounded-xl border p-2.5 text-sm">
             <p class="font-semibold">Dúvidas da IA</p>
             <ul class="list-disc pl-5">
               <li v-for="(d, i) in r.dados.duvidasImportacao" :key="i">{{ d }}</li>
             </ul>
           </div>
 
-          <div v-if="errosPorRascunho[r.chave]?.length" role="alert" class="border-critico bg-critico/12 rounded-lg border p-2.5 text-sm">
+          <div v-if="errosPorRascunho[r.chave]?.length" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-2.5 text-sm">
             <p class="font-semibold">Corrija antes de aprovar:</p>
             <ul class="list-disc pl-5">
               <li v-for="e in errosPorRascunho[r.chave]" :key="e">{{ e }}</li>
@@ -563,11 +563,11 @@ onBeforeUnmount(() => {
               {{ r.dados.alertas.length }} {{ r.dados.alertas.length === 1 ? 'alerta' : 'alertas' }}
             </p>
             <div v-if="r.dados.receita" class="flex flex-col gap-1 text-sm">
-              <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Receita pronta</p>
-              <p class="bg-muted/50 rounded-lg border p-2.5 whitespace-pre-line">{{ r.dados.receita }}</p>
+              <p class="text-muted-foreground text-xs font-medium">Receita pronta</p>
+              <p class="bg-muted/50 rounded-xl border p-2.5 whitespace-pre-line">{{ r.dados.receita }}</p>
             </div>
             <div v-if="r.dados.observacoes" class="flex flex-col gap-1 text-sm">
-              <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Observações</p>
+              <p class="text-muted-foreground text-xs font-medium">Observações</p>
               <p class="whitespace-pre-line">{{ r.dados.observacoes }}</p>
             </div>
           </template>
@@ -635,7 +635,7 @@ onBeforeUnmount(() => {
           </CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
-          <label v-if="arquivo && trechosPlanejados.length" class="border-atencao bg-atencao/12 flex items-start gap-3 rounded-xl border p-3 text-sm">
+          <label v-if="arquivo && trechosPlanejados.length" class="border-atencao/45 bg-atencao/12 flex items-start gap-3 rounded-xl border p-3 text-sm">
             <input v-model="confirmado" type="checkbox" class="accent-primary mt-0.5 size-5 shrink-0" />
             <span>
               <ShieldAlert class="text-atencao mr-1 inline size-4" />

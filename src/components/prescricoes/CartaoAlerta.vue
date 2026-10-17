@@ -17,11 +17,11 @@ const estilo = computed(() => ESTILO_GRAVIDADE[props.alerta.gravidade])
 <template>
   <div
     role="note"
-    :class="cn('flex gap-3 rounded-xl border-l-4 p-3', estilo.caixa, compacto && 'p-2 text-sm')"
+    :class="cn('flex gap-3 rounded-2xl border p-3', estilo.caixa, compacto && 'rounded-xl p-2.5 text-sm')"
   >
     <component :is="estilo.componente" :class="cn('mt-0.5 size-5 shrink-0', estilo.icone)" />
     <div class="min-w-0 flex-1">
-      <p class="text-xs font-semibold tracking-wide uppercase">
+      <p class="text-xs font-medium">
         {{ ROTULO_TIPO_ALERTA[alerta.tipo] }} · {{ ROTULO_GRAVIDADE[alerta.gravidade] }}
         <span v-if="referenciaItem" class="text-muted-foreground font-normal normal-case">· {{ referenciaItem }}</span>
       </p>

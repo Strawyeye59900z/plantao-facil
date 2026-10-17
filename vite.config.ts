@@ -26,8 +26,8 @@ const pwa = VitePWA({
     display: 'standalone',
     start_url: '.',
     scope: '.',
-    theme_color: '#0a0a0a',
-    background_color: '#0a0a0a',
+    theme_color: '#faf9f5',
+    background_color: '#faf9f5',
     icons: [
       { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
       { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -37,7 +37,7 @@ const pwa = VitePWA({
   },
   workbox: {
     // Pré-carrega tudo do build: o app abre offline após o primeiro acesso.
-    globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+    globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff2}'],
   },
 })
 

@@ -81,7 +81,7 @@ async function excluir() {
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Categorias</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Categorias</h1>
 
     <div class="bg-muted grid grid-cols-2 gap-1 rounded-xl p-1" role="tablist" aria-label="Módulo">
       <button
@@ -107,7 +107,7 @@ async function excluir() {
       Nenhuma categoria cadastrada.
     </p>
 
-    <ul v-else class="bg-card ring-foreground/10 divide-y overflow-hidden rounded-xl ring-1">
+    <ul v-else class="bg-card border shadow-xs divide-y overflow-hidden rounded-2xl">
       <li v-for="(c, i) in lista" :key="c.id" class="flex min-h-14 items-center gap-1 px-2 py-1">
         <template v-if="editandoId === c.id">
           <Input

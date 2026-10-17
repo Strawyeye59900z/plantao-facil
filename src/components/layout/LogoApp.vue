@@ -1,6 +1,6 @@
 <template>
   <svg viewBox="0 0 512 512" aria-hidden="true">
-    <rect width="512" height="512" rx="112" fill="#2563eb" />
+    <rect width="512" height="512" rx="112" fill="var(--primary)" />
     <rect x="140" y="116" width="232" height="292" rx="32" fill="none" stroke="#fff" stroke-width="30" />
     <rect x="196" y="84" width="120" height="64" rx="20" fill="#fff" />
     <path

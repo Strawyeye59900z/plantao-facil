@@ -23,7 +23,7 @@ function fechar() {
   <div
     v-if="offlineReady || needRefresh"
     role="alert"
-    class="bg-card text-card-foreground ring-foreground/10 fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-xl p-3 shadow-lg ring-1 md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
+    class="bg-card text-card-foreground border shadow-xs fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-2xl p-3 shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
   >
     <p class="flex-1 text-sm">
       {{ needRefresh ? 'Nova versão disponível.' : 'Pronto para uso offline.' }}

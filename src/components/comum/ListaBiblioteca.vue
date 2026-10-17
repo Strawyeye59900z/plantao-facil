@@ -96,9 +96,9 @@ function filtrarCategoria(chave: string | null) {
 </script>
 
 <template>
-  <section class="flex flex-col gap-4">
+  <section class="flex flex-col gap-5">
     <div class="flex items-center justify-between gap-2">
-      <h1 class="text-2xl font-semibold">{{ titulo }}</h1>
+      <h1 class="text-2xl font-semibold md:text-3xl">{{ titulo }}</h1>
       <Button v-if="!MODO_PENDRIVE" size="touch" class="hidden md:inline-flex" as-child>
         <RouterLink :to="`${rotaBase}/nova`"><Plus /> Nova</RouterLink>
       </Button>
@@ -107,15 +107,15 @@ function filtrarCategoria(chave: string | null) {
     <!-- Filtro por categoria -->
     <div
       v-if="chips.length > 1"
-      class="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]"
+      class="-mx-4 -mt-1 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:px-8"
       role="group"
       aria-label="Filtrar por categoria"
     >
       <button
         type="button"
         :class="cn(
-          'h-9 shrink-0 rounded-full border px-4 text-sm font-medium',
-          categoriaFiltro === null ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+          'h-9 shrink-0 rounded-full px-4 text-sm font-medium transition-colors',
+          categoriaFiltro === null ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent',
         )"
         @click="categoriaFiltro = null"
       >
@@ -127,8 +127,8 @@ function filtrarCategoria(chave: string | null) {
         type="button"
         :aria-pressed="categoriaFiltro === chip.chave"
         :class="cn(
-          'h-9 shrink-0 rounded-full border px-4 text-sm font-medium',
-          categoriaFiltro === chip.chave ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+          'h-9 shrink-0 rounded-full px-4 text-sm font-medium transition-colors',
+          categoriaFiltro === chip.chave ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent',
         )"
         @click="filtrarCategoria(chip.chave)"
       >
@@ -146,7 +146,7 @@ function filtrarCategoria(chave: string | null) {
     <!-- Lista vazia -->
     <div
       v-if="itens.length === 0"
-      class="text-muted-foreground flex flex-col items-center gap-4 rounded-xl border border-dashed p-8 text-center"
+      class="text-muted-foreground bg-card flex flex-col items-center gap-4 rounded-2xl border border-dashed p-10 text-center"
     >
       <p>{{ textoVazio }}</p>
       <Button v-if="!MODO_PENDRIVE" size="touch" as-child>
@@ -156,11 +156,11 @@ function filtrarCategoria(chave: string | null) {
 
     <template v-else>
       <!-- Recentes -->
-      <div v-if="mostrarAtalhos && listaRecentes.length" class="bg-card ring-foreground/10 overflow-hidden rounded-xl ring-1">
-        <h2 class="text-muted-foreground flex items-center gap-2 px-4 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase">
-          <Clock class="size-4" /> Recentes
+      <div v-if="mostrarAtalhos && listaRecentes.length" class="flex flex-col">
+        <h2 class="text-muted-foreground flex items-center gap-2 px-3 pb-1 text-xs font-medium">
+          <Clock class="size-3.5" /> Recentes
         </h2>
-        <div class="divide-y">
+        <div class="flex flex-col">
           <LinhaItem
             v-for="item in listaRecentes"
             :key="item.id"
@@ -175,11 +175,11 @@ function filtrarCategoria(chave: string | null) {
       </div>
 
       <!-- Favoritos -->
-      <div v-if="mostrarAtalhos && favoritos.length" class="bg-card ring-foreground/10 overflow-hidden rounded-xl ring-1">
-        <h2 class="text-muted-foreground flex items-center gap-2 px-4 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase">
-          <Star class="size-4" /> Favoritos
+      <div v-if="mostrarAtalhos && favoritos.length" class="flex flex-col">
+        <h2 class="text-muted-foreground flex items-center gap-2 px-3 pb-1 text-xs font-medium">
+          <Star class="size-3.5" /> Favoritos
         </h2>
-        <div class="divide-y">
+        <div class="flex flex-col">
           <LinhaItem
             v-for="item in favoritos"
             :key="item.id"
@@ -194,33 +194,35 @@ function filtrarCategoria(chave: string | null) {
       </div>
 
       <!-- Todos, por categoria -->
-      <div
-        v-for="grupo in gruposVisiveis"
-        :key="chaveGrupo(grupo.categoria?.id)"
-        class="bg-card ring-foreground/10 overflow-hidden rounded-xl ring-1"
-      >
-        <button
-          type="button"
-          class="hover:bg-muted/60 flex h-12 w-full items-center gap-2 px-4 text-left"
-          :aria-expanded="aberta(chaveGrupo(grupo.categoria?.id))"
-          @click="alternarGrupo(chaveGrupo(grupo.categoria?.id))"
+      <div v-if="gruposVisiveis.length" class="flex flex-col gap-1">
+        <div
+          v-for="grupo in gruposVisiveis"
+          :key="chaveGrupo(grupo.categoria?.id)"
+          class="flex flex-col"
         >
-          <IconeCategoria :icone="grupo.categoria?.icone" class="text-muted-foreground size-5" />
-          <span class="flex-1 font-semibold">{{ grupo.categoria?.nome ?? ROTULO_SEM_CATEGORIA }}</span>
-          <span class="text-muted-foreground text-sm">{{ grupo.itens.length }}</span>
-          <ChevronDown
-            :class="cn('text-muted-foreground size-5 transition-transform', !aberta(chaveGrupo(grupo.categoria?.id)) && '-rotate-90')"
-          />
-        </button>
-        <div v-show="aberta(chaveGrupo(grupo.categoria?.id))" class="divide-y border-t">
-          <LinhaItem
-            v-for="item in grupo.itens"
-            :key="item.id"
-            :para="`${rotaBase}/${item.id}`"
-            :titulo="nomeDoItem(item)"
-            :favorito="item.favorito"
-            :nao-revisada="item.revisada === false"
-          />
+          <button
+            type="button"
+            class="hover:bg-accent/70 flex h-11 w-full items-center gap-2 rounded-xl px-2 text-left transition-colors"
+            :aria-expanded="aberta(chaveGrupo(grupo.categoria?.id))"
+            @click="alternarGrupo(chaveGrupo(grupo.categoria?.id))"
+          >
+            <ChevronDown
+              :class="cn('text-muted-foreground size-4 shrink-0 transition-transform', !aberta(chaveGrupo(grupo.categoria?.id)) && '-rotate-90')"
+            />
+            <IconeCategoria :icone="grupo.categoria?.icone" class="text-muted-foreground size-[18px]" />
+            <span class="flex-1 text-sm font-semibold">{{ grupo.categoria?.nome ?? ROTULO_SEM_CATEGORIA }}</span>
+            <span class="text-muted-foreground bg-secondary rounded-full px-2 py-0.5 text-xs">{{ grupo.itens.length }}</span>
+          </button>
+          <div v-show="aberta(chaveGrupo(grupo.categoria?.id))" class="flex flex-col pl-4">
+            <LinhaItem
+              v-for="item in grupo.itens"
+              :key="item.id"
+              :para="`${rotaBase}/${item.id}`"
+              :titulo="nomeDoItem(item)"
+              :favorito="item.favorito"
+              :nao-revisada="item.revisada === false"
+            />
+          </div>
         </div>
       </div>
 
@@ -231,7 +233,7 @@ function filtrarCategoria(chave: string | null) {
     <Button
       v-if="!MODO_PENDRIVE"
       size="icon-touch"
-      class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg md:hidden"
+      class="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-2xl shadow-lg md:hidden"
       :aria-label="rotuloNovo"
       as-child
     >

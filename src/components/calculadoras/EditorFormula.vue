@@ -34,7 +34,7 @@ function mover(i: number, direcao: -1 | 1) {
     <div
       v-for="(entrada, i) in entradas"
       :key="entrada.id"
-      class="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-3 ring-1"
+      class="bg-card border shadow-xs flex flex-col gap-3 rounded-2xl p-3"
     >
       <div class="flex items-center gap-1">
         <span class="flex-1 font-semibold">Entrada {{ i + 1 }}</span>

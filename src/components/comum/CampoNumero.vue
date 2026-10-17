@@ -39,7 +39,7 @@ function aoDigitar() {
       autocomplete="off"
       :aria-invalid="(texto.trim() !== '' && Number.isNaN(valor)) || undefined"
       :class="cn(
-        'border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-11 w-full rounded-lg border bg-transparent px-3 text-base outline-none focus-visible:ring-3 aria-invalid:ring-3',
+        'border-input bg-card dark:bg-input/20 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-11 w-full rounded-xl border bg-transparent px-3 text-base outline-none focus-visible:ring-3 aria-invalid:ring-3',
         sufixo && 'pr-14',
       )"
       @input="aoDigitar"

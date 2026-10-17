@@ -191,7 +191,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
 
 <template>
   <section class="flex flex-col gap-4 pb-6">
-    <h1 class="text-2xl font-semibold">Backup</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Backup</h1>
 
     <!-- Exportar -->
     <Card>
@@ -239,7 +239,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
         </Button>
         <p v-if="nomeArquivo" class="text-muted-foreground text-sm break-all">{{ nomeArquivo }}</p>
 
-        <p v-if="erroLeitura" role="alert" class="border-critico bg-critico/12 rounded-lg border p-3 text-sm">
+        <p v-if="erroLeitura" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3 text-sm">
           {{ erroLeitura }}
         </p>
 
@@ -292,7 +292,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
               :aria-checked="modo === opcao.valor"
               :class="cn(
                 'flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left',
-                modo === opcao.valor ? 'border-primary bg-primary/10' : 'hover:bg-muted border-border',
+                modo === opcao.valor ? 'border-primary/50 bg-primary/10' : 'hover:bg-accent/70 border-border',
               )"
               @click="modo = opcao.valor"
             >
@@ -327,7 +327,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
 
           <!-- Substituir -->
           <template v-else>
-            <p class="border-critico bg-critico/12 rounded-lg border p-3 text-sm">
+            <p class="border-critico/35 bg-critico/10 rounded-xl border p-3 text-sm">
               A biblioteca deste aparelho ({{ totalNoAparelho }} {{ totalNoAparelho === 1 ? 'prescrição' : 'prescrições' }},
               inclusive a lixeira) será apagada e trocada pela do arquivo.
             </p>

@@ -29,7 +29,7 @@ function aoApagar() {
 
 <template>
   <div
-    class="border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border px-2 py-1.5 focus-within:ring-3"
+    class="border-input dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/50 flex min-h-11 flex-wrap items-center gap-1.5 rounded-xl border px-2 py-1.5 focus-within:ring-3"
   >
     <span
       v-for="(tag, i) in tags"
@@ -39,7 +39,7 @@ function aoApagar() {
       {{ tag }}
       <button
         type="button"
-        class="hover:bg-muted flex size-6 items-center justify-center rounded-full"
+        class="hover:bg-accent/70 flex size-6 items-center justify-center rounded-full"
         :aria-label="`Remover tag ${tag}`"
         @click="remover(i)"
       >

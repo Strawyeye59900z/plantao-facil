@@ -158,15 +158,15 @@ async function moverParaLixeira() {
 </script>
 
 <template>
-  <section v-if="prescricao" class="flex flex-col gap-4 pb-24">
+  <section v-if="prescricao" class="flex flex-col gap-5 pb-24">
     <!-- Cabeçalho -->
-    <header class="flex flex-col gap-2">
-      <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
-        <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" />
+    <header class="flex flex-col gap-3">
+      <p class="text-muted-foreground bg-secondary flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+        <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" class="size-3.5" />
         {{ categorias.nome(prescricao.categoriaId) }}
       </p>
       <div class="flex items-start gap-2">
-        <h1 class="flex-1 text-2xl leading-tight font-semibold">{{ prescricao.titulo }}</h1>
+        <h1 class="flex-1 text-2xl leading-tight font-semibold md:text-3xl">{{ prescricao.titulo }}</h1>
         <!-- Pen drive: favorito só exibido (a próxima atualização da biblioteca apagaria a mudança) -->
         <Star
           v-if="MODO_PENDRIVE"
@@ -185,18 +185,28 @@ async function moverParaLixeira() {
         </Button>
       </div>
       <div v-if="prescricao.tags.length" class="flex flex-wrap gap-1.5">
-        <span v-for="tag in prescricao.tags" :key="tag" class="bg-secondary rounded-full px-2.5 py-0.5 text-xs">
-          {{ tag }}
+        <span v-for="tag in prescricao.tags" :key="tag" class="text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs">
+          #{{ tag }}
         </span>
+      </div>
+      <!-- Ações (antes ficavam no fim da página) -->
+      <div v-if="!prescricao.excluidoEm && !MODO_PENDRIVE" class="-ml-2 flex flex-wrap gap-1">
+        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" as-child>
+          <RouterLink :to="`/prescricoes/${prescricao.id}/editar`"><Pencil /> Editar</RouterLink>
+        </Button>
+        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" @click="duplicar"><Copy /> Duplicar</Button>
+        <Button variant="ghost" size="touch" class="text-muted-foreground hover:text-destructive px-3 text-sm" @click="confirmarLixeira = true">
+          <Trash2 /> Excluir
+        </Button>
       </div>
     </header>
 
-    <div v-if="prescricao.excluidoEm" class="bg-muted rounded-xl p-3 text-sm">
+    <div v-if="prescricao.excluidoEm" class="bg-muted rounded-2xl p-3 text-sm">
       Esta prescrição está na lixeira.
     </div>
 
     <!-- Importada e não revisada -->
-    <div v-if="!prescricao.revisada" class="border-atencao bg-atencao/12 flex flex-col gap-2 rounded-xl border p-3">
+    <div v-if="!prescricao.revisada" class="border-atencao/45 bg-atencao/12 flex flex-col gap-2 rounded-2xl border p-4">
       <p class="font-semibold">Importada — não revisada</p>
       <ul v-if="prescricao.duvidasImportacao.length" class="list-disc pl-5 text-sm">
         <li v-for="(duvida, i) in prescricao.duvidasImportacao" :key="i">{{ duvida }}</li>
@@ -217,8 +227,8 @@ async function moverParaLixeira() {
     </div>
 
     <!-- Peso do paciente (só na memória desta tela) -->
-    <div v-if="temRegra" class="bg-card ring-foreground/10 flex flex-col gap-1.5 rounded-xl p-4 ring-1">
-      <label for="peso" class="flex items-center gap-2 font-semibold"><Scale class="size-5" /> Peso do paciente</label>
+    <div v-if="temRegra" class="bg-card flex flex-col gap-2 rounded-2xl border p-4 shadow-xs">
+      <label for="peso" class="text-muted-foreground flex items-center gap-2 text-sm font-medium"><Scale class="size-4" /> Peso do paciente</label>
       <div class="relative">
         <input
           id="peso"
@@ -229,7 +239,7 @@ async function moverParaLixeira() {
           placeholder="ex.: 12,5"
           :aria-invalid="(pesoDigitado.trim() !== '' && !leituraPeso.ok) || undefined"
           aria-describedby="peso-ajuda"
-          class="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-14 w-full rounded-xl border bg-transparent pr-12 pl-4 text-2xl font-semibold outline-none focus-visible:ring-3 aria-invalid:ring-3"
+          class="border-input bg-background dark:bg-input/20 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-14 w-full rounded-xl border pr-12 pl-4 text-2xl font-semibold tabular-nums outline-none focus-visible:ring-3 aria-invalid:ring-3"
         />
         <span class="text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">kg</span>
       </div>
@@ -249,14 +259,14 @@ async function moverParaLixeira() {
     <ol class="flex flex-col gap-3">
       <template v-for="(item, i) in itens" :key="item.id">
         <!-- Cabeçalho do grupo: condição com caixa de marcar (entra no Copiar) ou "Sempre" -->
-        <li v-if="cabecalho(i) === 'sempre'" class="text-muted-foreground mt-1 text-xs font-semibold tracking-wide uppercase">
+        <li v-if="cabecalho(i) === 'sempre'" class="text-muted-foreground mt-1 px-1 text-xs font-medium">
           Sempre
         </li>
         <li v-else-if="cabecalho(i)" class="mt-1">
           <label
             :class="cn(
-              'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-3',
-              marcadas[(cabecalho(i) as { id: UUID }).id] ? 'border-primary bg-primary/10' : 'border-dashed',
+              'flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-colors',
+              marcadas[(cabecalho(i) as { id: UUID }).id] ? 'border-primary/50 bg-primary/10' : 'border-dashed hover:bg-accent/60',
             )"
           >
             <input
@@ -273,22 +283,22 @@ async function moverParaLixeira() {
         </li>
         <li
           :class="cn(
-            'bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-4 ring-1 transition-opacity',
-            !calculada.linhas[i]!.copiar && 'opacity-55',
-          )"
+     'bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs transition-opacity',
+      !calculada.linhas[i]!.copiar &&'opacity-55',
+     )"
         >
-          <div class="flex gap-3">
-            <span class="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+          <div class="flex flex-wrap gap-3 sm:flex-nowrap">
+            <span class="bg-primary/12 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums">
               {{ i + 1 }}
             </span>
             <!-- Opções equivalentes (OU): todas por extenso; escolher uma é obrigatório para copiar -->
             <div
               v-if="calculada.linhas[i]!.opcoesEquivalentes"
-              class="flex min-w-0 flex-1 flex-col gap-1.5"
+              class="flex min-w-0 flex-1 basis-[calc(100%-2.5rem)] flex-col gap-1.5 sm:basis-0"
               role="radiogroup"
               :aria-label="`Opções do item ${i + 1}`"
             >
-              <p :class="cn('text-xs font-semibold tracking-wide uppercase', calculada.linhas[i]!.escolhaPendente ? 'text-atencao' : 'text-muted-foreground')">
+              <p :class="cn('text-xs font-medium', calculada.linhas[i]!.escolhaPendente ? 'text-atencao' : 'text-muted-foreground')">
                 {{ calculada.linhas[i]!.escolhaPendente ? 'Escolha uma opção' : 'Opção escolhida' }}
               </p>
               <button
@@ -298,11 +308,11 @@ async function moverParaLixeira() {
                 role="radio"
                 :aria-checked="escolhidas[item.id] === opcao.id"
                 :class="cn(
-                  'flex items-start gap-2.5 rounded-lg border p-2.5 text-left transition-opacity',
+                  'flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors',
                   escolhidas[item.id] === opcao.id
-                    ? 'border-primary bg-primary/10'
+                    ? 'border-primary/50 bg-primary/10'
                     : calculada.linhas[i]!.escolhaPendente
-                      ? 'hover:bg-muted'
+                      ? 'hover:bg-accent/60'
                       : 'opacity-50 hover:opacity-100',
                 )"
                 @click="escolher(item.id, opcao.id)"
@@ -321,18 +331,18 @@ async function moverParaLixeira() {
                 </span>
               </button>
             </div>
-            <div v-else class="min-w-0 flex-1">
+            <div v-else class="min-w-0 flex-1 basis-[calc(100%-2.5rem)] sm:basis-0">
               <p v-if="calculada.linhas[i]!.motivoAlternativa" class="text-primary mb-1 flex items-center gap-1 text-xs font-semibold">
                 <Replace class="size-3.5" /> Alternativa: {{ calculada.linhas[i]!.motivoAlternativa }}
               </p>
-              <p class="text-base whitespace-pre-line">{{ calculada.linhas[i]!.texto }}</p>
+              <p class="text-base leading-relaxed whitespace-pre-line">{{ calculada.linhas[i]!.texto }}</p>
             </div>
             <!-- Troca pela alternativa -->
             <CampoSelect
               v-if="item.alternativas.length && !calculada.linhas[i]!.opcoesEquivalentes"
               :model-value="escolhidas[item.id] ?? null"
               :opcoes="opcoesItem(item)"
-              class="w-36 shrink-0 sm:w-48"
+              class="ml-10 w-[calc(100%-2.5rem)] shrink-0 sm:ml-0 sm:w-48"
               :aria-label="`Substituir item ${i + 1}`"
               @update:model-value="(altId) => escolher(item.id, altId)"
             />
@@ -349,40 +359,31 @@ async function moverParaLixeira() {
       </template>
     </ol>
 
-    <div v-if="prescricao.receita" class="flex flex-col gap-2">
+    <div v-if="prescricao.receita" class="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs">
       <div class="flex items-center justify-between gap-2">
-        <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Receita pronta</h2>
-        <Button variant="outline" size="touch" @click="copiarReceita"><ClipboardCopy /> Copiar receita</Button>
+        <h2 class="text-sm font-semibold">Receita pronta</h2>
+        <Button variant="outline" size="touch" class="text-sm" @click="copiarReceita"><ClipboardCopy /> Copiar receita</Button>
       </div>
-      <p class="bg-muted/50 rounded-lg border p-3 whitespace-pre-line">{{ prescricao.receita }}</p>
+      <p class="bg-muted/70 rounded-xl p-3 leading-relaxed whitespace-pre-line">{{ prescricao.receita }}</p>
     </div>
 
-    <div v-if="prescricao.observacoes" class="flex flex-col gap-1">
-      <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Observações</h2>
-      <p class="whitespace-pre-line">{{ prescricao.observacoes }}</p>
+    <div v-if="prescricao.observacoes" class="flex flex-col gap-1.5 px-1">
+      <h2 class="text-sm font-semibold">Observações</h2>
+      <p class="leading-relaxed whitespace-pre-line">{{ prescricao.observacoes }}</p>
     </div>
 
-    <div v-if="prescricao.referencia" class="flex flex-col gap-1">
-      <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Referência</h2>
+    <div v-if="prescricao.referencia" class="flex flex-col gap-1.5 border-t px-1 pt-4">
+      <h2 class="text-muted-foreground text-xs font-medium">Referência</h2>
       <p class="text-muted-foreground text-sm whitespace-pre-line">{{ prescricao.referencia }}</p>
-    </div>
-
-    <!-- Ações -->
-    <div v-if="!prescricao.excluidoEm && !MODO_PENDRIVE" class="grid grid-cols-3 gap-2 border-t pt-4">
-      <Button variant="outline" size="touch" as-child>
-        <RouterLink :to="`/prescricoes/${prescricao.id}/editar`"><Pencil /> Editar</RouterLink>
-      </Button>
-      <Button variant="outline" size="touch" @click="duplicar"><Copy /> Duplicar</Button>
-      <Button variant="destructive" size="touch" @click="confirmarLixeira = true"><Trash2 /> Excluir</Button>
     </div>
 
     <!-- Copiar: barra fixa -->
     <div
       v-if="!prescricao.excluidoEm"
-      class="bg-background/95 fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t backdrop-blur md:bottom-0 md:left-60"
+      class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 px-3 md:bottom-4 md:left-64 md:px-8"
     >
-      <div class="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2">
-        <p v-if="motivoBloqueio" class="text-muted-foreground flex-1 text-sm">{{ motivoBloqueio }}</p>
+      <div class="bg-card/95 pointer-events-auto mx-auto flex max-w-[44rem] items-center gap-2 rounded-2xl border p-2 shadow-lg backdrop-blur-md">
+        <p v-if="motivoBloqueio" class="text-muted-foreground flex-1 px-2 text-sm">{{ motivoBloqueio }}</p>
         <Button size="touch" :class="motivoBloqueio ? '' : 'flex-1'" :disabled="!calculada.podeCopiar" @click="copiar">
           <ClipboardCopy /> Copiar
         </Button>
@@ -400,7 +401,7 @@ async function moverParaLixeira() {
   </section>
 
   <section v-else class="flex flex-col items-start gap-4">
-    <h1 class="text-2xl font-semibold">Prescrição não encontrada</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Prescrição não encontrada</h1>
     <Button size="touch" as-child><RouterLink to="/prescricoes">Voltar para a lista</RouterLink></Button>
   </section>
 </template>

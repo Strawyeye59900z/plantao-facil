@@ -21,7 +21,7 @@ const modelo = defineModel<T>({ required: true })
       :id="id"
       v-model="modelo"
       v-bind="$attrs"
-      class="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive h-11 w-full appearance-none rounded-lg border bg-transparent pr-9 pl-3 text-base outline-none focus-visible:ring-3"
+      class="bg-card dark:bg-input/20 shadow-xs border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive h-11 w-full appearance-none rounded-xl border pr-9 pl-3 text-base outline-none focus-visible:ring-3"
     >
       <option v-if="placeholder" :value="null" disabled>{{ placeholder }}</option>
       <option v-for="o in opcoes" :key="String(o.valor)" :value="o.valor" class="bg-popover text-popover-foreground">

@@ -81,7 +81,7 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
         <div
           v-for="campo in (calculadora as CalculadoraPontos).campos"
           :key="campo.id"
-          class="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl px-3 py-2 ring-1"
+          class="bg-card border shadow-xs flex flex-col gap-1 rounded-2xl px-3 py-2"
         >
           <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p class="min-w-[40%] flex-1 text-sm font-medium">{{ campo.rotulo || 'Campo sem texto' }}</p>
@@ -96,8 +96,8 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
                 type="button"
                 :aria-pressed="respostas[campo.id] === opcao.valor"
                 :class="cn(
-                  'flex h-11 min-w-16 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium',
-                  respostas[campo.id] === opcao.valor ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+                  'flex h-11 min-w-16 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-sm font-medium',
+                  respostas[campo.id] === opcao.valor ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent/70',
                 )"
                 @click="responder(campo.id, opcao.valor)"
               >
@@ -118,8 +118,8 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
                 role="radio"
                 :aria-checked="respostas[campo.id] === opcao.id"
                 :class="cn(
-                  'flex min-h-11 items-center gap-1.5 rounded-lg border px-2.5 text-left text-sm',
-                  respostas[campo.id] === opcao.id ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted',
+                  'flex min-h-11 items-center gap-1.5 rounded-xl border px-2.5 text-left text-sm',
+                  respostas[campo.id] === opcao.id ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent/70',
                 )"
                 @click="responder(campo.id, opcao.id)"
               >
@@ -147,7 +147,7 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
         <div
           v-for="entrada in (calculadora as CalculadoraFormula).entradas"
           :key="entrada.id"
-          class="bg-card ring-foreground/10 flex items-center gap-3 rounded-xl px-3 py-2 ring-1"
+          class="bg-card border shadow-xs flex items-center gap-3 rounded-2xl px-3 py-2"
         >
           <div class="min-w-0 flex-1">
             <label :for="`entrada-${entrada.id}`" class="text-sm font-medium">{{ entrada.rotulo || entrada.variavel }}</label>
@@ -167,12 +167,12 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
 
     <!-- Resultado -->
     <div
-      class="bg-background/95 ring-foreground/10 sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col gap-2 rounded-xl p-3 ring-1 backdrop-blur md:bottom-4"
+      class="bg-card/95 border shadow-lg sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col gap-2 rounded-2xl p-3 backdrop-blur md:bottom-4"
       aria-live="polite"
     >
       <div class="flex items-center gap-3">
         <div class="min-w-0 flex-1">
-          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          <p class="text-muted-foreground text-xs font-medium">
             Resultado<span v-if="parcial && pontos"> · parcial ({{ pontos.respondidos }} de {{ pontos.totalCampos }})</span>
           </p>
           <p v-if="textoResultado" class="text-3xl font-bold">{{ textoResultado }}</p>
@@ -187,7 +187,7 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
 
       <p
         v-if="formula?.estado === 'ok' && formula.aviso"
-        class="border-atencao bg-atencao/12 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold"
+        class="border-atencao/45 bg-atencao/12 flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm font-semibold"
       >
         <TriangleAlert class="text-atencao size-4" />
         {{ formula.aviso === 'teto' ? 'Valor máximo (teto) aplicado' : 'Valor mínimo (piso) aplicado' }}
@@ -196,11 +196,11 @@ const sinal = (x: number) => (x > 0 ? `+${formatarNumero(x)}` : formatarNumero(x
 
       <div
         v-if="faixa"
-        :class="cn('flex gap-2 rounded-lg border-l-4 p-2.5', ESTILO_GRAVIDADE[faixa.gravidade].caixa)"
+        :class="cn('flex gap-2 rounded-xl border p-2.5', ESTILO_GRAVIDADE[faixa.gravidade].caixa)"
       >
         <component :is="ESTILO_GRAVIDADE[faixa.gravidade].componente" :class="cn('mt-0.5 size-5 shrink-0', ESTILO_GRAVIDADE[faixa.gravidade].icone)" />
         <div>
-          <p class="text-xs font-semibold tracking-wide uppercase">
+          <p class="text-xs font-medium">
             {{ ROTULO_GRAVIDADE[faixa.gravidade] }}<span v-if="parcial" class="font-normal normal-case"> · resultado parcial</span>
           </p>
           <p class="whitespace-pre-line">{{ faixa.texto }}</p>

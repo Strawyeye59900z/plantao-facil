@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">{{ titulo }}</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">{{ titulo }}</h1>
     <div class="text-muted-foreground flex flex-col items-center gap-3 rounded-xl border border-dashed p-8 text-center">
       <Construction class="size-8" />
       <p class="text-sm">Disponível na Fase {{ fase }}.</p>

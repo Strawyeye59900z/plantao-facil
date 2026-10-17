@@ -94,17 +94,17 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
 
 <template>
   <section v-if="naoEncontrada" class="flex flex-col items-start gap-4">
-    <h1 class="text-2xl font-semibold">Calculadora não encontrada</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Calculadora não encontrada</h1>
     <Button size="touch" as-child><RouterLink to="/calculadoras">Voltar para a lista</RouterLink></Button>
   </section>
 
   <!-- Criação: escolher o tipo -->
   <section v-else-if="!dados" class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Nova calculadora</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Nova calculadora</h1>
     <p class="text-muted-foreground">Qual o tipo?</p>
     <button
       type="button"
-      class="bg-card ring-foreground/10 hover:bg-muted flex items-start gap-3 rounded-xl p-4 text-left ring-1"
+      class="bg-card border shadow-xs hover:bg-accent/70 flex items-start gap-3 rounded-2xl p-4 text-left"
       @click="escolherTipo('pontos')"
     >
       <ListChecks class="text-primary mt-0.5 size-6 shrink-0" />
@@ -115,7 +115,7 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
     </button>
     <button
       type="button"
-      class="bg-card ring-foreground/10 hover:bg-muted flex items-start gap-3 rounded-xl p-4 text-left ring-1"
+      class="bg-card border shadow-xs hover:bg-accent/70 flex items-start gap-3 rounded-2xl p-4 text-left"
       @click="escolherTipo('formula')"
     >
       <Calculator class="text-primary mt-0.5 size-6 shrink-0" />
@@ -127,12 +127,12 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
   </section>
 
   <form v-else class="flex flex-col gap-6 pb-24" novalidate @submit.prevent="salvar">
-    <h1 class="text-2xl font-semibold">
+    <h1 class="text-2xl font-semibold md:text-3xl">
       {{ idEdicao ? 'Editar calculadora' : 'Nova calculadora' }}
       <span class="text-muted-foreground text-base font-normal">· {{ dados.tipo === 'pontos' ? 'escore por pontos' : 'fórmula' }}</span>
     </h1>
 
-    <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico bg-critico/12 rounded-xl border p-3">
+    <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3">
       <p class="font-semibold">Corrija antes de salvar:</p>
       <ul class="list-disc pl-5 text-sm">
         <li v-for="erro in erros" :key="erro">{{ erro }}</li>
@@ -187,7 +187,7 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
     <EditorFaixasInterpretacao v-model="dados.faixas" />
 
     <!-- Avisos (não impedem salvar) -->
-    <div v-if="avisos.length" class="border-atencao bg-atencao/12 flex flex-col gap-1 rounded-xl border p-3 text-sm">
+    <div v-if="avisos.length" class="border-atencao/45 bg-atencao/12 flex flex-col gap-1 rounded-xl border p-3 text-sm">
       <p class="flex items-center gap-2 font-semibold"><TriangleAlert class="text-atencao size-4" /> Avisos</p>
       <ul class="list-disc pl-5">
         <li v-for="aviso in avisos" :key="aviso">{{ aviso }}</li>
@@ -202,8 +202,8 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
       <UsoCalculadora v-if="mostrarTeste" :calculadora="dados" />
     </div>
 
-    <div class="bg-background/95 fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t backdrop-blur md:bottom-0 md:left-60">
-      <div class="mx-auto flex max-w-3xl gap-2 px-3 py-2">
+    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 px-3 md:bottom-4 md:left-64 md:px-8">
+      <div class="bg-card/95 pointer-events-auto mx-auto flex max-w-[44rem] items-center gap-2 rounded-2xl border p-2 shadow-lg backdrop-blur-md">
         <Button type="button" variant="outline" size="touch" class="flex-1" @click="router.back()">Cancelar</Button>
         <Button type="submit" size="touch" class="flex-1">Salvar</Button>
       </div>

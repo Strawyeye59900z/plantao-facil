@@ -58,11 +58,11 @@ async function excluirDeVez() {
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Lixeira</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Lixeira</h1>
 
     <p v-if="itens.length === 0" class="text-muted-foreground py-6 text-center">A lixeira está vazia.</p>
 
-    <ul v-else class="bg-card ring-foreground/10 divide-y overflow-hidden rounded-xl ring-1">
+    <ul v-else class="bg-card border shadow-xs divide-y overflow-hidden rounded-2xl">
       <li v-for="item in itens" :key="item.id" class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
         <RouterLink :to="rota(item)" class="min-w-0 flex-1">
           <p class="truncate font-medium">{{ item.nome }}</p>

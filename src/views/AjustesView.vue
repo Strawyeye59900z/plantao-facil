@@ -84,7 +84,7 @@ async function apagar() {
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Ajustes</h1>
+    <h1 class="text-2xl font-semibold md:text-3xl">Ajustes</h1>
 
     <Card>
       <CardContent class="flex items-center justify-between gap-4">
@@ -128,7 +128,7 @@ async function apagar() {
           v-for="item in NAVEGACAO_SECUNDARIA"
           :key="item.rota"
           :to="item.rota"
-          class="hover:bg-muted flex h-14 items-center gap-3 px-4 text-base not-last:border-b"
+          class="hover:bg-accent/70 flex h-14 items-center gap-3 px-4 text-base not-last:border-b"
         >
           <component :is="item.icone" class="size-5" />
           <span class="flex-1">{{ item.rotulo }}</span>

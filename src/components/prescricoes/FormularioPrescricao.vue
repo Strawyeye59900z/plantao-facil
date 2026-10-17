@@ -242,8 +242,8 @@ function removerAlerta(alertaId: UUID) {
         <span class="text-muted-foreground text-xs">não é salvo</span>
       </div>
       <template v-for="(item, i) in dados.itens" :key="item.id">
-        <h3 v-if="tituloGrupo(i)" class="text-muted-foreground mt-2 text-xs font-semibold tracking-wide uppercase">{{ tituloGrupo(i) }}</h3>
-        <div class="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-3 ring-1">
+        <h3 v-if="tituloGrupo(i)" class="text-muted-foreground mt-2 text-xs font-medium">{{ tituloGrupo(i) }}</h3>
+        <div class="bg-card border shadow-xs flex flex-col gap-3 rounded-2xl p-3">
           <div class="flex items-center gap-1">
             <span class="flex-1 font-semibold">Item {{ i + 1 }}</span>
             <Button type="button" variant="ghost" size="icon-touch" :disabled="!podeMover(i, -1)" aria-label="Mover para cima" @click="mover(i, -1)">
@@ -333,7 +333,7 @@ function removerAlerta(alertaId: UUID) {
       <div
         v-for="(alerta, i) in dados.alertas"
         :key="alerta.id"
-        class="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-3 ring-1"
+        class="bg-card border shadow-xs flex flex-col gap-3 rounded-2xl p-3"
       >
         <div class="flex items-center gap-2">
           <span class="flex-1 font-semibold">Alerta {{ i + 1 }}</span>

@@ -33,7 +33,7 @@ async function aoEscolher(evento: Event) {
     <div class="flex items-center gap-3">
       <LogoApp class="size-10" />
       <div>
-        <h1 class="text-2xl font-semibold">Plantão Fácil</h1>
+        <h1 class="text-2xl font-semibold md:text-3xl">Plantão Fácil</h1>
         <p class="text-muted-foreground text-sm">Modo pen drive — somente leitura</p>
       </div>
     </div>
@@ -50,11 +50,11 @@ async function aoEscolher(evento: Event) {
         <Button size="touch" :disabled="carregando" @click="entrada?.click()">
           <FileUp /> Escolher backup
         </Button>
-        <p v-if="erro" role="alert" class="border-critico bg-critico/12 rounded-lg border p-3 text-sm">{{ erro }}</p>
+        <p v-if="erro" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3 text-sm">{{ erro }}</p>
       </CardContent>
     </Card>
 
-    <div class="border-atencao bg-atencao/12 flex gap-3 rounded-xl border p-3 text-sm">
+    <div class="border-atencao/45 bg-atencao/12 flex gap-3 rounded-xl border p-3 text-sm">
       <ShieldAlert class="text-atencao mt-0.5 size-5 shrink-0" />
       <p v-if="!armazenamento.emMemoria">
         A biblioteca fica salva <strong>neste navegador</strong>, e abre direto nas próximas vezes. Em PC

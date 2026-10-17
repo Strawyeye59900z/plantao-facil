@@ -40,8 +40,8 @@ function escolher(chave: string | null) {
         <button
           type="button"
           :class="cn(
-            'flex aspect-square items-center justify-center rounded-lg border',
-            icone === null ? 'border-primary bg-primary/10' : 'hover:bg-muted border-transparent',
+            'flex aspect-square items-center justify-center rounded-xl border',
+            icone === null ? 'border-primary/50 bg-primary/10' : 'hover:bg-accent/70 border-transparent',
           )"
           aria-label="Sem ícone"
           title="Sem ícone"
@@ -54,8 +54,8 @@ function escolher(chave: string | null) {
           :key="chave"
           type="button"
           :class="cn(
-            'flex aspect-square items-center justify-center rounded-lg border',
-            icone === chave ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted border-transparent',
+            'flex aspect-square items-center justify-center rounded-xl border',
+            icone === chave ? 'border-primary/50 bg-primary/10 text-primary' : 'hover:bg-accent/70 border-transparent',
           )"
           :aria-label="definicao.rotulo"
           :aria-pressed="icone === chave"

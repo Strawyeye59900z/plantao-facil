@@ -1,20 +1,20 @@
 <!doctype html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Plantão Fácil</title>
     <meta name="description" content="Apoio pessoal ao plantão médico: prescrições e calculadoras offline." />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#faf9f5" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <script>
-      // Aplica o tema salvo antes do primeiro desenho (padrão: escuro).
+      // Aplica o tema salvo antes do primeiro desenho (padrão: claro).
       try {
-        if (localStorage.getItem('plantao-facil:tema') === 'claro') {
-          document.documentElement.classList.remove('dark')
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        if (localStorage.getItem('plantao-facil:tema') === 'escuro') {
+          document.documentElement.classList.add('dark')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#262624')
         }
       } catch (e) {}
     </script>
