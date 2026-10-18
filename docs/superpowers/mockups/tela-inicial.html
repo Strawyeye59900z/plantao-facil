@@ -1,0 +1,76 @@
+<style>
+  .mk { font-size: 12px; line-height: 1.45; color: var(--text-primary); text-align: left; width:100%; }
+  .mk .nav { display:flex; gap:4px; margin-bottom:8px; }
+  .mk .nav span { font-size:11px; padding:3px 9px; border-radius:99px; border:1px solid var(--border); }
+  .mk .nav span.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .mk .search { border:1px solid var(--border); border-radius:10px; padding:7px 10px; color:var(--text-secondary); background:var(--bg-secondary); margin-bottom:8px; }
+  .mk .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .mk .tile { border:1px solid var(--border); border-radius:10px; padding:8px 6px; background:var(--bg-secondary); text-align:center; }
+  .mk .tile b { display:block; font-size:11px; }
+  .mk .tile small { color:var(--text-secondary); font-size:10px; }
+  .mk .ico { font-size:16px; }
+  .mk .h { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); margin:8px 0 3px; }
+  .mk .row { padding:4px 6px; border-bottom:1px solid var(--border); font-size:11px; }
+  .mk .side { display:grid; grid-template-columns: 0.9fr 1.6fr; gap:8px; }
+  .mk .sidebar { border-right:1px solid var(--border); padding-right:6px; }
+  .mk .sidebar div { font-size:11px; padding:3px 6px; border-radius:6px; }
+  .mk .sidebar div.on { background:var(--selected-bg); font-weight:600; }
+  .mk .grp { display:flex; justify-content:space-between; font-weight:600; font-size:11px; padding:5px 4px; border-bottom:1px solid var(--border); }
+  .mk .chips span { display:inline-block; font-size:10px; padding:2px 8px; border-radius:99px; border:1px solid var(--border); margin:0 3px 3px 0; }
+</style>
+
+<h2>Como deve ser a tela inicial?</h2>
+<p class="subtitle">Em todas: busca sempre no topo (busca sem acento, enquanto digita) e três áreas — Prescrições, Calculadoras, Escalas. Nomes e números são fictícios.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="aspect-ratio:auto; padding:12px; display:block;">
+      <div class="mk">
+        <div class="nav"><span class="on">Prescrições</span><span>Calculadoras</span><span>Escalas</span></div>
+        <div class="search">🔍 Buscar prescrição…</div>
+        <div class="grid">
+          <div class="tile"><span class="ico">❤</span><b>Cardiovascular</b><small>18</small></div>
+          <div class="tile"><span class="ico">🫁</span><b>Respiratório</b><small>12</small></div>
+          <div class="tile"><span class="ico">🧠</span><b>Neurológico</b><small>9</small></div>
+          <div class="tile"><span class="ico">🦠</span><b>Infecto</b><small>21</small></div>
+          <div class="tile"><span class="ico">✂</span><b>Procedimentos</b><small>7</small></div>
+          <div class="tile"><span class="ico">＋</span><b>…</b><small>&nbsp;</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A — Grade de sistemas</h3><p>Abre com blocos grandes por sistema. Toca no sistema → lista das prescrições dele. Bom para o dedo no celular.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="aspect-ratio:auto; padding:12px; display:block;">
+      <div class="mk">
+        <div class="nav"><span class="on">Prescrições</span><span>Calculadoras</span><span>Escalas</span></div>
+        <div class="search">🔍 Buscar prescrição…</div>
+        <div class="side">
+          <div class="sidebar">
+            <div>Todas</div><div class="on">Cardiovascular</div><div>Respiratório</div><div>Neurológico</div><div>Infecto</div><div>Procedimentos</div>
+          </div>
+          <div>
+            <div class="row">Fibrilação atrial</div><div class="row">Prescrição Teste 2</div><div class="row">Prescrição Teste 3</div><div class="row">Prescrição Teste 4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B — Sistemas na lateral</h3><p>Lista de sistemas fixa à esquerda, prescrições à direita. Ótimo no PC; no celular a lateral vira uma fileira de botões no topo.</p></div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="aspect-ratio:auto; padding:12px; display:block;">
+      <div class="mk">
+        <div class="nav"><span class="on">Prescrições</span><span>Calculadoras</span><span>Escalas</span></div>
+        <div class="search">🔍 Buscar prescrição…</div>
+        <div class="chips"><span>★ Fibrilação atrial</span><span>★ Prescrição Teste 2</span></div>
+        <div class="grp"><span>▾ Cardiovascular</span><small>18</small></div>
+        <div class="row">Fibrilação atrial</div><div class="row">Prescrição Teste 2</div>
+        <div class="grp"><span>▸ Respiratório</span><small>12</small></div>
+        <div class="grp"><span>▸ Neurológico</span><small>9</small></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>C — Lista única por grupos</h3><p>Uma lista só, com os sistemas como títulos que abrem/fecham. Favoritos no topo. (Parecido com o Plantão Fácil.)</p></div>
+  </div>
+</div>
