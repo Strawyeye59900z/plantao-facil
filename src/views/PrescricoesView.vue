@@ -4,11 +4,9 @@ import { filtrarPrescricoes } from '@/dominio/prescricoes/busca'
 import type { Prescricao } from '@/dominio/tipos'
 import { useCategoriasStore } from '@/stores/categorias'
 import { usePrescricoesStore } from '@/stores/prescricoes'
-import { useRecentesStore } from '@/stores/recentes'
 
 const prescricoes = usePrescricoesStore()
 const categorias = useCategoriasStore()
-const recentes = useRecentesStore()
 
 function filtrar(itens: Prescricao[], termo: string) {
   return filtrarPrescricoes(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
@@ -23,7 +21,6 @@ function filtrar(itens: Prescricao[], termo: string) {
     texto-vazio="Nenhuma prescrição cadastrada."
     :itens="prescricoes.ativas"
     :categorias="categorias.dePrescricoes"
-    :recentes-ids="recentes.ids('prescricao')"
     :filtrar="filtrar"
   />
 </template>

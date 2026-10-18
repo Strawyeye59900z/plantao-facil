@@ -202,7 +202,7 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
       <UsoCalculadora v-if="mostrarTeste" :calculadora="dados" />
     </div>
 
-    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 px-3 md:bottom-4 md:left-64 md:px-8">
+    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-20 px-3 md:px-8">
       <div class="bg-card/95 pointer-events-auto mx-auto flex max-w-[44rem] items-center gap-2 rounded-2xl border p-2 shadow-lg backdrop-blur-md">
         <Button type="button" variant="outline" size="touch" class="flex-1" @click="router.back()">Cancelar</Button>
         <Button type="submit" size="touch" class="flex-1">Salvar</Button>

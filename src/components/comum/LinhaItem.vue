@@ -9,7 +9,7 @@ defineProps<{
   favorito: boolean
   /** Prescrição importada e ainda não revisada. */
   naoRevisada?: boolean
-  /** Mostra o nome da categoria (nas seções Recentes e Favoritos). */
+  /** Mostra o nome da categoria (na seção Favoritos). */
   categoria?: string
   iconeCategoria?: string | null
 }>()

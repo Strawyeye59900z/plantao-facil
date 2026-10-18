@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils'
 import { MODO_PENDRIVE } from '@/modo'
 import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
-import { useRecentesStore } from '@/stores/recentes'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,7 +19,6 @@ const categorias = useCategoriasStore()
 
 const id = String(route.params.id)
 const calculadora = computed(() => calculadoras.obter(id))
-if (calculadora.value && calculadora.value.excluidoEm === null) useRecentesStore().registrar('calculadora', id)
 
 async function duplicar() {
   const copia = await calculadoras.duplicar(id)

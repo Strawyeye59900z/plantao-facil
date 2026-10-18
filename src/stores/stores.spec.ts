@@ -6,22 +6,10 @@ import { prescricaoVazia } from '@/dominio/prescricoes/editar'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from './categorias'
 import { usePrescricoesStore } from './prescricoes'
 import { useConfiguracoesStore } from './configuracoes'
-import { MAX_RECENTES, useRecentesStore } from './recentes'
 
 beforeEach(async () => {
   setActivePinia(createPinia())
   await Promise.all(db.tables.map((t) => t.clear()))
-})
-
-describe('recentes', () => {
-  it(`guarda no máximo ${MAX_RECENTES} por tipo, mais recente primeiro e sem repetir`, () => {
-    const recentes = useRecentesStore()
-    for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) recentes.registrar('prescricao', id)
-    recentes.registrar('prescricao', 'd')
-    recentes.registrar('calculadora', 'x')
-    expect(recentes.ids('prescricao')).toEqual(['d', 'f', 'e', 'c', 'b'])
-    expect(recentes.ids('calculadora')).toEqual(['x'])
-  })
 })
 
 describe('categorias', () => {

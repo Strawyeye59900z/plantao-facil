@@ -4,11 +4,9 @@ import { filtrarCalculadoras } from '@/dominio/calculadoras/busca'
 import type { Calculadora } from '@/dominio/tipos'
 import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
-import { useRecentesStore } from '@/stores/recentes'
 
 const calculadoras = useCalculadorasStore()
 const categorias = useCategoriasStore()
-const recentes = useRecentesStore()
 
 function filtrar(itens: Calculadora[], termo: string) {
   return filtrarCalculadoras(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
@@ -23,7 +21,6 @@ function filtrar(itens: Calculadora[], termo: string) {
     texto-vazio="Nenhuma calculadora cadastrada."
     :itens="calculadoras.ativas"
     :categorias="categorias.deCalculadoras"
-    :recentes-ids="recentes.ids('calculadora')"
     :filtrar="filtrar"
   />
 </template>

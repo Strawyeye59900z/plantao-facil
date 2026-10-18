@@ -29,7 +29,7 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - Offline-first: tudo funciona sem internet, exceto a importação de PDF por IA.
 - Dados só no aparelho, modelados para sincronização futura: UUID, `criadoEm`, `atualizadoEm`, exclusão lógica (`excluidoEm`).
 - **Nenhum dado de paciente é salvo.** Peso e entradas das calculadoras vivem só na memória da tela.
-- Rapidez: busca no topo, favoritos, recentes.
+- Rapidez: busca no topo, favoritos.
 - Mobile-first, funciona bem no PC. **Tema claro padrão**, opção de escuro. Alvos de toque ≥ 44px (botões `size="touch"` / `"icon-touch"`).
 - Sem fontes ou recursos externos em tempo de execução. Fonte **Plus Jakarta Sans embutida** (só o subconjunto latino, `src/assets/fontes/`, licença OFL junto).
 
@@ -66,6 +66,10 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Código: nomes de domínio em português; termos técnicos genéricos em inglês.
 - Git iniciado; commit ao fim de cada fase.
 
+### Layout (v2, branch `v2`)
+- Topo único (sem menu lateral nem navegação inferior): logo redondo na cor de destaque, pílulas das áreas (`AREAS` em `navegacao.ts`; a ativa em `--foreground`), busca em pílula (grava `?q=` na rota da área) e botão redondo de menu (`MENU`: Grupos, Importar PDF, Backup, Lixeira, Ajustes). No celular, logo + busca + menu numa linha e as pílulas embaixo.
+- Rotas `/nova` e `/editar`: o topo mostra só voltar + `route.meta.titulo`.
+
 ### Visual (redesign, branch `ui-redesign`)
 - Estilo inspirado no Claude desktop/Notion: **neutros quentes** (bege/off-white no claro, cinza quente no escuro) e **acento terracota** (`--primary`, hue 40). Tokens em `src/style.css`; `--radius: 0.75rem`.
 - Cartões `rounded-2xl border shadow-xs` (sem anel); listas sem caixa, linhas com destaque ao passar/tocar; rótulos de seção pequenos, sem maiúsculas.
@@ -76,21 +80,21 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ### Dados
 - Categorias: **lista gerenciada**, separada por módulo (`escopo: 'prescricao' | 'calculadora'`). Prescrições/calculadoras referenciam `categoriaId`.
-- Categorias têm **ícone opcional** (`icone`: chave da galeria fixa de ~70 ícones Lucide em `src/components/categorias/icones.ts`; não renomear chaves). Escolhido em Categorias (galeria em diálogo). Aparece no cabeçalho dos grupos, nos chips, em Recentes/Favoritos e na tela da prescrição. Registros/backups antigos sem o campo = `null`.
+- Categorias têm **ícone opcional** (`icone`: chave da galeria fixa de ~70 ícones Lucide em `src/components/categorias/icones.ts`; não renomear chaves). Escolhido em Categorias (galeria em diálogo). Aparece no cabeçalho dos grupos, nos chips, em Favoritos e na tela da prescrição. Registros/backups antigos sem o campo = `null`.
 - Exclusão: vai para a **lixeira** (exclusão lógica); dentro da lixeira pode **excluir permanentemente**.
-- **Recentes: 5 últimos, só em memória** enquanto o app está aberto (não persistem, não vão para o backup).
+- **Recentes foram removidos na v2** (sem store nem seção).
 - Favoritos: campo `favorito` na entidade; entram no backup.
 - Configurações (tema, chaves de IA) ficam na tabela `configuracoes`, fora do backup. Tema também em `localStorage` só para evitar piscar na abertura.
 - IndexedDB não indexa booleanos nem `null`: favorito/excluidoEm filtrados em memória.
 
 ### Prescrições e dose (Fases 1–2)
-- Lista: Recentes e Favoritos no topo; depois **agrupada por categoria** (ordem cadastrada), títulos em ordem alfabética, **grupos colapsáveis** (estado só em memória; durante a busca todos abrem). Chips filtram por categoria.
+- Lista: Favoritos no topo; depois **agrupada por categoria** (ordem cadastrada), títulos em ordem alfabética, **grupos colapsáveis** (estado só em memória; durante a busca todos abrem). Chips filtram por categoria.
 - Busca (tempo real, sem acentos, todas as palavras): título, categoria, tags, texto dos itens, **motivo e texto das alternativas, receita pronta, observações**.
 - Obrigatórios ao salvar: **título, categoria e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
 - Reordenar itens: botões ↑/↓.
 - Excluir categoria: prescrições ficam **"Sem categoria"** (categoria vai para exclusão lógica; não aparece na Lixeira).
 - **Opções equivalentes ("OU")**: item com `opcoesEquivalentes: true` — texto principal = opção 1, alternativas = opções 2, 3… (motivo opcional, vira rótulo). Na tela: **todas as opções por extenso** (com doses calculadas), **nenhuma pré-escolhida**, Copiar bloqueado até escolher ("Escolha uma opção no item N"); copia só a escolhida. Precisa de ≥2 opções. No editor: chave por item (ligar cria a opção 2). A IA marca `opcoesEquivalentes` quando o documento lista opções intercambiáveis ("OU"). Ausente em dados antigos = false.
-- Recentes: conta ao abrir a prescrição. Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
+- Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
 - Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
 - Observações/referência: texto simples com quebras de linha.
 - **Receita pronta** (`receita`): texto simples com quebras de linha, **sem marcadores/cálculo**. Seção própria na tela da prescrição com botão **"Copiar receita"** (copia o texto como cadastrado, separado do Copiar dos itens; também no pen drive). Entra na busca e no backup; dados/backups antigos sem o campo = `''`.
@@ -117,7 +121,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Regra nova: base "por tomada", arredondamento do volume 1 casa decimal (padrões de formulário, editáveis).
 
 ### Backup (Fase 3)
-- JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + `versaoFormato: 1`; prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA, recentes.
+- JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + `versaoFormato: 1`; prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
 - Validação com **valibot** (esquemas em `src/dominio/backup/esquema.ts`, tipados contra o modelo). Rejeita JSON inválido, arquivo que não é do app, versão de formato mais nova e IDs repetidos.
 - Exportar: **Baixar** e **Compartilhar** (menu do Android, se o navegador suportar). Guarda `ultimoBackupEm` (só no aparelho) e mostra lembrete; destaque em âmbar a partir de 7 dias.
 - Importar: pré-visualização (novos/iguais/conflitos por tipo) → **Mesclar** ou **Substituir**.

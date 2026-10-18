@@ -12,7 +12,7 @@ function estadoDa(chave: string) {
 <script setup lang="ts" generic="T extends { id: string; categoriaId: string | null; titulo?: string; nome?: string; favorito: boolean; revisada?: boolean }">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronDown, Clock, Plus, Star } from '@lucide/vue'
+import { ChevronDown, Plus, Star } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import IconeCategoria from '@/components/categorias/IconeCategoria.vue'
 import LinhaItem from './LinhaItem.vue'
@@ -23,7 +23,7 @@ import { MODO_PENDRIVE } from '@/modo'
 import { ROTULO_SEM_CATEGORIA } from '@/stores/categorias'
 
 /**
- * Lista com busca (?q=), chips de categoria, Recentes, Favoritos e grupos colapsáveis.
+ * Lista com busca (?q=), chips de categoria, Favoritos e grupos colapsáveis.
  * Usada por Prescrições e Calculadoras.
  */
 const props = defineProps<{
@@ -34,7 +34,6 @@ const props = defineProps<{
   textoVazio: string
   itens: T[]
   categorias: Categoria[]
-  recentesIds: string[]
   filtrar: (itens: T[], termo: string) => T[]
 }>()
 
@@ -63,8 +62,6 @@ const gruposVisiveis = computed(() =>
     : grupos.value.filter((g) => (g.categoria?.id ?? SEM_CATEGORIA) === categoriaFiltro.value),
 )
 
-const porId = computed(() => new Map(props.itens.map((i) => [i.id, i])))
-const listaRecentes = computed(() => props.recentesIds.map((id) => porId.value.get(id)).filter((i): i is T => !!i))
 const favoritos = computed(() =>
   props.itens.filter((i) => i.favorito).sort((a, b) => nomeDoItem(a).localeCompare(nomeDoItem(b), 'pt-BR')),
 )
@@ -155,25 +152,6 @@ function filtrarCategoria(chave: string | null) {
     </div>
 
     <template v-else>
-      <!-- Recentes -->
-      <div v-if="mostrarAtalhos && listaRecentes.length" class="flex flex-col">
-        <h2 class="text-muted-foreground flex items-center gap-2 px-3 pb-1 text-xs font-medium">
-          <Clock class="size-3.5" /> Recentes
-        </h2>
-        <div class="flex flex-col">
-          <LinhaItem
-            v-for="item in listaRecentes"
-            :key="item.id"
-            :para="`${rotaBase}/${item.id}`"
-            :titulo="nomeDoItem(item)"
-            :favorito="item.favorito"
-            :nao-revisada="item.revisada === false"
-            :categoria="categoriaDe(item)?.nome ?? ROTULO_SEM_CATEGORIA"
-            :icone-categoria="categoriaDe(item)?.icone"
-          />
-        </div>
-      </div>
-
       <!-- Favoritos -->
       <div v-if="mostrarAtalhos && favoritos.length" class="flex flex-col">
         <h2 class="text-muted-foreground flex items-center gap-2 px-3 pb-1 text-xs font-medium">
@@ -233,7 +211,7 @@ function filtrarCategoria(chave: string | null) {
     <Button
       v-if="!MODO_PENDRIVE"
       size="icon-touch"
-      class="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-2xl shadow-lg md:hidden"
+      class="fixed right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-2xl shadow-lg md:hidden"
       :aria-label="rotuloNovo"
       as-child
     >
