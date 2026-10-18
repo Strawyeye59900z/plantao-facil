@@ -4,7 +4,7 @@ Data: 18/10/2026
 
 Onde: repositório do Plantão Fácil (`E:\Apps\My app`), numa **branch nova a partir de `main`** (`v2`). A decisão foi do usuário: evoluir o Plantão Fácil em vez de reescrever o app, para economizar tempo.
 
-Mockups aprovados: `E:\Apps\Meu app 2.0\.superpowers\brainstorm\707-1792336853\content\`. Os principais são `visual.html` (direção visual), `tela-inicial.html` (opção B), `tela-prescricao-v2.html` e `alertas-ou.html`.
+Mockups aprovados: `docs/superpowers/mockups/`. Os arquivos `tela-inicial.html` e `tela-prescricao-v2.html` são fragmentos e abrem sem o estilo da moldura. Os principais são `visual.html` (direção visual), `tela-inicial.html` (opção B), `tela-prescricao-v2.html` e `alertas-ou.html`.
 
 ## 1. Para quê e por quê
 
