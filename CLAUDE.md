@@ -31,7 +31,7 @@ App pessoal de apoio ao plantão médico (PWA offline-first). O usuário é méd
 - **Nenhum dado de paciente é salvo.** Peso e entradas das calculadoras vivem só na memória da tela.
 - Rapidez: busca no topo, favoritos, recentes.
 - Mobile-first, funciona bem no PC. **Tema claro padrão**, opção de escuro. Alvos de toque ≥ 44px (botões `size="touch"` / `"icon-touch"`).
-- Sem fontes ou recursos externos em tempo de execução. Fonte **Inter embutida** (só o subconjunto latino, `src/assets/fontes/`, licença OFL junto).
+- Sem fontes ou recursos externos em tempo de execução. Fonte **Plus Jakarta Sans embutida** (só o subconjunto latino, `src/assets/fontes/`, licença OFL junto).
 
 ## Estrutura
 

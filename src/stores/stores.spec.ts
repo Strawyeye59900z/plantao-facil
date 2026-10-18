@@ -5,6 +5,7 @@ import { db } from '@/db/banco'
 import { prescricaoVazia } from '@/dominio/prescricoes/editar'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from './categorias'
 import { usePrescricoesStore } from './prescricoes'
+import { useConfiguracoesStore } from './configuracoes'
 import { MAX_RECENTES, useRecentesStore } from './recentes'
 
 beforeEach(async () => {
@@ -78,5 +79,29 @@ describe('prescricoes', () => {
     const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A' })
     await prescricoes.alternarFavorito(p.id)
     expect(prescricoes.favoritas.map((x) => x.id)).toEqual([p.id])
+  })
+})
+
+describe('configurações', () => {
+  it('configurações sem corDestaque salva carregam com verde', async () => {
+    await db.configuracoes.put({
+      id: 'local',
+      tema: 'claro',
+      ia: { provedor: 'gemini', chaves: {}, modelos: {} },
+      ultimoBackupEm: null,
+      bibliotecaPenDriveDe: null,
+    } as never)
+    const store = useConfiguracoesStore()
+    await store.carregar()
+    expect(store.config.corDestaque).toBe('verde')
+    expect(document.documentElement.dataset.destaque).toBe('verde')
+  })
+
+  it('definirCorDestaque aplica e salva', async () => {
+    const store = useConfiguracoesStore()
+    await store.carregar()
+    await store.definirCorDestaque('violeta')
+    expect(document.documentElement.dataset.destaque).toBe('violeta')
+    expect((await db.configuracoes.get('local'))!.corDestaque).toBe('violeta')
   })
 })
