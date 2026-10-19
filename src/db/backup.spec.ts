@@ -30,6 +30,20 @@ describe('backup no banco', () => {
     expect(b.categorias).toHaveLength(1)
   })
 
+  it('ler normaliza campos ausentes (receita, condições, calculadoras, ícone)', async () => {
+    const antiga: Record<string, unknown> = { ...prescricaoTeste() }
+    delete antiga.receita
+    delete antiga.condicoes
+    delete antiga.calculadoraIds
+    const categoria: Record<string, unknown> = { ...categoriaTeste() }
+    delete categoria.icone
+    await banco.prescricoes.put(antiga as unknown as ReturnType<typeof prescricaoTeste>)
+    await banco.categorias.put(categoria as unknown as ReturnType<typeof categoriaTeste>)
+    const b = await lerBiblioteca(banco)
+    expect(b.prescricoes).toEqual([prescricaoTeste()])
+    expect(b.categorias).toEqual([categoriaTeste()])
+  })
+
   it('aceita dados reativos do Vue', async () => {
     const reativo = reactive({ prescricoes: [prescricaoTeste()], calculadoras: [], categorias: [] })
     await gravarNaBiblioteca(reativo, banco)

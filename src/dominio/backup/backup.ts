@@ -2,6 +2,8 @@ import * as v from 'valibot'
 import { descreverProblemas } from '@/dominio/texto/validacao'
 import type { ArquivoBackup, Calculadora, Categoria, Entidade, ISODate, Prescricao, UUID } from '@/dominio/tipos'
 import { normalizarTexto } from '@/dominio/texto/normalizar'
+import { migrarBibliotecaV1 } from '@/dominio/migracao/biblioteca'
+import { esquemaArquivoBackupV1 } from '@/dominio/migracao/v1/esquema'
 import { esquemaArquivoBackup, FORMATO_BACKUP, VERSAO_FORMATO_ATUAL } from './esquema'
 
 export interface Biblioteca {
@@ -34,6 +36,7 @@ export function nomeArquivoBackup(data: Date): string {
 
 export type LeituraBackup = { ok: true; backup: ArquivoBackup } | { ok: false; erro: string }
 
+/** Aceita os formatos 1 (v1, migrado) e 2; devolve sempre o formato atual. */
 export function lerBackup(texto: string): LeituraBackup {
   let bruto: unknown
   try {
@@ -52,13 +55,10 @@ export function lerBackup(texto: string): LeituraBackup {
     }
   }
 
-  const resultado = v.safeParse(esquemaArquivoBackup, bruto)
-  if (!resultado.success) {
-    const detalhes = descreverProblemas(resultado.issues)
-    return { ok: false, erro: `O backup tem dados inválidos e não foi importado (${detalhes}).` }
-  }
+  const resultado = lerConteudo(bruto, cabecalho.versaoFormato)
+  if (!resultado.ok) return resultado
 
-  const backup = resultado.output
+  const backup = resultado.backup
   for (const [nome, lista] of [
     ['prescrições', backup.prescricoes],
     ['calculadoras', backup.calculadoras],
@@ -69,6 +69,24 @@ export function lerBackup(texto: string): LeituraBackup {
     }
   }
   return { ok: true, backup }
+}
+
+function invalido(issues: readonly v.BaseIssue<unknown>[]): LeituraBackup {
+  return { ok: false, erro: `O backup tem dados inválidos e não foi importado (${descreverProblemas(issues)}).` }
+}
+
+/** Valida conforme a versão do formato; o formato 1 (v1) é migrado para o atual. */
+function lerConteudo(bruto: unknown, versaoFormato: unknown): LeituraBackup {
+  if (versaoFormato === 1) {
+    const v1 = v.safeParse(esquemaArquivoBackupV1, bruto)
+    if (!v1.success) return invalido(v1.issues)
+    const { exportadoEm, versaoApp } = v1.output
+    const biblioteca = migrarBibliotecaV1(v1.output)
+    return { ok: true, backup: montarBackup(biblioteca, exportadoEm, versaoApp) }
+  }
+  const atual = v.safeParse(esquemaArquivoBackup, bruto)
+  if (!atual.success) return invalido(atual.issues)
+  return { ok: true, backup: atual.output }
 }
 
 // ===== Comparar =====

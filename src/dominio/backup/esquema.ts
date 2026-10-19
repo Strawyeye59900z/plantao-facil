@@ -38,7 +38,7 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
     v.object({
       id,
       condicaoId: v.optional(v.nullable(id), null),
-      opcoes: v.array(v.object({ id, texto: v.string(), motivo: v.string() })),
+      opcoes: v.pipe(v.array(v.object({ id, texto: v.string(), motivo: v.string() })), v.minLength(1)),
     }),
   ),
   condicoes: v.optional(v.array(v.object({ id, nome: v.string() })), []),
@@ -112,7 +112,7 @@ export const esquemaCalculadora: v.GenericSchema<unknown, Calculadora> = v.varia
 ])
 
 export const FORMATO_BACKUP = 'plantao-facil-backup'
-export const VERSAO_FORMATO_ATUAL = 1
+export const VERSAO_FORMATO_ATUAL = 2
 
 export const esquemaArquivoBackup: v.GenericSchema<unknown, ArquivoBackup> = v.object({
   formato: v.literal(FORMATO_BACKUP),

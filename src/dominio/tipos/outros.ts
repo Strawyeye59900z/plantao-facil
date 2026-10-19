@@ -6,7 +6,7 @@ import type { Prescricao } from './prescricao'
 // ===== Módulo 3 — Backup =====
 export interface ArquivoBackup {
   formato: 'plantao-facil-backup'
-  versaoFormato: 1
+  versaoFormato: 2
   exportadoEm: ISODate
   versaoApp: string
   /** Inclui itens na lixeira (excluidoEm preenchido), para propagar exclusões na mesclagem. */
