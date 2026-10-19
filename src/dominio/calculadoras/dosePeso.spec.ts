@@ -40,6 +40,32 @@ describe('calcularRegraDosePeso', () => {
   it('volume com 1 casa', () => {
     expect(calcularRegraDosePeso(regra({ concentracao: 3 }), 10).texto).toBe('10 mg (3,3 mL)')
   })
+  it('volume pequeno com 2 casas', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.2, concentracao: 5 }), 1).texto).toBe('0,2 mg (0,04 mL)')
+  })
+  it('volume menor que 0,005', () => {
+    expect(
+      calcularRegraDosePeso(regra({ dosePorKg: 0.01, casasDecimais: 2, concentracao: 5 }), 1).texto,
+    ).toBe('0,01 mg (< 0,01 mL)')
+  })
+  it('empate de arredondamento', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 1.005, casasDecimais: 2 }), 1).texto).toBe('1,01 mg')
+  })
+  it('máximo com concentração', () => {
+    expect(calcularRegraDosePeso(regra({ doseMaxima: 50, concentracao: 5 }), 70)).toEqual({
+      texto: '50 mg (10 mL)',
+      limitada: true,
+    })
+  })
+  it('regra incompleta', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: Number.NaN }), 70)).toEqual({
+      texto: '[regra incompleta]',
+      limitada: false,
+    })
+  })
+  it('concentração inválida omite volume', () => {
+    expect(calcularRegraDosePeso(regra({ concentracao: Number.NaN }), 70).texto).toBe('70 mg')
+  })
 })
 
 describe('montarLinhaDosePeso', () => {

@@ -10,19 +10,25 @@ export function calcularRegraDosePeso(
   r: RegraDosePeso,
   pesoKg: number | null,
 ): { texto: string; limitada: boolean } {
-  if (pesoKg === null) {
+  if (!Number.isFinite(r.dosePorKg)) return { texto: '[regra incompleta]', limitada: false }
+  if (pesoKg === null || !Number.isFinite(pesoKg)) {
     const base = `${formatarNumero(r.dosePorKg)} ${r.unidade}/kg`
-    const max = r.doseMaxima !== null ? ` (máx. ${formatarNumero(r.doseMaxima)} ${r.unidade})` : ''
+    const max =
+      r.doseMaxima !== null && Number.isFinite(r.doseMaxima)
+        ? ` (máx. ${formatarNumero(r.doseMaxima)} ${r.unidade})`
+        : ''
     return { texto: base + max, limitada: false }
   }
   const fator = 10 ** r.casasDecimais
-  const calculada = Math.round(limpar(r.dosePorKg * pesoKg) * fator) / fator
-  const limitada = r.doseMaxima !== null && calculada > r.doseMaxima
+  const calculada = Math.round(limpar(r.dosePorKg * pesoKg * fator)) / fator
+  const limitada = r.doseMaxima !== null && Number.isFinite(r.doseMaxima) && calculada > r.doseMaxima
   const dose = limitada ? (r.doseMaxima as number) : calculada
   let texto = `${formatarNumero(dose)} ${r.unidade}`
-  if (r.concentracao !== null && r.concentracao > 0) {
-    const volume = Math.round(limpar(dose / r.concentracao) * 10) / 10
-    texto += ` (${formatarNumero(volume)} mL)`
+  if (r.concentracao !== null && Number.isFinite(r.concentracao) && r.concentracao > 0) {
+    const bruto = limpar(dose / r.concentracao)
+    const casas = bruto >= 1 ? 10 : 100
+    const volume = Math.round(limpar(bruto * casas)) / casas
+    texto += bruto > 0 && volume === 0 ? ' (< 0,01 mL)' : ` (${formatarNumero(volume)} mL)`
   }
   return { texto, limitada }
 }
