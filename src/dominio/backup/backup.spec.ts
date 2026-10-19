@@ -351,3 +351,50 @@ describe('camposAlterados', () => {
     expect(camposAlterados(a, b)).toEqual([])
   })
 })
+
+describe('esquema das calculadoras v2', () => {
+  const base = { criadoEm: T1, atualizadoEm: T1, excluidoEm: null, categoriaId: null, descricao: '', referencia: '', favorito: false }
+  const dosePeso = {
+    ...base, id: 'dp', area: 'calculadora', tipo: 'dose_peso', nome: 'Dose Teste',
+    linhas: [{ id: 'l1', texto: 'Medicamento Teste A {inducao}', regras: [{ id: 'r1', marcador: 'inducao', dosePorKg: 2, unidade: 'mg', concentracao: 10, doseMaxima: null, casasDecimais: 1 }] }],
+  }
+  const formula = {
+    ...base, id: 'fo', area: 'calculadora', tipo: 'formula', nome: 'Fórmula Teste',
+    campos: [
+      { id: 'c1', tipo: 'numero', variavel: 'a', rotulo: 'A', unidade: 'u', min: 0, max: null },
+      { id: 'c2', tipo: 'sim_nao', variavel: 'b', rotulo: 'B', valorSim: 1, valorNao: 0 },
+    ],
+    saidas: [{ id: 's1', nome: 'Resultado', expressao: 'a + b', unidade: 'u', casasDecimais: 1, teto: null, piso: 0,
+      faixas: [{ id: 'f1', de: null, ate: 5, texto: 'Faixa Teste', gravidade: 'informativo' }] }],
+  }
+  const pontos = { ...base, id: 'po', area: 'escala', tipo: 'pontos', nome: 'Escore Teste', faixas: [], campos: [] }
+  const arquivo = (calculadoras: unknown[]) =>
+    JSON.stringify({ formato: 'plantao-facil-backup', versaoFormato: 2, exportadoEm: T2, versaoApp: '1.0.0', prescricoes: [], categorias: [], calculadoras })
+
+  it('aceita dose_peso e fórmula no formato novo', () => {
+    const lido = lerBackup(arquivo([dosePeso, formula, pontos]))
+    expect(lido.ok).toBe(true)
+    if (lido.ok) expect(lido.backup.calculadoras).toEqual([dosePeso, formula, pontos])
+  })
+
+  it('rejeita dose_peso em escala e pontos em calculadora', () => {
+    expect(lerBackup(arquivo([{ ...dosePeso, area: 'escala' }])).ok).toBe(false)
+    expect(lerBackup(arquivo([{ ...pontos, area: 'calculadora' }])).ok).toBe(false)
+  })
+
+  it('backup v1 com pontos e fórmula é convertido e validado', () => {
+    const v1Pontos = { ...base, id: 'p1', tipo: 'pontos', nome: 'Escore Teste', faixas: [], campos: [] }
+    const v1Formula = {
+      ...base, id: 'f1', tipo: 'formula', nome: 'Fórmula Teste', faixas: [],
+      entradas: [{ id: 'e1', variavel: 'a', rotulo: 'A', unidade: 'u', min: 0, max: 10 }],
+      expressao: 'a * 2', unidadeResultado: 'u', casasDecimais: 1, teto: null, piso: null,
+    }
+    const v1 = JSON.stringify({ formato: 'plantao-facil-backup', versaoFormato: 1, exportadoEm: T2, versaoApp: '1.0.0', prescricoes: [], categorias: [], calculadoras: [v1Pontos, v1Formula] })
+    const lido = lerBackup(v1)
+    expect(lido.ok).toBe(true)
+    if (!lido.ok) return
+    expect(lido.backup.calculadoras[0]).toMatchObject({ id: 'p1', area: 'escala', tipo: 'pontos' })
+    expect(lido.backup.calculadoras[1]).toMatchObject({ id: 'f1', area: 'calculadora', tipo: 'formula' })
+    expect(lerBackup(JSON.stringify(lido.backup)).ok).toBe(true)
+  })
+})

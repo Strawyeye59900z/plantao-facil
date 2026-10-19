@@ -31,6 +31,10 @@ export function marcadoresDoTexto(texto: string): string[] {
   return [...new Set(achados)]
 }
 
+/**
+ * Calculadora nova. `area` só vale para `formula`; `pontos` é sempre 'escala' e `dose_peso`
+ * é sempre 'calculadora' (o argumento é ignorado nesses tipos).
+ */
 export function calculadoraVazia(area: AreaCalculadora, tipo: Calculadora['tipo'], gerarId: GerarId = idPadrao): DadosCalculadora {
   if (tipo === 'pontos') return { ...base, area: 'escala', tipo, campos: [campoVazio('sim_nao', gerarId)], faixas: [] }
   if (tipo === 'dose_peso') return { ...base, area: 'calculadora', tipo, linhas: [linhaDosePesoVazia(gerarId)] }

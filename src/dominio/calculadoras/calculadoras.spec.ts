@@ -243,4 +243,30 @@ describe('editor de calculadoras', () => {
     expect(copia.tipo === 'pontos' && copia.campos.map((c) => c.id)).toEqual(['novo-3', 'novo-4', 'novo-5', 'novo-8'])
     expect(copia).not.toHaveProperty('id')
   })
+
+  it('duplicar dose por peso: IDs novos em linhas e regras, marcadores iguais', () => {
+    let n = 0
+    const copia = duplicarCalculadora(dosePeso, () => `novo-${++n}`)
+    if (copia.tipo !== 'dose_peso') throw new Error('tipo')
+    expect(copia.nome).toBe('Dose Teste (cópia)')
+    const l = copia.linhas[0]!
+    expect(l.id).not.toBe('l1')
+    expect(l.regras[0]!.id).not.toBe('r1')
+    expect(l.id).not.toBe(l.regras[0]!.id)
+    expect(l.texto).toBe('Medicamento Teste A {inducao}')
+    expect({ ...l.regras[0]!, id: 'r1' }).toEqual(dosePeso.linhas[0]!.regras[0])
+  })
+
+  it('duplicar fórmula: IDs novos em campos, saídas e faixas', () => {
+    let n = 0
+    const original = comSaida({ faixas: [{ id: 'fx', de: 0, ate: 1, texto: 'Faixa Teste', gravidade: 'informativo' }] })
+    const copia = duplicarCalculadora(original, () => `novo-${++n}`)
+    if (copia.tipo !== 'formula') throw new Error('tipo')
+    const ids = [...copia.campos.map((c) => c.id), copia.saidas[0]!.id, copia.saidas[0]!.faixas[0]!.id]
+    expect(new Set(ids).size).toBe(4)
+    expect(ids.every((i) => i.startsWith('novo-'))).toBe(true)
+    expect(copia.campos.map((c) => c.variavel)).toEqual(['a', 'b'])
+    expect(copia.saidas[0]!.expressao).toBe(original.saidas[0]!.expressao)
+    expect({ ...copia.saidas[0]!.faixas[0]!, id: 'fx' }).toEqual(original.saidas[0]!.faixas[0])
+  })
 })
