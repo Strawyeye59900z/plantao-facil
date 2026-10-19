@@ -49,6 +49,13 @@ describe('paragrafosObservacoes', () => {
     expect(paragrafosObservacoes('Obs:\nlinha seguinte')).toEqual([{ rotulo: 'Obs', texto: 'linha seguinte' }])
   })
 
+  it('linha com link não vira rótulo', () => {
+    expect(paragrafosObservacoes('Obs: ver link\nhttps://exemplo.com/a')).toEqual([
+      { rotulo: 'Obs', texto: 'ver link\nhttps://exemplo.com/a' },
+    ])
+    expect(paragrafosObservacoes('http://exemplo.com')).toEqual([{ rotulo: null, texto: 'http://exemplo.com' }])
+  })
+
   it('primeiro parágrafo sem rótulo seguido de rotulado', () => {
     expect(paragrafosObservacoes('introdução\nObs: a')).toEqual([
       { rotulo: null, texto: 'introdução' },

@@ -4,7 +4,7 @@ export interface ParagrafoObservacao {
   texto: string
 }
 
-const ROTULO = /^\s*(#?\s?[\p{L}][\p{L} ]{0,24}):\s*/u
+const ROTULO = /^\s*(#?\s?[\p{L}][\p{L} ]{0,24}):(?!\/\/)\s*/u
 
 /**
  * Divide as observações em parágrafos. Um parágrafo novo começa numa linha em branco
