@@ -21,6 +21,7 @@ const ROTULOS: Record<string, string> = {
   itens: 'itens',
   condicoes: 'condições',
   alertas: 'alertas',
+  calculadoraIds: 'calculadoras ligadas',
   receita: 'receita pronta',
   observacoes: 'observações',
   referencia: 'referência',

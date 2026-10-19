@@ -1,5 +1,16 @@
-import { formatarNumero } from '@/dominio/dose/numeros'
 import type { DirecaoArredondamentoV1, RegraDoseV1 } from './tipos'
+
+// Cópia congelada de `limpar`/`formatarNumero` de src/dominio/dose/numeros.ts: mudanças futuras ali
+// não podem alterar o texto gerado pela migração.
+function limparV1(x: number): number {
+  return Math.round(x * 1e9) / 1e9
+}
+
+const formatadorV1 = new Intl.NumberFormat('pt-BR', { useGrouping: false, maximumFractionDigits: 4 })
+
+function formatarNumero(x: number): string {
+  return formatadorV1.format(limparV1(x))
+}
 
 /** Rótulos de direção da v1 (copiados de `ROTULO_DIRECAO` de src/dominio/dose/numeros.ts). */
 const ROTULO_DIRECAO_V1: Record<DirecaoArredondamentoV1, string> = {

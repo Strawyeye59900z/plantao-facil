@@ -130,7 +130,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 #### Migração v1 → v2 (`src/dominio/migracao/`)
 - **Dexie versão 2** converte todas as prescrições do aparelho (inclusive lixeira) ao abrir; se falhar, nada é gravado (os dados ficam na v1). **Backups v1 (`versaoFormato: 1`) são aceitos** na importação e convertidos (`migrarBibliotecaV1`).
-- Texto principal + alternativas viram as opções (mesmo `item.id`). Sem "OU" na v1, a opção principal recebe o motivo **"Padrão"**. IDs das opções **determinísticos**: principal = `${item.id}-principal`, alternativas mantêm o id da v1 (migrar o mesmo dado duas vezes dá o mesmo resultado, sem falso conflito na mesclagem).
+- Texto principal + alternativas viram as opções (mesmo `item.id`). Em item da v1 **com alternativas e sem "OU"**, a opção principal recebe o motivo **"Padrão"**. IDs das opções **determinísticos**: principal = `${item.id}-principal`, alternativas mantêm o id da v1 (migrar o mesmo dado duas vezes dá o mesmo resultado, sem falso conflito na mesclagem).
 - **Regra de dose vira texto** com **todos os números**, inclusive arredondamento (`descreverRegraV1`): o primeiro `{dose}`/`{dose_diaria}` vira "[regra por extenso]", os seguintes "[dose]"/"[dose diária]", `{volume}` → "[volume]", `{tomadas}` → intervalo ("de 8h em 8h") ou "[tomadas]"; sem marcador de dose, a regra é anexada ao fim. A prescrição fica **"importada — revisar"** (`revisada: false`) com uma dúvida por item convertido.
 - Campos ausentes em registros antigos: receita `''`, condições `[]`, condição "Sempre"; `calculadoraIds` começa vazio.
 

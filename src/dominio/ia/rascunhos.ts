@@ -19,7 +19,8 @@ export interface RascunhoImportado {
  * Converte a resposta da IA em prescrições "importada — não revisada", ainda não salvas.
  * - Categoria: se o nome bater (sem maiúsculas/acentos) com uma categoria de prescrições, já seleciona;
  *   senão fica "Sem categoria" (decisão do usuário).
- * - Doses ficam só no texto. Texto principal + alternativas viram as opções do item (principal sem motivo).
+ * - Doses ficam só no texto. Texto principal + alternativas viram as opções do item (principal com o motivo "Padrão"
+ *   quando há alternativas e elas não são equivalentes ("OU"); nos itens "OU" fica sem motivo).
  *   Adaptação temporária: a resposta ainda é a da v1 (até a Fase 4).
  * - Alerta que aponta para um item inexistente vale para a prescrição inteira e vira dúvida.
  * - Item que aponta para uma condição inexistente fica "Sempre" e vira dúvida. Itens ficam na ordem
@@ -50,7 +51,7 @@ export function criarRascunhos(
         id: gerarId(),
         condicaoId,
         opcoes: [
-          { id: gerarId(), texto: item.texto, motivo: '' },
+          { id: gerarId(), texto: item.texto, motivo: item.alternativas.length > 0 && !item.opcoesEquivalentes ? 'Padrão' : '' },
           ...item.alternativas.map((a) => ({ id: gerarId(), texto: a.texto, motivo: a.motivo })),
         ],
       }

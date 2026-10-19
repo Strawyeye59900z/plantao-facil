@@ -265,7 +265,7 @@ describe('rascunhos a partir da resposta', () => {
     expect(rascunhos[1]!.dados.receita).toBe('')
   })
 
-  it('texto principal + alternativas viram as opções do item (principal sem motivo)', () => {
+  it('texto principal + alternativas viram as opções do item (principal "Padrão" só quando não é "OU")', () => {
     const ou = rascunhos[0]!.dados.itens[2]!
     expect(ou.opcoes.map((o) => [o.texto, o.motivo])).toEqual([
       ['Opção Teste 1', ''],
@@ -273,9 +273,11 @@ describe('rascunhos a partir da resposta', () => {
       ['Opção Teste 3', ''],
     ])
     expect(rascunhos[0]!.dados.itens[0]!.opcoes.map((o) => [o.texto, o.motivo])).toEqual([
-      ['Medicamento Teste A', ''],
+      ['Medicamento Teste A', 'Padrão'],
       ['Medicamento Teste B', 'Motivo Teste'],
     ])
+    // Sem alternativas, a opção única não recebe motivo.
+    expect(rascunhos[0]!.dados.itens[1]!.opcoes.map((o) => o.motivo)).toEqual([''])
     expect(rascunhos[1]!.dados.itens[0]!.opcoes.map((o) => o.texto)).toEqual(['Medicamento Teste D'])
     expect(new Set(rascunhos.flatMap((r) => r.dados.itens.flatMap((i) => i.opcoes.map((o) => o.id)))).size).toBe(7)
   })
