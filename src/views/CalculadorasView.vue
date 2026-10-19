@@ -13,7 +13,7 @@ function filtrar(itens: Calculadora[], termo: string) {
 }
 
 function descrever(c: Calculadora) {
-  return { etiquetas: [c.tipo === 'pontos' ? 'Pontos' : 'Fórmula'], meta: c.descricao.trim() }
+  return { etiquetas: [c.tipo === 'pontos' ? 'Pontos' : c.tipo === 'dose_peso' ? 'Doses por peso' : 'Fórmula'], meta: c.descricao.trim() }
 }
 </script>
 

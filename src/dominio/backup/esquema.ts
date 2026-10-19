@@ -23,7 +23,7 @@ const entidade = {
 export const esquemaCategoria: v.GenericSchema<unknown, Categoria> = v.object({
   ...entidade,
   nome: v.string(),
-  escopo: v.picklist(['prescricao', 'calculadora']),
+  escopo: v.picklist(['prescricao', 'calculadora', 'escala']),
   ordem: numero,
   // Opcional: backups feitos antes dos ícones de categoria não têm o campo.
   icone: v.optional(v.nullable(v.string()), null),
@@ -62,20 +62,22 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
 })
 
 const faixa = { id, de: numeroOuNulo, ate: numeroOuNulo }
+const faixaInterpretacao = v.object({ ...faixa, texto: v.string(), gravidade })
 const calculadoraBase = {
   ...entidade,
   nome: v.string(),
   categoriaId: v.nullable(id),
   descricao: v.string(),
   referencia: v.string(),
-  faixas: v.array(v.object({ ...faixa, texto: v.string(), gravidade })),
   favorito: v.boolean(),
 }
 
 export const esquemaCalculadora: v.GenericSchema<unknown, Calculadora> = v.variant('tipo', [
   v.object({
     ...calculadoraBase,
+    area: v.literal('escala'),
     tipo: v.literal('pontos'),
+    faixas: v.array(faixaInterpretacao),
     campos: v.array(
       v.variant('tipo', [
         v.object({ id, tipo: v.literal('sim_nao'), rotulo: v.string(), pontosSim: numero, pontosNao: numero }),
@@ -99,15 +101,63 @@ export const esquemaCalculadora: v.GenericSchema<unknown, Calculadora> = v.varia
   }),
   v.object({
     ...calculadoraBase,
-    tipo: v.literal('formula'),
-    entradas: v.array(
-      v.object({ id, variavel: v.string(), rotulo: v.string(), unidade: v.string(), min: numero, max: numero }),
+    area: v.literal('calculadora'),
+    tipo: v.literal('dose_peso'),
+    linhas: v.array(
+      v.object({
+        id,
+        texto: v.string(),
+        regras: v.array(
+          v.object({
+            id,
+            marcador: v.string(),
+            dosePorKg: numero,
+            unidade: v.string(),
+            concentracao: numeroOuNulo,
+            doseMaxima: numeroOuNulo,
+            casasDecimais: numero,
+          }),
+        ),
+      }),
     ),
-    expressao: v.string(),
-    unidadeResultado: v.string(),
-    casasDecimais: numero,
-    teto: numeroOuNulo,
-    piso: numeroOuNulo,
+  }),
+  v.object({
+    ...calculadoraBase,
+    area: v.picklist(['calculadora', 'escala']),
+    tipo: v.literal('formula'),
+    campos: v.array(
+      v.variant('tipo', [
+        v.object({
+          id,
+          tipo: v.literal('numero'),
+          variavel: v.string(),
+          rotulo: v.string(),
+          unidade: v.string(),
+          min: numeroOuNulo,
+          max: numeroOuNulo,
+        }),
+        v.object({
+          id,
+          tipo: v.literal('sim_nao'),
+          variavel: v.string(),
+          rotulo: v.string(),
+          valorSim: numero,
+          valorNao: numero,
+        }),
+      ]),
+    ),
+    saidas: v.array(
+      v.object({
+        id,
+        nome: v.string(),
+        expressao: v.string(),
+        unidade: v.string(),
+        casasDecimais: numero,
+        teto: numeroOuNulo,
+        piso: numeroOuNulo,
+        faixas: v.array(faixaInterpretacao),
+      }),
+    ),
   }),
 ])
 

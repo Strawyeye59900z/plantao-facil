@@ -1,7 +1,7 @@
 // Calculadoras fictícias de teste — nenhum escore ou fórmula clínica real.
 import { describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
-import type { CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
+import type { CalculadoraDosePeso, CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
 import { avisosCalculadora, calculadoraVazia, duplicarCalculadora, validarCalculadora } from './editar'
 import { analisarExpressao, calcularFormula } from './formula'
 import { analisarFaixas, interpretar } from './interpretacao'
@@ -12,6 +12,7 @@ const ent = { id: 'calc', criadoEm: T, atualizadoEm: T, excluidoEm: null, catego
 
 const escore: CalculadoraPontos = {
   ...ent,
+  area: 'escala',
   tipo: 'pontos',
   nome: 'Escore Teste',
   campos: [
@@ -47,19 +48,34 @@ const escore: CalculadoraPontos = {
 
 const formula: CalculadoraFormula = {
   ...ent,
+  area: 'calculadora',
   tipo: 'formula',
   nome: 'Fórmula Teste',
-  entradas: [
-    { id: 'ea', variavel: 'a', rotulo: 'Entrada A', unidade: 'u', min: 0, max: 100 },
-    { id: 'eb', variavel: 'b', rotulo: 'Entrada B', unidade: 'u', min: 1, max: 10 },
+  campos: [
+    { id: 'ea', tipo: 'numero', variavel: 'a', rotulo: 'Entrada A', unidade: 'u', min: 0, max: 100 },
+    { id: 'eb', tipo: 'numero', variavel: 'b', rotulo: 'Entrada B', unidade: 'u', min: 1, max: 10 },
   ],
-  expressao: 'a / b + sqrt(4)',
-  unidadeResultado: 'u',
-  casasDecimais: 1,
-  teto: null,
-  piso: null,
-  faixas: [],
+  saidas: [{ id: 's1', nome: 'Resultado', expressao: 'a / b + sqrt(4)', unidade: 'u', casasDecimais: 1, teto: null, piso: null, faixas: [] }],
 }
+
+const dosePeso: CalculadoraDosePeso = {
+  ...ent,
+  area: 'calculadora',
+  tipo: 'dose_peso',
+  nome: 'Dose Teste',
+  linhas: [
+    {
+      id: 'l1',
+      texto: 'Medicamento Teste A {inducao}',
+      regras: [{ id: 'r1', marcador: 'inducao', dosePorKg: 2, unidade: 'mg', concentracao: null, doseMaxima: null, casasDecimais: 1 }],
+    },
+  ],
+}
+
+const comSaida = (alt: Partial<CalculadoraFormula['saidas'][number]>): CalculadoraFormula => ({
+  ...formula,
+  saidas: [{ ...formula.saidas[0]!, ...alt }],
+})
 
 describe('motor de pontos', () => {
   it('soma sim/não, seleção e número', () => {
@@ -110,12 +126,12 @@ describe('avaliador de fórmulas', () => {
   })
 
   it('aplica teto e piso por último, com aviso', () => {
-    expect(calcularFormula({ ...formula, teto: 5 }, { ea: 100, eb: 1 })).toMatchObject({ valor: 5, aviso: 'teto' })
-    expect(calcularFormula({ ...formula, piso: 4 }, { ea: 0, eb: 1 })).toMatchObject({ valor: 4, aviso: 'piso' })
+    expect(calcularFormula(comSaida({ teto: 5 }), { ea: 100, eb: 1 })).toMatchObject({ valor: 5, aviso: 'teto' })
+    expect(calcularFormula(comSaida({ piso: 4 }), { ea: 0, eb: 1 })).toMatchObject({ valor: 4, aviso: 'piso' })
   })
 
   it('resultado não finito é erro', () => {
-    const f = { ...formula, expressao: 'sqrt(a - 50)' }
+    const f = comSaida({ expressao: 'sqrt(a - 50)' })
     expect(calcularFormula(f, { ea: 10, eb: 1 })).toMatchObject({ estado: 'erro' })
   })
 
@@ -176,30 +192,48 @@ describe('editor de calculadoras', () => {
   it('calculadoras completas são válidas', () => {
     expect(validarCalculadora(escore, existe)).toEqual([])
     expect(validarCalculadora(formula, existe)).toEqual([])
+    expect(validarCalculadora(dosePeso, existe)).toEqual([])
   })
 
   it('nova calculadora vazia aponta o que falta', () => {
-    expect(validarCalculadora(calculadoraVazia('pontos'), existe)).toEqual([
+    expect(validarCalculadora(calculadoraVazia('escala', 'pontos'), existe)).toEqual([
       'Informe o nome.',
       'Escolha o grupo.',
       'Campo 1: informe o texto.',
       'Campo 1: informe os pontos de "sim" e "não".',
     ])
-    const erros = validarCalculadora(calculadoraVazia('formula'), existe)
-    expect(erros).toContain('Entrada 1: informe mínimo e máximo.')
-    expect(erros).toContain('Escreva a expressão.')
+    const erros = validarCalculadora(calculadoraVazia('calculadora', 'formula'), existe)
+    expect(erros).toContain('Saída 1: Escreva a expressão.')
+    expect(erros).toContain('Saída 1: informe o nome.')
+    expect(validarCalculadora(calculadoraVazia('calculadora', 'dose_peso'), existe)).toContain('Linha 1: informe o texto.')
   })
 
-  it('variável inválida ou repetida', () => {
-    const d = { ...formula, entradas: [...formula.entradas, { ...formula.entradas[0]!, id: 'x' }, { ...formula.entradas[0]!, id: 'y', variavel: 'peso_ação' }] }
+  it('dose por peso: marcador sem regra', () => {
+    const d = { ...dosePeso, linhas: [{ ...dosePeso.linhas[0]!, regras: [] }] }
+    expect(validarCalculadora(d, existe)).toEqual(['A linha 1 usa {inducao}, que não tem regra.'])
+  })
+
+  it('dose por peso: regra sem uso', () => {
+    const l = dosePeso.linhas[0]!
+    const d = { ...dosePeso, linhas: [{ ...l, regras: [...l.regras, { ...l.regras[0]!, id: 'r2', marcador: 'manutencao' }] }] }
+    expect(validarCalculadora(d, existe)).toEqual(['A regra {manutencao} não é usada em nenhuma linha.'])
+  })
+
+  it('dose por peso só existe em calculadora e pontos só em escala', () => {
+    expect(validarCalculadora({ ...dosePeso, area: 'escala' } as never, existe)).toContain('Dose por peso só existe em calculadoras.')
+    expect(validarCalculadora({ ...escore, area: 'calculadora' } as never, existe)).toContain('Pontos só existe em escalas.')
+  })
+
+  it('fórmula: variável repetida ou inválida', () => {
+    const d = { ...formula, campos: [...formula.campos, { ...formula.campos[0]!, id: 'x', variavel: 'peso' }, { ...formula.campos[0]!, id: 'y', variavel: 'peso' }, { ...formula.campos[0]!, id: 'z', variavel: 'peso_ação' }] }
     const erros = validarCalculadora(d, existe)
-    expect(erros.some((e) => e.includes('repetida'))).toBe(true)
+    expect(erros).toContain('Variável repetida: peso.')
     expect(erros.some((e) => e.includes('sem acento'))).toBe(true)
   })
 
   it('avisos: lacuna na interpretação e variável não usada', () => {
     expect(avisosCalculadora({ ...escore, faixas: [{ ...escore.faixas[0]!, ate: 1 }, escore.faixas[1]!] })[0]).toMatch(/Lacuna/)
-    expect(avisosCalculadora({ ...formula, expressao: 'a * 2' })).toEqual(['A variável "b" não é usada na expressão.'])
+    expect(avisosCalculadora(comSaida({ expressao: 'a * 2' }))).toEqual(['A variável "b" não é usada em nenhuma saída.'])
   })
 
   it('duplicar gera IDs novos, "(cópia)" e aceita objeto reativo', () => {

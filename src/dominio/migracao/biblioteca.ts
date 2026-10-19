@@ -1,5 +1,6 @@
 import type { Biblioteca } from '@/dominio/backup/backup'
 import type { UUID } from '@/dominio/tipos'
+import { migrarCalculadoraV1 } from './calculadora'
 import { migrarPrescricaoV1 } from './prescricao'
 import type { CalculadoraV1, CategoriaV1, PrescricaoV1 } from './v1/tipos'
 
@@ -11,14 +12,14 @@ export interface BibliotecaV1 {
 }
 
 /**
- * Converte uma biblioteca da v1 para o modelo atual. Por enquanto só as prescrições mudam
- * (ver `migrarPrescricaoV1`); calculadoras e categorias passam como estão.
+ * Converte uma biblioteca da v1 para o modelo atual. Prescrições: `migrarPrescricaoV1`;
+ * calculadoras: `migrarCalculadoraV1` (conversão mínima); categorias passam como estão.
  * Função pura: não altera a biblioteca recebida.
  */
 export function migrarBibliotecaV1(b: BibliotecaV1, gerarId?: () => UUID): Biblioteca {
   return {
     prescricoes: b.prescricoes.map((p) => migrarPrescricaoV1(p, gerarId)),
-    calculadoras: b.calculadoras,
+    calculadoras: b.calculadoras.map(migrarCalculadoraV1),
     categorias: b.categorias,
   }
 }

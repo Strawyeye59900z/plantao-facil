@@ -25,6 +25,7 @@ const calculadoraTeste: Calculadora = {
   criadoEm: T1,
   atualizadoEm: T1,
   excluidoEm: null,
+  area: 'escala',
   tipo: 'pontos',
   nome: 'Escore Teste',
   categoriaId: null,
