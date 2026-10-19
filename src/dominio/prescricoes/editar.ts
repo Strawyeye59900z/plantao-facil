@@ -1,7 +1,5 @@
-import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, RegraDose, UUID } from '@/dominio/tipos'
+import type { Alerta, DadosNovos, ItemPrescricao, OpcaoItem, Prescricao, UUID } from '@/dominio/tipos'
 import { ordenarPorCondicao } from './condicoes'
-import { validarMarcadores } from '@/dominio/dose/marcadores'
-import { validarRegraDose } from '@/dominio/dose/validarRegra'
 
 export type DadosPrescricao = DadosNovos<Prescricao>
 type GerarId = () => UUID
@@ -16,6 +14,7 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
     itens: [itemVazio(gerarId)],
     condicoes: [],
     alertas: [],
+    calculadoraIds: [],
     receita: '',
     observacoes: '',
     referencia: '',
@@ -26,28 +25,13 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
   }
 }
 
+/** Item novo com uma opção vazia (item simples). */
 export function itemVazio(gerarId: GerarId = idPadrao, condicaoId: UUID | null = null): ItemPrescricao {
-  return { id: gerarId(), texto: '', regraDose: null, alternativas: [], condicaoId }
+  return { id: gerarId(), condicaoId, opcoes: [opcaoVazia(gerarId)] }
 }
 
-export function alternativaVazia(gerarId: GerarId = idPadrao): Alternativa {
-  return { id: gerarId(), motivo: '', texto: '', regraDose: null }
-}
-
-/** Regra nova: campos numéricos vazios (NaN) para o usuário preencher; dose sempre inteira. */
-export function regraDoseVazia(): RegraDose {
-  return {
-    dosePorKg: Number.NaN,
-    unidade: '',
-    baseDoseKg: 'por_tomada',
-    tomadasPorDia: null,
-    doseMaximaPorTomada: null,
-    doseMaximaDiaria: null,
-    pesoLimite: null,
-    concentracao: null,
-    arredondamentoDose: { modo: 'inteiro' },
-    arredondamentoVolume: { modo: 'casas_decimais', casas: 1 },
-  }
+export function opcaoVazia(gerarId: GerarId = idPadrao): OpcaoItem {
+  return { id: gerarId(), texto: '', motivo: '' }
 }
 
 export function alertaVazio(gerarId: GerarId = idPadrao): Alerta {
@@ -65,7 +49,7 @@ export function paraDados(p: Prescricao): DadosPrescricao {
 }
 
 /**
- * Duplica com IDs novos em itens, alternativas, condições e alertas (mantendo os vínculos alerta→item e item→condição).
+ * Duplica com IDs novos em itens, opções, condições e alertas (mantendo os vínculos alerta→item e item→condição).
  * Título recebe "(cópia)", sai sem favorito; origem e status de revisão são mantidos,
  * para uma cópia de importação não revisada continuar não revisada.
  */
@@ -85,7 +69,7 @@ export function duplicarPrescricao(p: Prescricao, gerarId: GerarId = idPadrao): 
     return {
       ...item,
       id,
-      alternativas: item.alternativas.map((alt) => ({ ...alt, id: gerarId() })),
+      opcoes: item.opcoes.map((opcao) => ({ ...opcao, id: gerarId() })),
       condicaoId: item.condicaoId ? (novoIdCondicao.get(item.condicaoId) ?? null) : null,
     }
   })
@@ -161,23 +145,11 @@ export function validarPrescricao(
   if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha o grupo.')
   if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
 
-  const validarDose = (prefixo: string, texto: string, regra: RegraDose | null) => {
-    if (regra) for (const e of validarRegraDose(regra)) erros.push(`${prefixo}, regra de dose: ${e}`)
-    for (const e of validarMarcadores(texto, regra)) erros.push(`${prefixo}: ${e}`)
-  }
-
   dados.itens.forEach((item, i) => {
-    if (!item.texto.trim()) erros.push(`Item ${i + 1}: texto vazio.`)
-    if (item.opcoesEquivalentes && item.alternativas.length === 0) {
-      erros.push(`Item ${i + 1}: opções equivalentes precisam de pelo menos 2 opções.`)
-    }
-    validarDose(`Item ${i + 1}`, item.texto, item.regraDose)
-    item.alternativas.forEach((alt, j) => {
-      const prefixo = `Item ${i + 1}, alternativa ${j + 1}`
-      if (!alt.texto.trim()) erros.push(`${prefixo}: texto vazio.`)
-      // Em opções equivalentes (OU) o motivo é opcional.
-      if (!item.opcoesEquivalentes && !alt.motivo.trim()) erros.push(`${prefixo}: informe o motivo.`)
-      validarDose(prefixo, alt.texto, alt.regraDose)
+    if (item.opcoes.length === 0) erros.push(`Item ${i + 1}: inclua pelo menos 1 opção.`)
+    item.opcoes.forEach((opcao, j) => {
+      if (opcao.texto.trim()) return
+      erros.push(item.opcoes.length === 1 ? `Item ${i + 1}: texto vazio.` : `Item ${i + 1}, opção ${j + 1}: texto vazio.`)
     })
   })
   dados.alertas.forEach((alerta, i) => {

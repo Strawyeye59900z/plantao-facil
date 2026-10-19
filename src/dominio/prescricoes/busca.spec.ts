@@ -17,10 +17,10 @@ const lista = [
     itens: [
       {
         id: 'i-2',
-        texto: 'Medicamento Teste B',
-        regraDose: null,
-        alternativas: [
-          { id: 'a-1', motivo: 'Motivo Ômega', texto: 'Medicamento Kappa', regraDose: null },
+        condicaoId: null,
+        opcoes: [
+          { id: 'o-1', texto: 'Medicamento Teste B', motivo: '' },
+          { id: 'o-2', texto: 'Medicamento Kappa', motivo: 'Motivo Ômega' },
         ],
       },
     ],
@@ -49,11 +49,11 @@ describe('filtrarPrescricoes', () => {
     expect(ids('etiqueta-x')).toEqual(['p-2'])
   })
 
-  it('busca no texto dos itens', () => {
+  it('busca no texto da primeira opção dos itens', () => {
     expect(ids('medicamento teste b')).toEqual(['p-2'])
   })
 
-  it('busca no motivo e no texto das alternativas', () => {
+  it('busca no motivo e no texto das demais opções', () => {
     expect(ids('omega')).toEqual(['p-2'])
     expect(ids('kappa')).toEqual(['p-2'])
   })

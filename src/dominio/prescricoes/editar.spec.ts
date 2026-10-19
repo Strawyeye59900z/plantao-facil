@@ -5,8 +5,9 @@ import {
   duplicarPrescricao,
   moverItem,
   normalizarTags,
+  itemVazio,
+  opcaoVazia,
   prescricaoVazia,
-  regraDoseVazia,
   removerItem,
   validarPrescricao,
 } from './editar'
@@ -26,9 +27,11 @@ describe('duplicarPrescricao', () => {
     itens: [
       {
         id: 'i-1',
-        texto: 'Medicamento Teste A',
-        regraDose: null,
-        alternativas: [{ id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B', regraDose: null }],
+        condicaoId: null,
+        opcoes: [
+          { id: 'o-1', texto: 'Medicamento Teste A', motivo: '' },
+          { id: 'o-2', texto: 'Medicamento Teste B', motivo: 'Motivo Teste' },
+        ],
       },
     ],
     alertas: [
@@ -37,11 +40,14 @@ describe('duplicarPrescricao', () => {
     ],
   })
 
-  it('gera IDs novos e mantém o vínculo alerta→item', () => {
+  it('gera IDs novos (também nas opções) e mantém o vínculo alerta→item', () => {
     const copia = duplicarPrescricao(original, geradorIds())
     expect(copia.itens[0]!.id).toBe('novo-1')
-    expect(copia.itens[0]!.alternativas[0]!.id).toBe('novo-2')
-    expect(copia.alertas.map((a) => a.id)).toEqual(['novo-3', 'novo-4'])
+    expect(copia.itens[0]!.opcoes).toEqual([
+      { id: 'novo-2', texto: 'Medicamento Teste A', motivo: '' },
+      { id: 'novo-3', texto: 'Medicamento Teste B', motivo: 'Motivo Teste' },
+    ])
+    expect(copia.alertas.map((a) => a.id)).toEqual(['novo-4', 'novo-5'])
     expect(copia.alertas[0]!.itemId).toBe('novo-1')
     expect(copia.alertas[1]!.itemId).toBeNull()
   })
@@ -63,7 +69,19 @@ describe('duplicarPrescricao', () => {
   it('não altera o original', () => {
     duplicarPrescricao(original, geradorIds())
     expect(original.itens[0]!.id).toBe('i-1')
+    expect(original.itens[0]!.opcoes[0]!.id).toBe('o-1')
     expect(original.titulo).toBe('Situação Teste A')
+  })
+})
+
+describe('itens vazios', () => {
+  it('item novo vem com uma opção vazia', () => {
+    expect(itemVazio(geradorIds(), 'c-a')).toEqual({ id: 'novo-1', condicaoId: 'c-a', opcoes: [{ id: 'novo-2', texto: '', motivo: '' }] })
+    expect(opcaoVazia(geradorIds())).toEqual({ id: 'novo-1', texto: '', motivo: '' })
+  })
+
+  it('prescrição nova sem calculadoras ligadas', () => {
+    expect(prescricaoVazia().calculadoraIds).toEqual([])
   })
 })
 
@@ -114,51 +132,42 @@ describe('validarPrescricao', () => {
     expect(validarPrescricao(dados, existe)).toEqual(['Escolha o grupo.'])
   })
 
-  it('exige texto e motivo nas alternativas e texto nos alertas', () => {
+  it('exige texto em todas as opções (motivo é opcional) e texto nos alertas', () => {
     const dados = prescricaoTeste({
       itens: [
         {
           id: 'i-1',
-          texto: 'Medicamento Teste A',
-          regraDose: null,
-          alternativas: [{ id: 'a-1', motivo: ' ', texto: '', regraDose: null }],
+          condicaoId: null,
+          opcoes: [
+            { id: 'o-1', texto: 'Medicamento Teste A', motivo: '' },
+            { id: 'o-2', texto: ' ', motivo: 'Motivo Teste' },
+          ],
         },
+        { id: 'i-2', condicaoId: null, opcoes: [{ id: 'o-3', texto: '', motivo: '' }] },
       ],
       alertas: [{ id: 'al', tipo: 'outro', gravidade: 'atencao', texto: '', itemId: null }],
     })
     expect(validarPrescricao(dados, existe)).toEqual([
-      'Item 1, alternativa 1: texto vazio.',
-      'Item 1, alternativa 1: informe o motivo.',
+      'Item 1, opção 2: texto vazio.',
+      'Item 2: texto vazio.',
       'Alerta 1: texto vazio.',
     ])
   })
 
-  it('valida regra de dose e marcadores de itens e alternativas', () => {
+  it('item "OU" com opções preenchidas e sem motivo é válido', () => {
     const dados = prescricaoTeste({
       itens: [
         {
           id: 'i-1',
-          texto: 'Medicamento Teste A {dose}',
-          regraDose: regraDoseVazia(),
-          alternativas: [{ id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B {dose}', regraDose: null }],
+          condicaoId: null,
+          opcoes: [
+            { id: 'o-1', texto: 'Opção Teste 1', motivo: '' },
+            { id: 'o-2', texto: 'Opção Teste 2', motivo: '' },
+          ],
         },
       ],
     })
-    expect(validarPrescricao(dados, existe)).toEqual([
-      'Item 1, regra de dose: dose por kg deve ser maior que zero.',
-      'Item 1, regra de dose: informe a unidade.',
-      'Item 1, alternativa 1: usa {dose} mas não tem regra de dose.',
-    ])
-  })
-
-  it('opções equivalentes: motivo opcional, mas exige pelo menos 2 opções', () => {
-    const item = { id: 'i-1', texto: 'Medicamento Teste A', regraDose: null, opcoesEquivalentes: true }
-    expect(
-      validarPrescricao(prescricaoTeste({ itens: [{ ...item, alternativas: [{ id: 'a', motivo: '', texto: 'Medicamento Teste B', regraDose: null }] }] }), existe),
-    ).toEqual([])
-    expect(validarPrescricao(prescricaoTeste({ itens: [{ ...item, alternativas: [] }] }), existe)).toEqual([
-      'Item 1: opções equivalentes precisam de pelo menos 2 opções.',
-    ])
+    expect(validarPrescricao(dados, existe)).toEqual([])
   })
 
   it('prescrição completa é válida', () => {

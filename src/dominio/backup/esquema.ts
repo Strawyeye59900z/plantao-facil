@@ -1,11 +1,5 @@
 import * as v from 'valibot'
-import type {
-  ArquivoBackup,
-  Calculadora,
-  Categoria,
-  Prescricao,
-  RegraDose,
-} from '@/dominio/tipos'
+import type { ArquivoBackup, Calculadora, Categoria, Prescricao } from '@/dominio/tipos'
 
 /**
  * Esquemas de validação (valibot) do arquivo de backup.
@@ -18,7 +12,6 @@ const dataOuNulo = v.nullable(data)
 const numero = v.pipe(v.number(), v.finite())
 const numeroOuNulo = v.nullable(numero)
 const gravidade = v.picklist(['informativo', 'atencao', 'critico'])
-const direcao = v.picklist(['baixo', 'proximo', 'cima'])
 
 const entidade = {
   id,
@@ -36,25 +29,6 @@ export const esquemaCategoria: v.GenericSchema<unknown, Categoria> = v.object({
   icone: v.optional(v.nullable(v.string()), null),
 })
 
-const esquemaRegraDose: v.GenericSchema<unknown, RegraDose> = v.object({
-  dosePorKg: numero,
-  unidade: v.string(),
-  baseDoseKg: v.picklist(['por_tomada', 'por_dia']),
-  tomadasPorDia: numeroOuNulo,
-  doseMaximaPorTomada: numeroOuNulo,
-  doseMaximaDiaria: numeroOuNulo,
-  pesoLimite: v.nullable(v.object({ acimaDeKg: numero, doseFixa: numero })),
-  concentracao: v.nullable(v.object({ quantidade: numero, volumeMl: numero })),
-  arredondamentoDose: v.variant('modo', [
-    v.object({ modo: v.literal('inteiro') }),
-    v.object({ modo: v.literal('multiplo'), passo: numero, direcao }),
-  ]),
-  arredondamentoVolume: v.variant('modo', [
-    v.object({ modo: v.literal('casas_decimais'), casas: numero }),
-    v.object({ modo: v.literal('multiplo'), passo: numero, direcao }),
-  ]),
-})
-
 export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object({
   ...entidade,
   titulo: v.string(),
@@ -63,13 +37,8 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
   itens: v.array(
     v.object({
       id,
-      texto: v.string(),
-      regraDose: v.nullable(esquemaRegraDose),
-      alternativas: v.array(
-        v.object({ id, motivo: v.string(), texto: v.string(), regraDose: v.nullable(esquemaRegraDose) }),
-      ),
-      opcoesEquivalentes: v.optional(v.boolean()),
-      condicaoId: v.optional(v.nullable(id)),
+      condicaoId: v.optional(v.nullable(id), null),
+      opcoes: v.array(v.object({ id, texto: v.string(), motivo: v.string() })),
     }),
   ),
   condicoes: v.optional(v.array(v.object({ id, nome: v.string() })), []),
@@ -82,6 +51,7 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
       itemId: v.nullable(id),
     }),
   ),
+  calculadoraIds: v.array(id),
   receita: v.optional(v.string(), ''),
   observacoes: v.string(),
   referencia: v.string(),

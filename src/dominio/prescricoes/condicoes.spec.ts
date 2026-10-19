@@ -1,8 +1,7 @@
 // Dados fictícios para testes — nenhum conteúdo clínico real.
 import { describe, expect, it } from 'vitest'
 import type { ItemPrescricao } from '@/dominio/tipos'
-import { calcularPrescricao, montarTextoCopia, OPCAO_PRINCIPAL } from '@/dominio/dose/prescricaoCalculada'
-import { duplicarPrescricao, paraDados, regraDoseVazia, removerCondicao, validarPrescricao } from './editar'
+import { duplicarPrescricao, paraDados, removerCondicao, validarPrescricao } from './editar'
 import { itemEntraNaCopia, ordenarPorCondicao } from './condicoes'
 import { filtrarPrescricoes } from './busca'
 import { prescricaoTeste } from './fixtures.spec-helper'
@@ -11,13 +10,10 @@ const condicoes = [
   { id: 'c-a', nome: 'Condição Teste A' },
   { id: 'c-b', nome: 'Condição Teste B' },
 ]
-const item = (id: string, condicaoId: string | null = null, extra: Partial<ItemPrescricao> = {}): ItemPrescricao => ({
+const item = (id: string, condicaoId: string | null = null): ItemPrescricao => ({
   id,
-  texto: `Medicamento Teste ${id}`,
-  regraDose: null,
-  alternativas: [],
   condicaoId,
-  ...extra,
+  opcoes: [{ id: `o-${id}`, texto: `Medicamento Teste ${id}`, motivo: '' }],
 })
 
 describe('ordem e cópia por condição', () => {
@@ -27,50 +23,12 @@ describe('ordem e cópia por condição', () => {
   })
 
   it('condição inexistente ou ausente conta como "Sempre"', () => {
-    const semCampo = { id: 'x', texto: 'Medicamento Teste X', regraDose: null, alternativas: [] }
+    // Registro sem o campo (dado malformado) continua valendo "Sempre".
+    const semCampo = { id: 'x', opcoes: [{ id: 'o-x', texto: 'Medicamento Teste X', motivo: '' }] } as unknown as ItemPrescricao
     expect(itemEntraNaCopia(semCampo, condicoes, {})).toBe(true)
     expect(itemEntraNaCopia(item('y', 'apagada'), condicoes, {})).toBe(true)
     expect(itemEntraNaCopia(item('z', 'c-a'), condicoes, {})).toBe(false)
     expect(itemEntraNaCopia(item('z', 'c-a'), condicoes, { 'c-a': true })).toBe(true)
-  })
-
-  it('copia "Sempre" + condições marcadas, renumerando', () => {
-    const itens = [item('1'), item('2', 'c-a'), item('3', 'c-b')]
-    const c = calcularPrescricao(itens, {}, null, condicoes, { 'c-b': true })
-    expect(c.linhas.map((l) => l.copiar)).toEqual([true, false, true])
-    expect(montarTextoCopia(c.linhas)).toBe('1. Medicamento Teste 1\n2. Medicamento Teste 3')
-    expect(c.podeCopiar).toBe(true)
-  })
-
-  it('várias condições marcadas ao mesmo tempo', () => {
-    const itens = [item('1', 'c-a'), item('2', 'c-b')]
-    const c = calcularPrescricao(itens, {}, null, condicoes, { 'c-a': true, 'c-b': true })
-    expect(montarTextoCopia(c.linhas)).toBe('1. Medicamento Teste 1\n2. Medicamento Teste 2')
-  })
-
-  it('só itens de condição e nenhuma marcada: nada para copiar, Copiar bloqueado', () => {
-    const c = calcularPrescricao([item('1', 'c-a'), item('2', 'c-b')], {}, null, condicoes, {})
-    expect(c.nadaParaCopiar).toBe(true)
-    expect(c.podeCopiar).toBe(false)
-  })
-
-  it('item fora da cópia não exige peso nem escolha de opção', () => {
-    const comRegra = item('1', 'c-a', { texto: 'Medicamento Teste {dose}', regraDose: { ...regraDoseVazia(), dosePorKg: 1, unidade: 'mg' } })
-    const ou = item('2', 'c-a', { opcoesEquivalentes: true, alternativas: [{ id: 'alt', motivo: '', texto: 'Opção Teste 2', regraDose: null }] })
-    const c = calcularPrescricao([item('0'), comRegra, ou], {}, null, condicoes, {})
-    expect(c.precisaPeso).toBe(false)
-    expect(c.itensSemEscolha).toEqual([])
-    expect(c.podeCopiar).toBe(true)
-
-    const marcada = calcularPrescricao([item('0'), comRegra, ou], { '2': OPCAO_PRINCIPAL }, null, condicoes, { 'c-a': true })
-    expect(marcada.precisaPeso).toBe(true)
-    expect(marcada.podeCopiar).toBe(false)
-  })
-
-  it('sem condições, comportamento antigo (tudo entra)', () => {
-    const c = calcularPrescricao([item('1'), item('2')], {}, null)
-    expect(c.linhas.every((l) => l.copiar)).toBe(true)
-    expect(montarTextoCopia([{ texto: 'Texto Teste' }])).toBe('1. Texto Teste')
   })
 })
 
