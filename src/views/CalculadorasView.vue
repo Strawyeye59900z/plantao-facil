@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import PainelBiblioteca from '@/components/biblioteca/PainelBiblioteca.vue'
 import { filtrarCalculadoras } from '@/dominio/calculadoras/busca'
 import type { Calculadora } from '@/dominio/tipos'
@@ -8,12 +9,14 @@ import { useCategoriasStore } from '@/stores/categorias'
 const calculadoras = useCalculadorasStore()
 const categorias = useCategoriasStore()
 
-function filtrar(itens: Calculadora[], termo: string) {
-  return filtrarCalculadoras(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
+const itens = computed(() => calculadoras.ativas.filter((c) => c.area === 'calculadora'))
+
+function filtrar(lista: Calculadora[], termo: string) {
+  return filtrarCalculadoras(lista, termo, (id) => categorias.obter(id)?.nome ?? '')
 }
 
 function descrever(c: Calculadora) {
-  return { etiquetas: [c.tipo === 'pontos' ? 'Pontos' : c.tipo === 'dose_peso' ? 'Doses por peso' : 'Fórmula'], meta: c.descricao.trim() }
+  return { etiquetas: [c.tipo === 'dose_peso' ? 'Doses por peso' : 'Fórmula'], meta: c.descricao.trim() }
 }
 </script>
 
@@ -23,7 +26,7 @@ function descrever(c: Calculadora) {
     rotulo-novo="Nova calculadora"
     texto-vazio="Nenhuma calculadora cadastrada."
     :nome-itens="{ um: 'calculadora', varios: 'calculadoras' }"
-    :itens="calculadoras.ativas"
+    :itens="itens"
     :grupos="categorias.deCalculadoras"
     :filtrar="filtrar"
     :descrever="descrever"

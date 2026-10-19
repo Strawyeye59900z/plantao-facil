@@ -29,9 +29,13 @@ watch(
   { immediate: true },
 )
 
-// Cada área tem sua busca: em Calculadoras busca calculadoras; no resto, prescrições.
-const listaDaBusca = computed(() => (route.path.startsWith('/calculadoras') ? '/calculadoras' : '/prescricoes'))
-const rotuloBusca = computed(() => (listaDaBusca.value === '/calculadoras' ? 'Buscar calculadora' : 'Buscar prescrição'))
+// Cada área tem sua busca: Calculadoras e Escalas buscam nelas; no resto, prescrições.
+const listaDaBusca = computed(() =>
+  route.path.startsWith('/calculadoras') ? '/calculadoras' : route.path.startsWith('/escalas') ? '/escalas' : '/prescricoes',
+)
+const rotuloBusca = computed(() =>
+  listaDaBusca.value === '/calculadoras' ? 'Buscar calculadora' : listaDaBusca.value === '/escalas' ? 'Buscar escala' : 'Buscar prescrição',
+)
 
 function buscar() {
   const q = busca.value.trim()
@@ -72,7 +76,11 @@ const emEdicao = computed(() => /\/(nova|editar)$/.test(route.path))
 // A biblioteca (lateral + grade) e a tela da prescrição (lista + receita ao lado) usam a largura toda;
 // as demais telas ficam estreitas, para leitura.
 const larguraTotal = computed(
-  () => route.path === '/prescricoes' || route.path === '/calculadoras' || route.name === 'prescricao',
+  () =>
+    route.path === '/prescricoes' ||
+    route.path === '/calculadoras' ||
+    route.path === '/escalas' ||
+    route.name === 'prescricao',
 )
 const tituloEdicao = computed(() => route.meta.titulo ?? '')
 

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calculator, ClipboardList, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
+import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
 
 export interface ItemNavegacao {
   rota: string
@@ -7,10 +7,11 @@ export interface ItemNavegacao {
   icone: Component
 }
 
-/** Áreas do app, mostradas como pílulas no topo. A Fase 3 acrescenta Escalas. */
+/** Áreas do app, mostradas como pílulas no topo. */
 export const AREAS: ItemNavegacao[] = [
   { rota: '/prescricoes', rotulo: 'Prescrições', icone: ClipboardList },
   { rota: '/calculadoras', rotulo: 'Calculadoras', icone: Calculator },
+  { rota: '/escalas', rotulo: 'Escalas', icone: ListChecks },
 ]
 
 /** Itens do menu redondo do topo (no pen drive some o que a rota bloqueia). */

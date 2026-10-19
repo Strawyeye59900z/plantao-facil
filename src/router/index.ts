@@ -59,6 +59,30 @@ export const router = createRouter({
       meta: { titulo: 'Calculadora' },
     },
     {
+      path: '/escalas',
+      name: 'escalas',
+      component: () => import('@/views/EscalasView.vue'),
+      meta: { titulo: 'Escalas' },
+    },
+    {
+      path: '/escalas/nova',
+      name: 'escala-nova',
+      component: () => import('@/views/CalculadoraEditorView.vue'),
+      meta: { titulo: 'Nova escala' },
+    },
+    {
+      path: '/escalas/:id/editar',
+      name: 'escala-editar',
+      component: () => import('@/views/CalculadoraEditorView.vue'),
+      meta: { titulo: 'Editar escala' },
+    },
+    {
+      path: '/escalas/:id',
+      name: 'escala',
+      component: () => import('@/views/CalculadoraView.vue'),
+      meta: { titulo: 'Escala' },
+    },
+    {
       path: '/ajustes',
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),
