@@ -4,6 +4,7 @@ import { Dexie } from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import { criarBanco, type BancoPlantao } from '@/db/banco'
 import { lerBiblioteca } from '@/db/backup'
+import { lerBackup, planejarMesclagem } from '@/dominio/backup/backup'
 
 /** Esquema do banco da v1 (versão 1 do Dexie), congelado para o teste. */
 const STORES_V1 = {
@@ -160,5 +161,53 @@ describe('migração do banco (Dexie versão 1 → 2)', () => {
     await gravarComoV1({ prescricoes: [], categorias: [], calculadoras: [] })
     banco = criarBanco(nome)
     expect(await banco.prescricoes.count()).toBe(0)
+    expect(banco.verno).toBe(2)
+  })
+
+  it('backup v1 do mesmo conteúdo, importado num aparelho já migrado, fica todo "igual" (sem falso conflito)', async () => {
+    const prescricoes = [
+      // Registros crus antigos (sem receita/condições/condicaoId), no banco e no arquivo.
+      prescricaoV1Crua('p-ativa', {
+        itens: [
+          {
+            id: 'i-1',
+            texto: 'Medicamento Teste A {dose}',
+            regraDose: regraV1,
+            alternativas: [{ id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B', regraDose: null }],
+          },
+          {
+            id: 'i-2',
+            texto: 'Opção Teste 1',
+            regraDose: null,
+            opcoesEquivalentes: true,
+            alternativas: [{ id: 'a-2', motivo: '', texto: 'Opção Teste 2', regraDose: null }],
+          },
+        ],
+      }),
+      prescricaoV1Crua('p-lixeira', { excluidoEm: T2 }),
+    ]
+    const categorias = [categoriaSemIcone]
+    await gravarComoV1({ prescricoes, categorias, calculadoras: [] })
+    banco = criarBanco(nome)
+
+    const textoBackupV1 = JSON.stringify({
+      formato: 'plantao-facil-backup',
+      versaoFormato: 1,
+      exportadoEm: T2,
+      versaoApp: '1.0.0',
+      prescricoes,
+      calculadoras: [],
+      categorias,
+    })
+    const lido = lerBackup(textoBackupV1)
+    expect(lido.ok).toBe(true)
+    if (!lido.ok) return
+
+    const plano = planejarMesclagem(await lerBiblioteca(banco), lido.backup)
+    expect(plano.prescricoes.map((i) => [i.id, i.situacao])).toEqual([
+      ['p-ativa', 'igual'],
+      ['p-lixeira', 'igual'],
+    ])
+    expect(plano.categorias.map((i) => i.situacao)).toEqual(['igual'])
   })
 })

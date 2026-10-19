@@ -13,11 +13,15 @@ function textoMigrado(texto: string, regra: RegraDoseV1 | null | undefined): str
   return regra != null ? converterTextoComRegraV1(texto, regra) : texto
 }
 
-function migrarItem(item: ItemPrescricaoV1, gerarId: GerarId): ItemPrescricao {
+/**
+ * IDs das opções são determinísticos (principal = `${item.id}-principal`; alternativas mantêm o id da v1):
+ * migrar o mesmo dado duas vezes (banco e backup v1) dá o mesmo resultado, sem falso conflito na mesclagem.
+ */
+function migrarItem(item: ItemPrescricaoV1): ItemPrescricao {
   const alternativas = item.alternativas ?? []
   const equivalentes = item.opcoesEquivalentes === true
   const principal: OpcaoItem = {
-    id: gerarId(),
+    id: `${item.id}-principal`,
     texto: textoMigrado(item.texto, item.regraDose),
     motivo: alternativas.length > 0 && !equivalentes ? MOTIVO_PADRAO : '',
   }
@@ -27,7 +31,7 @@ function migrarItem(item: ItemPrescricaoV1, gerarId: GerarId): ItemPrescricao {
     condicaoId: item.condicaoId ?? null,
     opcoes: [
       principal,
-      ...alternativas.map((alt) => ({ id: gerarId(), texto: textoMigrado(alt.texto, alt.regraDose), motivo: alt.motivo })),
+      ...alternativas.map((alt) => ({ id: alt.id, texto: textoMigrado(alt.texto, alt.regraDose), motivo: alt.motivo })),
     ],
   }
 }
@@ -44,10 +48,12 @@ function tinhaCalculoDeDose(item: ItemPrescricaoV1): boolean {
  * - regra de dose vira texto (ver `converterTextoComRegraV1`) e a prescrição fica "não revisada",
  *   com uma dúvida por item convertido;
  * - campos ausentes em registros antigos: receita '', condições [], condição do item "Sempre";
- * - `calculadoraIds` começa vazio.
+ * - `calculadoraIds` começa vazio;
+ * - IDs das opções determinísticos (ver `migrarItem`): o mesmo dado migrado duas vezes dá o mesmo resultado.
  * Função pura: não altera o registro recebido.
+ * `_gerarId` não é usado nas opções; fica na assinatura para as próximas migrações de outras entidades.
  */
-export function migrarPrescricaoV1(p: PrescricaoV1, gerarId: GerarId = () => crypto.randomUUID()): Prescricao {
+export function migrarPrescricaoV1(p: PrescricaoV1, _gerarId: GerarId = () => crypto.randomUUID()): Prescricao {
   const avisos: string[] = []
   p.itens.forEach((item, i) => {
     if (tinhaCalculoDeDose(item)) {
@@ -65,7 +71,7 @@ export function migrarPrescricaoV1(p: PrescricaoV1, gerarId: GerarId = () => cry
     titulo: p.titulo,
     categoriaId: p.categoriaId,
     tags: [...p.tags],
-    itens: p.itens.map((item) => migrarItem(item, gerarId)),
+    itens: p.itens.map(migrarItem),
     condicoes: (p.condicoes ?? []).map((c) => ({ ...c })),
     alertas: p.alertas.map((a) => ({ ...a })),
     calculadoraIds: [],

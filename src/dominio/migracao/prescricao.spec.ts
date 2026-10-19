@@ -176,9 +176,10 @@ describe('migrarPrescricaoV1', () => {
     const item = m.itens[0]!
     expect(item.id).toBe('i-ou')
     expect(item.opcoes).toEqual([
-      { id: 'novo-1', texto: 'Opção Teste 1', motivo: '' },
-      { id: 'novo-2', texto: 'Opção Teste 2', motivo: 'Motivo Teste' },
-      { id: 'novo-3', texto: `Opção Teste 3 [${DESC_SIMPLES}]`, motivo: '' },
+      // IDs determinísticos: principal = `${item.id}-principal`; alternativas mantêm o id da v1.
+      { id: 'i-ou-principal', texto: 'Opção Teste 1', motivo: '' },
+      { id: 'a-1', texto: 'Opção Teste 2', motivo: 'Motivo Teste' },
+      { id: 'a-2', texto: `Opção Teste 3 [${DESC_SIMPLES}]`, motivo: '' },
     ])
     // A alternativa tinha regra: a prescrição também fica para revisar.
     expect(m.revisada).toBe(false)
@@ -255,6 +256,24 @@ describe('migrarPrescricaoV1', () => {
     const { itens: _i, calculadoraIds: _c, ...resto } = m
     const { itens: _iv1, ...restoV1 } = p
     expect(resto).toEqual(restoV1)
+  })
+
+  it('migrar a mesma prescrição duas vezes dá o mesmo resultado (IDs das opções determinísticos)', () => {
+    const p = prescricaoV1({
+      itens: [
+        itemV1({
+          id: 'i-1',
+          texto: 'Medicamento Teste A {dose}',
+          regraDose: regraSimples,
+          alternativas: [{ id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B', regraDose: null }],
+        }),
+        itemV1({ id: 'i-2', texto: 'Medicamento Teste C' }),
+      ],
+    })
+    const primeira = migrarPrescricaoV1(p)
+    expect(migrarPrescricaoV1(p)).toEqual(primeira)
+    expect(migrarPrescricaoV1(p, geradorIds())).toEqual(primeira)
+    expect(primeira.itens.map((i) => i.opcoes.map((o) => o.id))).toEqual([['i-1-principal', 'a-1'], ['i-2-principal']])
   })
 
   it('não altera o registro original', () => {
