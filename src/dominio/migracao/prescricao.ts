@@ -9,8 +9,8 @@ type GerarId = () => UUID
 /** Motivo da opção principal de um item que tinha alternativas (sem "OU") na v1. */
 const MOTIVO_PADRAO = 'Padrão'
 
-function textoMigrado(texto: string, regra: RegraDoseV1 | null): string {
-  return regra ? converterTextoComRegraV1(texto, regra) : texto
+function textoMigrado(texto: string, regra: RegraDoseV1 | null | undefined): string {
+  return regra != null ? converterTextoComRegraV1(texto, regra) : texto
 }
 
 function migrarItem(item: ItemPrescricaoV1, gerarId: GerarId): ItemPrescricao {
@@ -33,7 +33,8 @@ function migrarItem(item: ItemPrescricaoV1, gerarId: GerarId): ItemPrescricao {
 }
 
 function tinhaCalculoDeDose(item: ItemPrescricaoV1): boolean {
-  return item.regraDose !== null || (item.alternativas ?? []).some((alt) => alt.regraDose !== null)
+  // `!= null`: registros antigos sem o campo (undefined) contam como sem regra.
+  return item.regraDose != null || (item.alternativas ?? []).some((alt) => alt.regraDose != null)
 }
 
 /**

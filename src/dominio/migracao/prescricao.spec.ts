@@ -35,7 +35,8 @@ const regraCompleta: RegraDoseV1 = {
   concentracao: { quantidade: 100, volumeMl: 5 },
   ...arred,
 }
-const DESC_COMPLETA = '30 mg/kg/dia, 3 tomadas/dia, máx. 1500 mg/dia, acima de 40 kg: 400 mg, concentração 100 mg em 5 mL'
+const DESC_COMPLETA =
+  '30 mg/kg/dia, 3 tomadas/dia, máx. 1500 mg/dia, acima de 40 kg: 400 mg/tomada, concentração 100 mg em 5 mL, volume com 1 casa decimal'
 
 function geradorIds() {
   let n = 0
@@ -79,6 +80,31 @@ describe('descreverRegraV1', () => {
 
   it('dose por dia com tomadas, teto diário, peso limite e concentração', () => {
     expect(descreverRegraV1(regraCompleta)).toBe(DESC_COMPLETA)
+  })
+
+  it('arredondamento da dose em múltiplos entra na descrição', () => {
+    expect(
+      descreverRegraV1({ ...regraSimples, arredondamentoDose: { modo: 'multiplo', passo: 5, direcao: 'baixo' } }),
+    ).toBe(`${DESC_SIMPLES}, dose em múltiplos de 5 mg (para baixo)`)
+    expect(
+      descreverRegraV1({ ...regraSimples, arredondamentoDose: { modo: 'multiplo', passo: 2.5, direcao: 'cima' } }),
+    ).toBe(`${DESC_SIMPLES}, dose em múltiplos de 2,5 mg (para cima)`)
+  })
+
+  it('arredondamento do volume só aparece com concentração', () => {
+    const comConcentracao: RegraDoseV1 = { ...regraSimples, concentracao: { quantidade: 100, volumeMl: 5 } }
+    const base = `${DESC_SIMPLES}, concentração 100 mg em 5 mL`
+    const volume = (arredondamentoVolume: RegraDoseV1['arredondamentoVolume']) =>
+      descreverRegraV1({ ...comConcentracao, arredondamentoVolume })
+    expect(volume({ modo: 'casas_decimais', casas: 0 })).toBe(`${base}, volume inteiro`)
+    expect(volume({ modo: 'casas_decimais', casas: 1 })).toBe(`${base}, volume com 1 casa decimal`)
+    expect(volume({ modo: 'casas_decimais', casas: 2 })).toBe(`${base}, volume com 2 casas decimais`)
+    expect(volume({ modo: 'multiplo', passo: 0.5, direcao: 'proximo' })).toBe(
+      `${base}, volume em múltiplos de 0,5 mL (mais próximo)`,
+    )
+    expect(descreverRegraV1({ ...regraSimples, arredondamentoVolume: { modo: 'multiplo', passo: 0.5, direcao: 'baixo' } })).toBe(
+      DESC_SIMPLES,
+    )
   })
 
   it('números com vírgula decimal', () => {
@@ -180,6 +206,21 @@ describe('migrarPrescricaoV1', () => {
       expect(m.revisada).toBe(revisada)
       expect(m.duvidasImportacao).toEqual([])
     }
+  })
+
+  it('item antigo sem o campo regraDose não conta como cálculo de dose', () => {
+    const semCampo = itemV1({ texto: 'Medicamento Teste A' }) as Partial<ItemPrescricaoV1>
+    delete semCampo.regraDose
+    const alternativa = { id: 'a-1', motivo: 'Motivo Teste', texto: 'Medicamento Teste B' }
+    const m = migrarPrescricaoV1(
+      prescricaoV1({
+        itens: [{ ...semCampo, alternativas: [alternativa] } as unknown as ItemPrescricaoV1],
+      }),
+      geradorIds(),
+    )
+    expect(m.revisada).toBe(true)
+    expect(m.duvidasImportacao).toEqual([])
+    expect(m.itens[0]!.opcoes.map((o) => o.texto)).toEqual(['Medicamento Teste A', 'Medicamento Teste B'])
   })
 
   it('registro antigo sem receita, condições e condicaoId recebe os vazios', () => {

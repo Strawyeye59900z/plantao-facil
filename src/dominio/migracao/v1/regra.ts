@@ -1,9 +1,17 @@
 import { formatarNumero } from '@/dominio/dose/numeros'
-import type { RegraDoseV1 } from './tipos'
+import type { DirecaoArredondamentoV1, RegraDoseV1 } from './tipos'
+
+/** Rótulos de direção da v1 (copiados de `ROTULO_DIRECAO` de src/dominio/dose/numeros.ts). */
+const ROTULO_DIRECAO_V1: Record<DirecaoArredondamentoV1, string> = {
+  baixo: 'para baixo',
+  proximo: 'mais próximo',
+  cima: 'para cima',
+}
 
 /**
- * Regra de dose da v1 escrita por extenso, com todos os números cadastrados (exceto o arredondamento).
- * Ex.: "30 mg/kg/dia, 3 tomadas/dia, máx. 1500 mg/dia, acima de 40 kg: 400 mg, concentração 100 mg em 5 mL".
+ * Regra de dose da v1 escrita por extenso, com todos os números cadastrados, inclusive o arredondamento
+ * (o do volume só quando há concentração). Ex.: "30 mg/kg/dia, 3 tomadas/dia, máx. 1500 mg/dia,
+ * acima de 40 kg: 400 mg/tomada, concentração 100 mg em 5 mL, volume com 1 casa decimal".
  */
 export function descreverRegraV1(r: RegraDoseV1): string {
   const n = formatarNumero
@@ -12,8 +20,24 @@ export function descreverRegraV1(r: RegraDoseV1): string {
   if (r.tomadasPorDia !== null) partes.push(`${n(r.tomadasPorDia)} ${r.tomadasPorDia === 1 ? 'tomada' : 'tomadas'}/dia`)
   if (r.doseMaximaPorTomada !== null) partes.push(`máx. ${n(r.doseMaximaPorTomada)} ${u}/tomada`)
   if (r.doseMaximaDiaria !== null) partes.push(`máx. ${n(r.doseMaximaDiaria)} ${u}/dia`)
-  if (r.pesoLimite) partes.push(`acima de ${n(r.pesoLimite.acimaDeKg)} kg: ${n(r.pesoLimite.doseFixa)} ${u}`)
+  // Na v1 a dose fixa do peso limite é por tomada.
+  if (r.pesoLimite) partes.push(`acima de ${n(r.pesoLimite.acimaDeKg)} kg: ${n(r.pesoLimite.doseFixa)} ${u}/tomada`)
   if (r.concentracao) partes.push(`concentração ${n(r.concentracao.quantidade)} ${u} em ${n(r.concentracao.volumeMl)} mL`)
+
+  const dose = r.arredondamentoDose
+  if (dose.modo === 'multiplo') {
+    partes.push(`dose em múltiplos de ${n(dose.passo)} ${u} (${ROTULO_DIRECAO_V1[dose.direcao]})`)
+  }
+  if (r.concentracao) {
+    const volume = r.arredondamentoVolume
+    if (volume.modo === 'multiplo') {
+      partes.push(`volume em múltiplos de ${n(volume.passo)} mL (${ROTULO_DIRECAO_V1[volume.direcao]})`)
+    } else if (volume.casas === 0) {
+      partes.push('volume inteiro')
+    } else {
+      partes.push(`volume com ${n(volume.casas)} ${volume.casas === 1 ? 'casa decimal' : 'casas decimais'}`)
+    }
+  }
   return partes.join(', ')
 }
 
