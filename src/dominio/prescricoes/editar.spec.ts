@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
 import type { Prescricao } from '@/dominio/tipos'
 import {
+  definirCondicaoDoItem,
   duplicarPrescricao,
+  moverCondicao,
   moverItem,
+  moverItemNoGrupo,
+  podeMoverItemNoGrupo,
+  removerOpcao,
   normalizarTags,
   itemVazio,
   opcaoVazia,
   prescricaoVazia,
   removerItem,
   validarPrescricao,
+  type DadosPrescricao,
 } from './editar'
 import { prescricaoTeste } from './fixtures.spec-helper'
 
@@ -102,6 +108,92 @@ describe('removerItem', () => {
     const resultado = removerItem(dados, itemId)
     expect(resultado.itens).toHaveLength(0)
     expect(resultado.alertas[0]!.itemId).toBeNull()
+  })
+})
+
+// Itens "Sempre" (s1, s2), condição A (a1, a2) e condição B (b1).
+function dadosComCondicoes(): DadosPrescricao {
+  const item = (id: string, condicaoId: string | null) => ({
+    id,
+    condicaoId,
+    opcoes: [{ id: `${id}-o`, texto: `Medicamento Teste ${id}`, motivo: '' }],
+  })
+  return {
+    ...prescricaoVazia(geradorIds()),
+    condicoes: [
+      { id: 'c-a', nome: 'Condição Teste A' },
+      { id: 'c-b', nome: 'Condição Teste B' },
+    ],
+    itens: [item('s1', null), item('s2', null), item('a1', 'c-a'), item('a2', 'c-a'), item('b1', 'c-b')],
+  }
+}
+const ids = (d: DadosPrescricao) => d.itens.map((i) => i.id)
+
+describe('definirCondicaoDoItem', () => {
+  it('troca a condição e leva o item para o fim do grupo novo', () => {
+    const d = definirCondicaoDoItem(dadosComCondicoes(), 's1', 'c-a')
+    expect(ids(d)).toEqual(['s2', 's1', 'a1', 'a2', 'b1'])
+    expect(d.itens.find((i) => i.id === 's1')!.condicaoId).toBe('c-a')
+  })
+
+  it('voltar para "Sempre" leva o item para o grupo "Sempre"', () => {
+    expect(ids(definirCondicaoDoItem(dadosComCondicoes(), 'b1', null))).toEqual(['s1', 's2', 'b1', 'a1', 'a2'])
+  })
+
+  it('não altera os dados recebidos', () => {
+    const original = dadosComCondicoes()
+    definirCondicaoDoItem(original, 's1', 'c-b')
+    expect(ids(original)).toEqual(['s1', 's2', 'a1', 'a2', 'b1'])
+    expect(original.itens[0]!.condicaoId).toBeNull()
+  })
+})
+
+describe('moverCondicao', () => {
+  it('troca a ordem das condições e os itens acompanham os grupos', () => {
+    const d = moverCondicao(dadosComCondicoes(), 1, -1)
+    expect(d.condicoes.map((c) => c.id)).toEqual(['c-b', 'c-a'])
+    expect(ids(d)).toEqual(['s1', 's2', 'b1', 'a1', 'a2'])
+  })
+
+  it('ignora movimentos para fora da lista', () => {
+    expect(ids(moverCondicao(dadosComCondicoes(), 0, -1))).toEqual(['s1', 's2', 'a1', 'a2', 'b1'])
+  })
+})
+
+describe('moverItemNoGrupo', () => {
+  it('move dentro do grupo da condição', () => {
+    expect(ids(moverItemNoGrupo(dadosComCondicoes(), 3, -1))).toEqual(['s1', 's2', 'a2', 'a1', 'b1'])
+    expect(ids(moverItemNoGrupo(dadosComCondicoes(), 0, 1))).toEqual(['s2', 's1', 'a1', 'a2', 'b1'])
+  })
+
+  it('não passa para outro grupo nem para fora da lista', () => {
+    const d = dadosComCondicoes()
+    expect(podeMoverItemNoGrupo(d, 1, 1)).toBe(false) // s2 → grupo A
+    expect(podeMoverItemNoGrupo(d, 2, -1)).toBe(false) // a1 → "Sempre"
+    expect(podeMoverItemNoGrupo(d, 0, -1)).toBe(false)
+    expect(podeMoverItemNoGrupo(d, 4, 1)).toBe(false)
+    expect(moverItemNoGrupo(d, 1, 1)).toBe(d)
+  })
+})
+
+describe('removerOpcao', () => {
+  const item = {
+    id: 'i',
+    condicaoId: null,
+    opcoes: [
+      { id: 'o-1', texto: 'Medicamento Teste A', motivo: '' },
+      { id: 'o-2', texto: 'Medicamento Teste B', motivo: 'Motivo Teste' },
+    ],
+  }
+
+  it('remove qualquer opção de um item "OU"; com 1 opção o item volta a ser simples', () => {
+    expect(removerOpcao(item, 'o-1').opcoes).toEqual([{ id: 'o-2', texto: 'Medicamento Teste B', motivo: 'Motivo Teste' }])
+    expect(removerOpcao(item, 'o-2').opcoes.map((o) => o.id)).toEqual(['o-1'])
+  })
+
+  it('não remove a única opção', () => {
+    const simples = { ...item, opcoes: [item.opcoes[0]!] }
+    expect(removerOpcao(simples, 'o-1')).toBe(simples)
   })
 })
 

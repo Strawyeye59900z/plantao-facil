@@ -1,5 +1,5 @@
 import type { Alerta, DadosNovos, ItemPrescricao, OpcaoItem, Prescricao, UUID } from '@/dominio/tipos'
-import { ordenarPorCondicao } from './condicoes'
+import { condicaoDoItem, ordenarPorCondicao } from './condicoes'
 
 export type DadosPrescricao = DadosNovos<Prescricao>
 type GerarId = () => UUID
@@ -112,6 +112,42 @@ export function removerCondicao(dados: DadosPrescricao, condicaoId: UUID): Dados
       condicoes,
     ),
   }
+}
+
+/** Troca a condição de um item e reagrupa os itens ("Sempre" primeiro, depois cada condição na ordem). */
+export function definirCondicaoDoItem(dados: DadosPrescricao, itemId: UUID, condicaoId: UUID | null): DadosPrescricao {
+  return {
+    ...dados,
+    itens: ordenarPorCondicao(
+      dados.itens.map((i) => (i.id === itemId ? { ...i, condicaoId } : i)),
+      dados.condicoes,
+    ),
+  }
+}
+
+/** Move uma condição uma posição; os grupos de itens acompanham a nova ordem. */
+export function moverCondicao(dados: DadosPrescricao, indice: number, direcao: -1 | 1): DadosPrescricao {
+  const condicoes = moverItem(dados.condicoes, indice, direcao)
+  return { ...dados, condicoes, itens: ordenarPorCondicao(dados.itens, condicoes) }
+}
+
+/** ↑/↓ de item só dentro do grupo da condição (para mudar de grupo, troca-se a condição do item). */
+export function podeMoverItemNoGrupo(dados: DadosPrescricao, indice: number, direcao: -1 | 1): boolean {
+  const atual = dados.itens[indice]
+  const vizinho = dados.itens[indice + direcao]
+  if (!atual || !vizinho) return false
+  return condicaoDoItem(atual, dados.condicoes) === condicaoDoItem(vizinho, dados.condicoes)
+}
+
+export function moverItemNoGrupo(dados: DadosPrescricao, indice: number, direcao: -1 | 1): DadosPrescricao {
+  if (!podeMoverItemNoGrupo(dados, indice, direcao)) return dados
+  return { ...dados, itens: moverItem(dados.itens, indice, direcao) }
+}
+
+/** Remove uma opção do item; o item fica sempre com pelo menos 1 (com 1, volta a ser item simples). */
+export function removerOpcao(item: ItemPrescricao, opcaoId: UUID): ItemPrescricao {
+  if (item.opcoes.length <= 1) return item
+  return { ...item, opcoes: item.opcoes.filter((o) => o.id !== opcaoId) }
 }
 
 /** Separa tags digitadas por vírgula, sem vazias nem repetidas (ignorando maiúsculas). */

@@ -43,7 +43,8 @@ src/
     aparencia/  cor de destaque (valores válidos, aplicar no <html>, cache em localStorage)
     biblioteca/ entradas da lateral de grupos (Favoritos, Todas, grupos, Sem grupo) e filtro por chave
     prescricoes/ busca, agrupamento, edição/duplicação/validação
-    dose/       motor de cálculo de dose, marcadores, peso
+    dose/       formatação de números e peso (o motor de dose dos itens saiu na v2)
+    migracao/   conversão da v1 para o modelo atual (banco e backup)
     backup/     esquema (valibot), exportar/ler, planejar e aplicar mesclagem
     calculadoras/ motor de pontos, fórmula (mathjs restrito), interpretação, editor
     ia/         provedores (Gemini/Claude/ChatGPT), prompt, formato da resposta, rascunhos
@@ -91,41 +92,50 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Configurações (tema, `corDestaque`, chaves de IA) ficam na tabela `configuracoes`, fora do backup. Tema e cor de destaque também em `localStorage` (`plantao-facil:tema`, `plantao-facil:destaque`) só para evitar piscar na abertura.
 - IndexedDB não indexa booleanos nem `null`: favorito/excluidoEm filtrados em memória.
 
-### Prescrições e dose (Fases 1–2)
+### Prescrições (v1 Fases 1–2; modelo v2, branch `v2`)
 - Lista: painel com **lateral de grupos** (Favoritos, Todas, grupos, Sem grupo) e cartões em ordem alfabética (ver "Visual"). Durante a busca, procura em todos os grupos.
-- Busca (tempo real, sem acentos, todas as palavras): título, grupo, tags, texto dos itens, **motivo e texto das alternativas, receita pronta, observações**.
-- Obrigatórios ao salvar: **título, grupo e ≥1 item** (itens/alternativas/alertas sem texto e alternativa sem motivo também bloqueiam).
-- Reordenar itens: botões ↑/↓.
+- Busca (tempo real, sem acentos, todas as palavras): título, grupo, tags, **texto e motivo de todas as opções dos itens**, nome das condições, receita, observações.
+- Obrigatórios ao salvar (`validarPrescricao`): **título, grupo e ≥1 item**; cada opção precisa de texto (o motivo é opcional); alerta sem texto e condição sem nome também bloqueiam. Os erros aparecem no topo do editor.
 - Excluir grupo: prescrições ficam **"Sem grupo"** (o grupo vai para exclusão lógica; não aparece na Lixeira).
-- **Opções equivalentes ("OU")**: item com `opcoesEquivalentes: true` — texto principal = opção 1, alternativas = opções 2, 3… (motivo opcional, vira rótulo). Na tela: **todas as opções por extenso** (com doses calculadas), **nenhuma pré-escolhida**, Copiar bloqueado até escolher ("Escolha uma opção no item N"); copia só a escolhida. Precisa de ≥2 opções. No editor: chave por item (ligar cria a opção 2). A IA marca `opcoesEquivalentes` quando o documento lista opções intercambiáveis ("OU"). Ausente em dados antigos = false.
-- Alternativa escolhida por **lista suspensa ao lado do item** ("Padrão" + motivos); vive só na tela e volta ao padrão ao sair.
-- Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); abre o editor da cópia.
-- Observações/referência: texto simples com quebras de linha.
-- **Receita pronta** (`receita`): texto simples com quebras de linha, **sem marcadores/cálculo**. Seção própria na tela da prescrição com botão **"Copiar receita"** (copia o texto como cadastrado, separado do Copiar dos itens; também no pen drive). Entra na busca e no backup; dados/backups antigos sem o campo = `''`.
-- **Condições** (`condicoes` na prescrição, `condicaoId` no item; `src/dominio/prescricoes/condicoes.ts`): etapas/situações com nome livre (ex.: uma etapa "se refratário"). Item sem condição = **"Sempre"**. Itens sempre **agrupados**: "Sempre" primeiro, depois cada condição na ordem (o editor reordena ao trocar a condição; ↑/↓ só dentro do grupo; `paraDados` já ordena).
-  - Tela: cabeçalho de cada condição com **caixa de marcar**; **várias podem ser marcadas**; **nenhuma vem marcada** (só em memória). Copiar = itens "Sempre" + itens das condições marcadas, **renumerados**. Itens fora da cópia aparecem esmaecidos e não exigem peso nem escolha de opção "OU". Só condicionais e nada marcado → "Marque uma condição para copiar.".
-  - Editor: seção "Condições" (adicionar, renomear, ↑/↓, remover → itens viram "Sempre"); seletor "Condição" em cada item. Nome vazio bloqueia salvar. Duplicar gera IDs novos mantendo os vínculos.
-  - Alertas **não** se ligam a condição (ficam da prescrição ou do item). Variações dentro de um item (grupos de pacientes) ficam no texto do item.
-  - Busca inclui o nome das condições; backup: ausente = `[]`/"Sempre".
-- Alertas: da prescrição (topo) **ou ligados a um item** (`itemId`): aparecem junto do item e também no topo. Remover um item transforma seus alertas em alertas da prescrição inteira.
-- Editor avisa ao sair com alterações não salvas.
-- Dose/kg pode ser **por tomada ou por dia** (`baseDoseKg`).
-- **Tetos sempre respeitados** (por tomada e/ou diário, conforme cadastrado), inclusive com peso limite (dose fixa por tomada) e **reaplicados após o arredondamento**.
-- Concentração na **mesma unidade da dose**, sem conversão automática.
-- Unidade: texto livre com sugestões.
-- Marcadores: `{dose}`, `{volume}`, `{dose_diaria}` (valor com unidade) e `{tomadas}`, que vira **intervalo em horas**: 1 → "1 vez ao dia", 2 → "de 12h em 12h", 3 → "de 8h em 8h"… Só aceito com 1, 2, 3, 4, 6, 8, 12 ou 24 tomadas/dia (o editor bloqueia o marcador nos outros casos; a regra continua válida).
-- Peso: **até 1 casa decimal**, rejeita zero/negativo/não numérico; **sem limite máximo e sem confirmação** de valor alto.
-- Copiar: **apenas os itens, numerados** ("1. …"), um por linha, **sem linha em branco** entre itens; quebras de linha dentro do item **não** são copiadas. Alternativa escolhida entra no lugar do item.
-- Números: **vírgula decimal, sem zeros sobrando, sem separador de milhar** ("2,5 mL", "300 mg", "1000 mg"), sempre com a unidade cadastrada.
-- **Dose sempre inteira**: arredondamento = inteiro mais próximo ou múltiplo de passo inteiro (baixo/próximo/cima). Volume: casas decimais (0–3) ou múltiplo.
-- Ordem do cálculo (src/dominio/dose/calculo.ts): peso limite (peso **>** X, estritamente; dose fixa sem arredondamento) → dose/kg × peso (÷ tomadas se "por dia") → arredondamento → **tetos por último** (por tomada e diário ÷ tomadas; se o teto não for inteiro/múltiplo, ajusta para baixo) → dose diária → volume. Se o volume arredondado equivaler a mais que a dose máxima, arredonda o volume **para baixo** com aviso. Dose ou volume zero = erro (bloqueia copiar).
-- Peso é obrigatório para copiar **só se algum item efetivo** (com a alternativa escolhida) tiver regra de dose. Campo de peso aparece se qualquer item/alternativa tiver regra.
-- Sem peso, marcadores aparecem como "[dose]", "[volume]"; {tomadas} sai sempre com o intervalo.
-- Editor: "Testar com peso" (não salvo) mostra prévia e memória de cálculo de cada regra.
-- Regra nova: base "por tomada", arredondamento do volume 1 casa decimal (padrões de formulário, editáveis).
+- Duplicar: "(cópia)" no título, sem favorito, mantém origem/revisão (cópia de não revisada continua não revisada); IDs novos em itens, opções, condições e alertas, mantendo os vínculos; abre o editor da cópia.
+
+#### Itens e opções "OU" (v2)
+- `ItemPrescricao { id, condicaoId, opcoes: OpcaoItem[] }`, `OpcaoItem { id, texto, motivo }`. **1 opção = item simples; ≥ 2 opções = item "OU"** (opções equivalentes). O motivo é opcional e aparece ao lado da opção.
+- **Sem cálculo de dose nos itens (v2):** `regraDose`, `alternativas` e `opcoesEquivalentes` da v1 foram removidos; doses ficam só no texto. (O motor de `src/dominio/dose/` pode ser reaproveitado na calculadora por peso, Fase 3.)
+- Tela: item "OU" mostra **todas as opções por extenso** para tocar em uma; **nenhuma vem escolhida** (escolha só em memória, volta ao padrão ao sair).
+- Editor: a primeira opção é o texto do item; **"+ opção OU"** acrescenta outra (com motivo opcional); cada opção de um item "OU" pode ser removida (com 1 opção o item volta a ser simples).
+
+#### Condições
+- `condicoes` na prescrição, `condicaoId` no item (`src/dominio/prescricoes/condicoes.ts`): etapas/situações com nome livre. Item sem condição = **"Sempre"**. Itens sempre **agrupados**: "Sempre" primeiro, depois cada condição na ordem (`ordenarPorCondicao`; `paraDados` já ordena).
+- Tela: pílulas "O paciente tem…"; **várias podem ser marcadas**; **nenhuma vem marcada** (só em memória). Só aparecem os itens "Sempre" + os das condições marcadas.
+- Editor: seção "Condições" (adicionar, renomear, ↑/↓ — os grupos de itens acompanham —, remover → itens viram "Sempre"); seletor "Condição" em cada item (trocar leva o item para o fim do grupo novo — `definirCondicaoDoItem`); ↑/↓ de item **só dentro do grupo** (`moverItemNoGrupo`).
+- Alertas **não** se ligam a condição. Backup/dados antigos sem os campos: `[]`/"Sempre".
+
+#### Copiar (`src/dominio/prescricoes/copia.ts`)
+- Copia **só os itens visíveis** ("Sempre" + condições marcadas), **renumerados** ("1. …"), um por linha, **sem linha em branco**; quebras de linha dentro do item viram espaço.
+- Item "OU" visível **sem opção escolhida bloqueia** ("Escolha uma opção no item N.", com o número da tela; o item é destacado); copia só a opção escolhida.
+- Só itens condicionais e nada marcado → "Marque uma condição para copiar.".
+
+#### Alertas
+- Da prescrição inteira (`itemId: null`) ou **ligados a um item** ("vale para" no editor). Tela: os da prescrição ficam no **topo**; os de item ficam **junto do item**. Alerta ligado a um **item que não existe** (dados importados/migrados) também aparece no **topo** (`alertasDaPrescricao`) — nunca fica escondido.
+- Remover um item transforma seus alertas em alertas da prescrição inteira.
+
+#### Observações, receita e referência
+- **Observações**: um parágrafo por observação. Parágrafo novo começa numa linha em branco ou numa linha que abre com **rótulo** ("Obs:", "# Cuidados:", "#Bizu:" — até ~25 letras/espaços antes dos dois-pontos), mostrado em negrito (`paragrafosObservacoes`). Rótulo seguido de "//" **não** conta (links como "https://…"). Editor: dica "Comece cada parágrafo com o rótulo, ex.: Obs:".
+- **Receita de alta** (`receita`): texto simples com quebras de linha, **sem marcadores/cálculo**, fonte mono. Na tela: coluna da direita no PC, aba "Receita" no celular, botão **"Copiar receita"** (copia o texto como cadastrado). Entra na busca e no backup; ausente = `''`.
+- Referência: texto simples com quebras de linha.
+
+#### Editor
+- Cartões brancos, nesta ordem: título/grupo ("Novo grupo")/tags → condições → itens → alertas → observações → receita → referência. Salvar/Cancelar numa **barra flutuante em pílula**. Avisa ao sair com alterações não salvas (`useAvisoSaida`).
+
+#### Migração v1 → v2 (`src/dominio/migracao/`)
+- **Dexie versão 2** converte todas as prescrições do aparelho (inclusive lixeira) ao abrir; se falhar, nada é gravado (os dados ficam na v1). **Backups v1 (`versaoFormato: 1`) são aceitos** na importação e convertidos (`migrarBibliotecaV1`).
+- Texto principal + alternativas viram as opções (mesmo `item.id`). Sem "OU" na v1, a opção principal recebe o motivo **"Padrão"**. IDs das opções **determinísticos**: principal = `${item.id}-principal`, alternativas mantêm o id da v1 (migrar o mesmo dado duas vezes dá o mesmo resultado, sem falso conflito na mesclagem).
+- **Regra de dose vira texto** com **todos os números**, inclusive arredondamento (`descreverRegraV1`): o primeiro `{dose}`/`{dose_diaria}` vira "[regra por extenso]", os seguintes "[dose]"/"[dose diária]", `{volume}` → "[volume]", `{tomadas}` → intervalo ("de 8h em 8h") ou "[tomadas]"; sem marcador de dose, a regra é anexada ao fim. A prescrição fica **"importada — revisar"** (`revisada: false`) com uma dúvida por item convertido.
+- Campos ausentes em registros antigos: receita `''`, condições `[]`, condição "Sempre"; `calculadoraIds` começa vazio.
 
 ### Backup (Fase 3)
-- JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + `versaoFormato: 1`; prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
+- JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + **`versaoFormato: 2`** (v2); backups `versaoFormato: 1` (v1) são aceitos e convertidos (ver "Migração v1 → v2"); prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
 - Validação com **valibot** (esquemas em `src/dominio/backup/esquema.ts`, tipados contra o modelo). Rejeita JSON inválido, arquivo que não é do app, versão de formato mais nova e IDs repetidos.
 - Exportar: **Baixar** e **Compartilhar** (menu do Android, se o navegador suportar). Guarda `ultimoBackupEm` (só no aparelho) e mostra lembrete; destaque em âmbar a partir de 7 dias.
 - Importar: pré-visualização (novos/iguais/conflitos por tipo) → **Mesclar** ou **Substituir**.
@@ -170,7 +180,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **Usuário escolhe o modelo** (lista com 3 por provedor — equilíbrio/mais barato/mais capaz — + "Outro"); padrão = o de equilíbrio (`gemini-3.8-flash`, `claude-sonnet-5-5`, `gpt-6.1-sol`).
 - Chave de API no IndexedDB (configuracoes), nunca no backup nem no pen drive, com mostrar/ocultar, link "Obter chave" e apagar.
 - Prompt (`src/dominio/ia/prompt.ts`): só o que está no PDF; nunca completar/corrigir/calcular doses; dúvidas em "duvidas". Resposta validada com valibot (`src/dominio/ia/resposta.ts`); inválida → erro claro + "Tentar de novo".
-- **IA não cria regra de dose**: doses só como texto no item; o usuário cadastra a regra na revisão.
+- **IA não cria cálculo de dose**: doses só como texto no item. A resposta da IA ainda está no formato da v1 (texto + alternativas); `criarRascunhos` converte para opções (adaptação temporária até a Fase 4).
 - **Receita e observações na extração**: a IA preenche `receita` **só com a receita de alta/para levar, com quantidade a dispensar** ("28 cps", "____ cps"); trechos com "Uso oral/intravenoso" **sem** quantidade viram **itens**. Receita inteira, com quebras de linha, separada dos itens. `observacoes`: "Obs:", "# Cuidados:" e "#Bizu" juntos, **mantendo os rótulos**, um parágrafo cada. Listas de contraindicações → alerta `contraindicacao` da prescrição inteira. Na leitura, `receita` ausente = `''` (respostas de prompts antigos).
 - **Condições na extração**: a IA devolve `condicoes` (nomes dos títulos de etapa/situação, como escritos) e `condicao` em cada item (0 = "Sempre", n = n-ésima condição). Condição inexistente → "Sempre" + dúvida. Ausentes na leitura = `[]`/0.
 - **Única correção de formatação permitida à IA**: recolocar **espaços entre palavras grudadas** do PDF, sem alterar letras, números, unidades, abreviações ou pontuação, registrando isso nas dúvidas da prescrição.
