@@ -538,7 +538,7 @@ onBeforeUnmount(() => {
             aceitar-sem-categoria
           />
           <template v-else>
-            <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Categoria" />
+            <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Grupo" />
             <ol class="list-decimal pl-5 text-sm">
               <li v-for="item in r.dados.itens" :key="item.id" class="whitespace-pre-line">
                 <span v-if="nomeCondicao(r, item.condicaoId)" class="text-primary block text-xs font-semibold">

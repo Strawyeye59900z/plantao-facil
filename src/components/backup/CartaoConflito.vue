@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 const props = defineProps<{
   item: ItemPlano<Entidade>
-  /** Ex.: "Prescrição", "Categoria". */
+  /** Ex.: "Prescrição", "Grupo". */
   tipo: string
   nome: (e: Entidade) => string
 }>()

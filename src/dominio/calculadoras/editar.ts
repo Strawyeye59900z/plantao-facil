@@ -93,7 +93,7 @@ const opcionalOk = (x: number | null) => x === null || finito(x)
 export function validarCalculadora(d: DadosCalculadora, categoriaExiste: (id: UUID) => boolean): string[] {
   const erros: string[] = []
   if (!d.nome.trim()) erros.push('Informe o nome.')
-  if (!d.categoriaId || !categoriaExiste(d.categoriaId)) erros.push('Escolha a categoria.')
+  if (!d.categoriaId || !categoriaExiste(d.categoriaId)) erros.push('Escolha o grupo.')
 
   if (d.tipo === 'pontos') {
     if (d.campos.length === 0) erros.push('Inclua pelo menos 1 campo.')

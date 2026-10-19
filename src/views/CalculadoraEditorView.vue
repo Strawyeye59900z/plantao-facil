@@ -146,7 +146,7 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
         <Input id="nome" v-model="dados.nome" class="h-11" autocomplete="off" />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label for="categoria">Categoria *</Label>
+        <Label for="categoria">Grupo *</Label>
         <div v-if="!criandoCategoria" class="flex gap-2">
           <CampoSelect id="categoria" v-model="dados.categoriaId" :opcoes="opcoesCategoria" placeholder="Escolha…" class="flex-1" />
           <Button type="button" variant="outline" size="touch" @click="criandoCategoria = true"><Plus /> Nova</Button>
@@ -155,8 +155,8 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
           <Input
             v-model="novaCategoria"
             class="h-11 flex-1"
-            placeholder="Nome da nova categoria"
-            aria-label="Nome da nova categoria"
+            placeholder="Nome do novo grupo"
+            aria-label="Nome do novo grupo"
             @keydown.enter.prevent="salvarNovaCategoria"
           />
           <Button type="button" size="touch" @click="salvarNovaCategoria">Criar</Button>

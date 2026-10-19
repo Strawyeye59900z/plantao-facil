@@ -69,7 +69,9 @@ function ativo(rota: string) {
 
 // Telas de edição: o topo mostra só o voltar e o título.
 const emEdicao = computed(() => /\/(nova|editar)$/.test(route.path))
-const tituloEdicao = computed(() => route.meta.titulo ?? '')
+// A biblioteca (lateral + grade) usa a largura toda; as demais telas ficam estreitas, para leitura.
+const larguraTotal = computed(() => route.path === '/prescricoes' || route.path === '/calculadoras')
+const tituloEdicao =computed(() => route.meta.titulo ?? '')
 
 function voltar() {
   // Sem histórico (aberta direto pelo link), volta para a lista da área.
@@ -101,7 +103,7 @@ function voltar() {
         <!-- Celular: logo + busca + menu, pílulas na linha de baixo; PC: tudo numa linha -->
         <div
           v-else
-          class="mx-auto flex max-w-3xl flex-wrap items-center gap-x-2.5 gap-y-2 px-4 py-2.5 md:flex-nowrap md:px-8"
+          class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2.5 gap-y-2 px-4 py-2.5 md:flex-nowrap md:px-8"
         >
           <RouterLink
             to="/prescricoes"
@@ -185,7 +187,7 @@ function voltar() {
         </p>
       </header>
 
-      <main class="mx-auto w-full max-w-3xl flex-1 px-4 pt-3 pb-28 md:px-8 md:pt-6 md:pb-10">
+      <main :class="cn('mx-auto w-full flex-1 px-4 pt-3 pb-28 md:px-8 md:pt-6 md:pb-10', larguraTotal ? 'max-w-6xl' : 'max-w-3xl')">
         <RouterView v-slot="{ Component }">
           <component :is="Component" :key="route.path" />
         </RouterView>

@@ -2,11 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { db } from '@/db/banco'
 import { repoCategorias } from '@/db/repositorios'
+import { ROTULO_SEM_GRUPO } from '@/dominio/biblioteca/lateral'
 import type { Categoria, EscopoCategoria, UUID } from '@/dominio/tipos'
 import { useCalculadorasStore } from './calculadoras'
 import { usePrescricoesStore } from './prescricoes'
 
-export const ROTULO_SEM_CATEGORIA = 'Sem categoria'
+export const ROTULO_SEM_CATEGORIA = ROTULO_SEM_GRUPO
 
 export const useCategoriasStore = defineStore('categorias', () => {
   const todas = ref<Categoria[]>([])

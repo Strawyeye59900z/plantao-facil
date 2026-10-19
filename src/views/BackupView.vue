@@ -113,7 +113,7 @@ const resumo = computed(() => {
   const b = backup.value
   return [
     { rotulo: 'Prescrições', total: b.prescricoes.length, lixeira: b.prescricoes.filter((p) => p.excluidoEm).length, ...contarSituacoes(plano.value.prescricoes) },
-    { rotulo: 'Categorias', total: b.categorias.length, lixeira: b.categorias.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.categorias) },
+    { rotulo: 'Grupos', total: b.categorias.length, lixeira: b.categorias.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.categorias) },
     { rotulo: 'Calculadoras', total: b.calculadoras.length, lixeira: b.calculadoras.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.calculadoras) },
   ]
 })
@@ -126,7 +126,7 @@ function nomeEntidade(e: Entidade) {
 const conflitos = computed(() => {
   if (!plano.value) return []
   const lista: { item: ItemPlano<Entidade>; tipo: string }[] = [
-    ...plano.value.categorias.map((item) => ({ item, tipo: 'Categoria' })),
+    ...plano.value.categorias.map((item) => ({ item, tipo: 'Grupo' })),
     ...plano.value.prescricoes.map((item) => ({ item, tipo: 'Prescrição' })),
     ...plano.value.calculadoras.map((item) => ({ item, tipo: 'Calculadora' })),
   ]
@@ -198,7 +198,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
       <CardHeader>
         <CardTitle>Exportar biblioteca</CardTitle>
         <CardDescription>
-          Prescrições, categorias e calculadoras (inclusive a lixeira). Tema e chaves de IA não entram.
+          Prescrições, grupos e calculadoras (inclusive a lixeira). Tema e chaves de IA não entram.
         </CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col gap-3">
@@ -275,7 +275,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
             </table>
           </div>
           <p v-if="plano.categoriasUnificadas.length" class="text-muted-foreground text-sm">
-            Categorias com o mesmo nome serão juntadas:
+            Grupos com o mesmo nome serão juntados:
             {{ plano.categoriasUnificadas.map((c) => c.nome).join(', ') }}.
           </p>
 

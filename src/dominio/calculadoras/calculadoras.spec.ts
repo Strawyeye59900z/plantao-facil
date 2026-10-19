@@ -181,7 +181,7 @@ describe('editor de calculadoras', () => {
   it('nova calculadora vazia aponta o que falta', () => {
     expect(validarCalculadora(calculadoraVazia('pontos'), existe)).toEqual([
       'Informe o nome.',
-      'Escolha a categoria.',
+      'Escolha o grupo.',
       'Campo 1: informe o texto.',
       'Campo 1: informe os pontos de "sim" e "não".',
     ])

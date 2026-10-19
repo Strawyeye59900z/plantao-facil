@@ -99,7 +99,7 @@ describe('validarPrescricao', () => {
   it('prescrição vazia: exige título, categoria e texto do item', () => {
     expect(validarPrescricao(prescricaoVazia(), existe)).toEqual([
       'Informe o título.',
-      'Escolha a categoria.',
+      'Escolha o grupo.',
       'Item 1: texto vazio.',
     ])
   })
@@ -111,7 +111,7 @@ describe('validarPrescricao', () => {
 
   it('rejeita categoria excluída/inexistente', () => {
     const dados = { ...prescricaoTeste(), categoriaId: 'c-9' }
-    expect(validarPrescricao(dados, existe)).toEqual(['Escolha a categoria.'])
+    expect(validarPrescricao(dados, existe)).toEqual(['Escolha o grupo.'])
   })
 
   it('exige texto e motivo nas alternativas e texto nos alertas', () => {

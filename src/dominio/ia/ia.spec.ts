@@ -283,7 +283,7 @@ describe('rascunhos a partir da resposta', () => {
 
   it('aprovação aceita "Sem categoria" só com a opção da importação', () => {
     const d = rascunhos[1]!.dados
-    expect(validarPrescricao(d, () => true)).toContain('Escolha a categoria.')
+    expect(validarPrescricao(d, () => true)).toContain('Escolha o grupo.')
     expect(validarPrescricao(d, () => true, { aceitarSemCategoria: true })).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ListaBiblioteca from '@/components/comum/ListaBiblioteca.vue'
+import PainelBiblioteca from '@/components/biblioteca/PainelBiblioteca.vue'
 import { filtrarCalculadoras } from '@/dominio/calculadoras/busca'
 import type { Calculadora } from '@/dominio/tipos'
 import { useCalculadorasStore } from '@/stores/calculadoras'
@@ -11,16 +11,21 @@ const categorias = useCategoriasStore()
 function filtrar(itens: Calculadora[], termo: string) {
   return filtrarCalculadoras(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
 }
+
+function descrever(c: Calculadora) {
+  return { etiquetas: [c.tipo === 'pontos' ? 'Pontos' : 'Fórmula'], meta: c.descricao.trim() }
+}
 </script>
 
 <template>
-  <ListaBiblioteca
-    titulo="Calculadoras"
+  <PainelBiblioteca
     rota-base="/calculadoras"
     rotulo-novo="Nova calculadora"
     texto-vazio="Nenhuma calculadora cadastrada."
+    :nome-itens="{ um: 'calculadora', varios: 'calculadoras' }"
     :itens="calculadoras.ativas"
-    :categorias="categorias.deCalculadoras"
+    :grupos="categorias.deCalculadoras"
     :filtrar="filtrar"
+    :descrever="descrever"
   />
 </template>

@@ -158,7 +158,7 @@ export function validarPrescricao(
   const erros: string[] = []
   if (!dados.titulo.trim()) erros.push('Informe o título.')
   const semCategoriaOk = opcoes.aceitarSemCategoria && dados.categoriaId === null
-  if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha a categoria.')
+  if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha o grupo.')
   if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
 
   const validarDose = (prefixo: string, texto: string, regra: RegraDose | null) => {

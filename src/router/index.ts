@@ -68,7 +68,7 @@ export const router = createRouter({
       path: '/categorias',
       name: 'categorias',
       component: () => import('@/views/CategoriasView.vue'),
-      meta: { titulo: 'Categorias' },
+      meta: { titulo: 'Grupos' },
     },
     {
       path: '/backup',

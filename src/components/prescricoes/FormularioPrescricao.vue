@@ -168,7 +168,7 @@ function removerAlerta(alertaId: UUID) {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <Label :for="id('categoria')">Categoria{{ aceitarSemCategoria ? '' : ' *' }}</Label>
+        <Label :for="id('categoria')">Grupo{{ aceitarSemCategoria ? '' : ' *' }}</Label>
         <div v-if="!criandoCategoria" class="flex gap-2">
           <CampoSelect
             :id="id('categoria')"
@@ -183,8 +183,8 @@ function removerAlerta(alertaId: UUID) {
           <Input
             v-model="novaCategoria"
             class="h-11 flex-1"
-            placeholder="Nome da nova categoria"
-            aria-label="Nome da nova categoria"
+            placeholder="Nome do novo grupo"
+            aria-label="Nome do novo grupo"
             @keydown.enter.prevent="salvarNovaCategoria"
           />
           <Button type="button" size="touch" @click="salvarNovaCategoria">Criar</Button>
