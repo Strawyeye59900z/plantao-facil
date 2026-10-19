@@ -29,7 +29,7 @@ function iconeDe(entrada: EntradaLateral): Component {
       type="button"
       :aria-current="ativa === entrada.chave ? 'true' : undefined"
       :class="cn(
-        'flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors md:h-auto md:gap-2.5 md:rounded-2xl md:px-2.5 md:py-2 md:font-medium md:shadow-none',
+        'flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors md:h-auto md:gap-2.5 md:rounded-2xl md:px-2.5 md:py-2 md:font-medium md:shadow-none',
         ativa === entrada.chave
           ? 'bg-primary text-primary-foreground md:bg-accent md:font-bold md:text-primary'
           : 'bg-card hover:bg-accent md:bg-transparent',

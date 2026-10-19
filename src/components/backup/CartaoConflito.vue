@@ -16,7 +16,7 @@ const escolha = defineModel<'local' | 'arquivo'>({ required: true })
 const ROTULOS: Record<string, string> = {
   titulo: 'título',
   nome: 'nome',
-  categoriaId: 'categoria',
+  categoriaId: 'grupo',
   tags: 'tags',
   itens: 'itens',
   condicoes: 'condições',
