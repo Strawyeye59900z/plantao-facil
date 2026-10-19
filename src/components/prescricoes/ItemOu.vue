@@ -22,7 +22,7 @@ const nome = `ou-${props.item.id}`
     role="radiogroup"
     :aria-labelledby="`${nome}-rotulo`"
     :class="cn(
-      'flex min-w-0 flex-col gap-1.5 rounded-2xl transition-shadow',
+      'flex min-w-0 flex-col gap-1.5 rounded-2xl md:gap-1 transition-shadow',
       destacado && !escolhida && 'ring-atencao ring-offset-card ring-2 ring-offset-4',
     )"
   >
@@ -42,7 +42,7 @@ const nome = `ou-${props.item.id}`
       v-for="opcao in item.opcoes"
       :key="opcao.id"
       :class="cn(
-        'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] px-3 py-2 transition-colors',
+        'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] px-3 py-2 transition-colors md:min-h-9 md:gap-2.5 md:py-1.5',
         escolhida === opcao.id ? 'border-primary bg-accent' : 'hover:bg-accent/50 border-border',
         'has-[:focus-visible]:ring-ring/40 has-[:focus-visible]:ring-3',
       )"
@@ -64,7 +64,7 @@ const nome = `ou-${props.item.id}`
       >
         <span v-if="escolhida === opcao.id" class="bg-primary size-2 rounded-full" />
       </span>
-      <span class="min-w-0 flex-1 text-[15px] leading-snug whitespace-pre-line">{{ opcao.texto }}</span>
+      <span class="min-w-0 flex-1 text-[15px] leading-snug whitespace-pre-line md:text-sm">{{ opcao.texto }}</span>
       <span v-if="opcao.motivo" class="text-muted-foreground max-w-[40%] shrink-0 text-right text-xs leading-snug">
         {{ opcao.motivo }}
       </span>

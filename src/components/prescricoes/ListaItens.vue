@@ -37,18 +37,18 @@ const ETIQUETA = 'inline-flex items-center rounded-full border px-2 py-0.5 text-
       v-for="(item, i) in itens"
       :id="`item-${item.id}`"
       :key="item.id"
-      class="border-border flex gap-3 border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
+      class="border-border flex gap-3 border-b py-3 first:pt-0 md:gap-2.5 md:py-2 last:border-b-0 last:pb-0"
     >
       <span
         :class="cn(
-          'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
+          'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums md:size-6 md:text-[11px]',
           condicaoDoItem(item, condicoes) ? 'bg-primary text-primary-foreground' : 'bg-secondary',
         )"
       >
         {{ i + 1 }}
       </span>
 
-      <div class="flex min-w-0 flex-1 flex-col gap-1.5 pt-0.5">
+      <div class="flex min-w-0 flex-1 flex-col gap-1.5 pt-0.5 md:gap-1 md:pt-px">
         <ItemOu
           v-if="item.opcoes.length >= 2"
           :item="item"
@@ -67,7 +67,7 @@ const ETIQUETA = 'inline-flex items-center rounded-full border px-2 py-0.5 text-
             </span>
           </template>
         </ItemOu>
-        <p v-else class="text-[15px] leading-relaxed">
+        <p v-else class="text-[15px] leading-relaxed md:text-sm md:leading-normal">
           <span class="whitespace-pre-line">{{ item.opcoes[0]?.texto }}</span>
           <span
             v-for="alerta in alertasDoItem(item.id)"
