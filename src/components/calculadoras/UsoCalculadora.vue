@@ -11,5 +11,5 @@ defineProps<{ calculadora: DadosCalculadora }>()
 <template>
   <UsoDosePeso v-if="calculadora.tipo === 'dose_peso'" :calculadora="calculadora" />
   <UsoFormula v-else-if="calculadora.tipo === 'formula'" :calculadora="calculadora" />
-  <UsoPontos v-else :calculadora="calculadora" />
+  <UsoPontos v-else-if="calculadora.tipo === 'pontos'" :calculadora="calculadora" />
 </template>

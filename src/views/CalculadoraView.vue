@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { ArrowLeft, Copy, Ellipsis, Pencil, Star, Trash2 } from '@lucide/vue'
@@ -26,9 +26,17 @@ const categorias = useCategoriasStore()
 
 const id = computed(() => String(route.params.id))
 const calculadora = computed(() => calculadoras.obter(id.value))
-const escala = computed(() => route.path.startsWith('/escalas'))
+// A área vem do próprio item; se a rota for da outra área, troca para a rota certa.
+const escala = computed(() => (calculadora.value ? calculadora.value.area === 'escala' : route.path.startsWith('/escalas')))
 const base = computed(() => (escala.value ? '/escalas' : '/calculadoras'))
 const rotulo = computed(() => (escala.value ? 'Escala' : 'Calculadora'))
+
+watchEffect(() => {
+  const c = calculadora.value
+  if (c && route.params.id && route.path.startsWith('/escalas') !== (c.area === 'escala')) {
+    router.replace(`${c.area === 'escala' ? '/escalas' : '/calculadoras'}/${c.id}`)
+  }
+})
 
 function voltar() {
   // Sem histórico (aberta direto pelo link), volta para a lista da área.
