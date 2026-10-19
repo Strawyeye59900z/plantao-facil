@@ -76,14 +76,14 @@
     --popover-foreground: #151a2d;
     --primary: #0f9d8a;
     --primary-foreground: #ffffff;
-    --secondary: #eef1f6;
+    --secondary: #e5e9f1;
     --secondary-foreground: #151a2d;
-    --muted: #eef1f6;
+    --muted: #e5e9f1;
     --muted-foreground: #7b8297;
     --accent: color-mix(in srgb, var(--primary) 12%, #ffffff);
     --accent-foreground: #151a2d;
     --destructive: oklch(0.55 0.2 27);
-    --border: #e4e8f0;
+    --border: #d8deea;
     --input: #d9dfeb;
     --ring: var(--primary);
     --chart-1: oklch(0.87 0 0);
@@ -177,7 +177,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     -webkit-tap-highlight-color: transparent;
-      }
+  }
   h1, h2, h3 {
     @apply tracking-tight;
   }

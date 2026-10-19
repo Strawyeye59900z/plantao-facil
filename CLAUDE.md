@@ -40,6 +40,8 @@ src/
   dominio/      TS puro (sem Vue/Dexie) — tipos, motores de cálculo; foco dos testes
     tipos/      modelo de dados de todos os módulos
     texto/      normalização para busca (sem acentos)
+    aparencia/  cor de destaque (valores válidos, aplicar no <html>, cache em localStorage)
+    biblioteca/ entradas da lateral de grupos (Favoritos, Todas, grupos, Sem grupo) e filtro por chave
     prescricoes/ busca, agrupamento, edição/duplicação/validação
     dose/       motor de cálculo de dose, marcadores, peso
     backup/     esquema (valibot), exportar/ler, planejar e aplicar mesclagem
@@ -48,7 +50,7 @@ src/
   db/           Dexie (banco.ts), repositório-base, armazenamento persistente
   stores/       Pinia
   router/
-  components/   layout/ (app shell) e ui/ (shadcn-vue)
+  components/   layout/ (app shell), biblioteca/ (painel, lateral de grupos, cartão) e ui/ (shadcn-vue)
   views/
   lib/utils.ts  cn() do shadcn
 ```
@@ -73,7 +75,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ### Visual (v2, branch `v2`)
 - Direção: **fundo cinza-azulado** (`--background`), **cartões brancos bem arredondados** (`--radius: 1.375rem`), **botões e filtros em pílula**, títulos grandes e pesados, **Plus Jakarta Sans**. Tokens em `src/style.css`.
-- **Cor de destaque** (`--primary`) escolhida em Ajustes via `data-destaque` no `<html>` (azul, coral, verde, violeta); **padrão verde** (`#0f9d8a`). Tema claro padrão, escuro opcional.
+- **Cor de destaque** (`--primary`) aplicada via `data-destaque` no `<html>` (azul, coral, verde, violeta); **padrão verde** (`#0f9d8a`). **O seletor em Ajustes ainda não existe — vem em uma fase posterior** (a ação `definirCorDestaque` da store de configurações já existe). Tema claro padrão, escuro opcional.
 - Biblioteca (Prescrições e Calculadoras, `PainelBiblioteca`): no PC, **lateral de grupos** (220px, cartão branco; ícone num quadrado arredondado, rótulo e contagem; a ativa tingida com o destaque) e grade de **2 colunas de cartões**; no celular, a lateral vira **fileira de pílulas rolável** e os cartões ficam em 1 coluna. Entradas: Favoritos, Todas, cada grupo (ordem cadastrada) e Sem grupo (só se houver item). Grupo escolhido em `?grupo=`; busca do topo em `?q=` procura em todos os grupos (título "Resultados").
 - Cartão (`CartaoItem`): etiquetas em pílula (ex.: "N condições"; "importada — revisar" em amarelo), título e linha de meta. Cada tela passa `descrever(item)` ao painel — o conteúdo do cartão é genérico.
 - Alertas e avisos: caixa com fundo tingido e borda suave da cor da gravidade (sem barra grossa à esquerda).
@@ -86,7 +88,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Exclusão: vai para a **lixeira** (exclusão lógica); dentro da lixeira pode **excluir permanentemente**.
 - **Recentes foram removidos na v2** (sem store nem seção).
 - Favoritos: campo `favorito` na entidade; entram no backup.
-- Configurações (tema, chaves de IA) ficam na tabela `configuracoes`, fora do backup. Tema também em `localStorage` só para evitar piscar na abertura.
+- Configurações (tema, `corDestaque`, chaves de IA) ficam na tabela `configuracoes`, fora do backup. Tema e cor de destaque também em `localStorage` (`plantao-facil:tema`, `plantao-facil:destaque`) só para evitar piscar na abertura.
 - IndexedDB não indexa booleanos nem `null`: favorito/excluidoEm filtrados em memória.
 
 ### Prescrições e dose (Fases 1–2)

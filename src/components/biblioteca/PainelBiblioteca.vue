@@ -51,7 +51,7 @@ function selecionar(nova: ChaveLateral) {
 }
 
 const visiveis = computed(() => {
-  const lista = buscando.value ? props.filtrar(props.itens, termo.value) : filtrarPorChave(props.itens, chave.value)
+  const lista = buscando.value ? props.filtrar(props.itens, termo.value) : filtrarPorChave(props.itens, chave.value, props.grupos)
   return [...lista].sort((a, b) => colador.compare(nomeDoItem(a), nomeDoItem(b)))
 })
 

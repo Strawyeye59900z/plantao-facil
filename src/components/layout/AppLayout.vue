@@ -71,7 +71,7 @@ function ativo(rota: string) {
 const emEdicao = computed(() => /\/(nova|editar)$/.test(route.path))
 // A biblioteca (lateral + grade) usa a largura toda; as demais telas ficam estreitas, para leitura.
 const larguraTotal = computed(() => route.path === '/prescricoes' || route.path === '/calculadoras')
-const tituloEdicao =computed(() => route.meta.titulo ?? '')
+const tituloEdicao = computed(() => route.meta.titulo ?? '')
 
 function voltar() {
   // Sem histórico (aberta direto pelo link), volta para a lista da área.
@@ -91,7 +91,7 @@ function voltar() {
         <div v-if="emEdicao" class="mx-auto flex h-16 max-w-3xl items-center gap-3 px-4 md:px-8">
           <button
             type="button"
-            class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors md:size-10"
+            class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors"
             aria-label="Voltar"
             @click="voltar"
           >
@@ -107,7 +107,7 @@ function voltar() {
         >
           <RouterLink
             to="/prescricoes"
-            class="bg-primary text-primary-foreground flex size-11 shrink-0 items-center justify-center rounded-full md:size-10"
+            class="bg-primary text-primary-foreground flex size-11 shrink-0 items-center justify-center rounded-full"
             aria-label="Plantão Fácil"
           >
             <ClipboardCheck class="size-5" />
@@ -120,7 +120,7 @@ function voltar() {
               :to="area.rota"
               :aria-current="ativo(area.rota) ? 'page' : undefined"
               :class="cn(
-                'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors md:h-10',
+                'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors',
                 ativo(area.rota) ? 'bg-foreground text-background' : 'bg-card hover:bg-accent',
               )"
             >
@@ -139,7 +139,7 @@ function voltar() {
               enterkeyhint="search"
               :placeholder="`${rotuloBusca}…`"
               :aria-label="rotuloBusca"
-              class="bg-card placeholder:text-muted-foreground focus-visible:ring-ring/30 h-11 w-full rounded-full pr-10 pl-10 text-base shadow-xs outline-none transition-colors focus-visible:ring-3 md:h-10 md:text-sm [&::-webkit-search-cancel-button]:hidden"
+              class="bg-card placeholder:text-muted-foreground focus-visible:ring-ring/30 h-11 w-full rounded-full pr-10 pl-10 text-base shadow-xs outline-none transition-colors focus-visible:ring-3 md:text-sm [&::-webkit-search-cancel-button]:hidden"
             />
             <button
               v-if="busca"
@@ -156,7 +156,7 @@ function voltar() {
             <DropdownMenuTrigger as-child>
               <button
                 type="button"
-                class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors md:size-10"
+                class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors"
                 aria-label="Menu"
               >
                 <Menu class="size-5" />

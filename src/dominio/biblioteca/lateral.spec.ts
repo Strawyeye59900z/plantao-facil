@@ -42,6 +42,31 @@ describe('montarLateral', () => {
     const quantidades = Object.fromEntries(lateral.map((e) => [e.chave, e.quantidade]))
     expect(quantidades).toEqual({ favoritos: 2, todas: 3, 'g-b': 0, 'g-a': 2, 'sem-grupo': 1 })
   })
+
+  it('item de grupo desconhecido ou excluído conta como sem-grupo', () => {
+    const excluido = categoriaTeste({ id: 'g-x', nome: 'Grupo Teste X', excluidoEm: '2026-02-01T00:00:00.000Z' })
+    const itens = [
+      prescricaoTeste({ id: 'p-1', categoriaId: 'g-a' }),
+      prescricaoTeste({ id: 'p-2', categoriaId: 'g-inexistente' }),
+      prescricaoTeste({ id: 'p-3', categoriaId: 'g-x' }),
+    ]
+    const lateral = montarLateral(itens, [grupoA, excluido])
+    const quantidades = Object.fromEntries(lateral.map((e) => [e.chave, e.quantidade]))
+    expect(quantidades).toEqual({ favoritos: 0, todas: 3, 'g-a': 1, 'sem-grupo': 2 })
+  })
+
+  it('omite grupos com excluidoEm preenchido', () => {
+    const excluido = categoriaTeste({ id: 'g-x', nome: 'Grupo Teste X', excluidoEm: '2026-02-01T00:00:00.000Z' })
+    const lateral = montarLateral([], [grupoA, excluido])
+    expect(lateral.map((e) => e.chave)).toEqual(['favoritos', 'todas', 'g-a'])
+  })
+
+  it('empate em ordem desempata pelo nome', () => {
+    const z = categoriaTeste({ id: 'g-z', nome: 'Zeta Teste', ordem: 5 })
+    const a = categoriaTeste({ id: 'g-a2', nome: 'Alfa Teste', ordem: 5 })
+    const lateral = montarLateral([], [z, a])
+    expect(lateral.map((e) => e.chave)).toEqual(['favoritos', 'todas', 'g-a2', 'g-z'])
+  })
 })
 
 describe('filtrarPorChave', () => {
@@ -57,6 +82,17 @@ describe('filtrarPorChave', () => {
 
   it('sem-grupo devolve só categoriaId null', () => {
     expect(filtrarPorChave(itens, 'sem-grupo').map((i) => i.id)).toEqual(['p-3'])
+  })
+
+  it('sem-grupo, com os grupos informados, inclui item de grupo desconhecido ou excluído', () => {
+    const excluido = categoriaTeste({ id: 'g-x', nome: 'Grupo Teste X', excluidoEm: '2026-02-01T00:00:00.000Z' })
+    const com = [
+      ...itens,
+      prescricaoTeste({ id: 'p-4', categoriaId: 'g-inexistente' }),
+      prescricaoTeste({ id: 'p-5', categoriaId: 'g-x' }),
+    ]
+    const resultado = filtrarPorChave(com, 'sem-grupo', [grupoA, grupoB, excluido])
+    expect(resultado.map((i) => i.id)).toEqual(['p-3', 'p-4', 'p-5'])
   })
 
   it('todas devolve tudo', () => {

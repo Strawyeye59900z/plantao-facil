@@ -63,8 +63,6 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
   </section>
 
   <form v-else class="flex flex-col gap-6 pb-24" novalidate @submit.prevent="salvar">
-    <h1 class="text-2xl font-semibold md:text-3xl">{{ idEdicao ? 'Editar prescrição' : 'Nova prescrição' }}</h1>
-
     <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3">
       <p class="font-semibold">Corrija antes de salvar:</p>
       <ul class="list-disc pl-5 text-sm">

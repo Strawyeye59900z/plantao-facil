@@ -20,7 +20,7 @@ function iconeDe(entrada: EntradaLateral): Component {
 
 <template>
   <nav
-    class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:sticky md:top-24 md:mx-0 md:flex-col md:gap-0.5 md:overflow-visible md:rounded-3xl md:bg-card md:p-3 md:pb-3 md:shadow-xs"
+    class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:sticky md:top-24 md:mx-0 md:flex-col md:gap-0.5 md:max-h-[calc(100dvh-7rem)] md:overflow-y-auto md:rounded-3xl md:bg-card md:p-3 md:pb-3 md:shadow-xs"
     aria-label="Grupos"
   >
     <button

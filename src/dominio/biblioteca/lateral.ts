@@ -24,7 +24,7 @@ export function montarLateral<T extends ItemDaBiblioteca>(itens: T[], grupos: Ca
   const ativos = grupos
     .filter((g) => g.excluidoEm === null)
     .sort((a, b) => a.ordem - b.ordem || colador.compare(a.nome, b.nome))
-  const semGrupo = filtrarPorChave(itens, 'sem-grupo').length
+  const semGrupo = filtrarPorChave(itens, 'sem-grupo', grupos).length
 
   return [
     { chave: 'favoritos', rotulo: 'Favoritos', icone: 'estrela', quantidade: filtrarPorChave(itens, 'favoritos').length },
@@ -39,9 +39,17 @@ export function montarLateral<T extends ItemDaBiblioteca>(itens: T[], grupos: Ca
   ]
 }
 
-export function filtrarPorChave<T extends ItemDaBiblioteca>(itens: T[], chave: ChaveLateral): T[] {
+/**
+ * Com `grupos`, "Sem grupo" também inclui itens cujo grupo não está entre os ativos
+ * (excluído ou desconhecido), como na v1 ("Sem categoria").
+ */
+export function filtrarPorChave<T extends ItemDaBiblioteca>(itens: T[], chave: ChaveLateral, grupos?: Categoria[]): T[] {
   if (chave === 'todas') return itens
   if (chave === 'favoritos') return itens.filter((i) => i.favorito)
-  if (chave === 'sem-grupo') return itens.filter((i) => i.categoriaId === null)
+  if (chave === 'sem-grupo') {
+    if (!grupos) return itens.filter((i) => i.categoriaId === null)
+    const ativos = new Set(grupos.filter((g) => g.excluidoEm === null).map((g) => g.id))
+    return itens.filter((i) => i.categoriaId === null || !ativos.has(i.categoriaId))
+  }
   return itens.filter((i) => i.categoriaId === chave)
 }

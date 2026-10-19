@@ -100,7 +100,6 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
 
   <!-- Criação: escolher o tipo -->
   <section v-else-if="!dados" class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold md:text-3xl">Nova calculadora</h1>
     <p class="text-muted-foreground">Qual o tipo?</p>
     <button
       type="button"
@@ -127,10 +126,7 @@ const { confirmarSaida, responderSaida } = useAvisoSaida(alterado)
   </section>
 
   <form v-else class="flex flex-col gap-6 pb-24" novalidate @submit.prevent="salvar">
-    <h1 class="text-2xl font-semibold md:text-3xl">
-      {{ idEdicao ? 'Editar calculadora' : 'Nova calculadora' }}
-      <span class="text-muted-foreground text-base font-normal">· {{ dados.tipo === 'pontos' ? 'escore por pontos' : 'fórmula' }}</span>
-    </h1>
+    <p class="text-muted-foreground">Tipo: {{ dados.tipo === 'pontos' ? 'escore por pontos' : 'fórmula' }}</p>
 
     <div v-if="erros.length" ref="caixaErros" role="alert" class="border-critico/35 bg-critico/10 rounded-xl border p-3">
       <p class="font-semibold">Corrija antes de salvar:</p>
