@@ -18,6 +18,7 @@ import CartaoReceita from '@/components/prescricoes/CartaoReceita.vue'
 import ListaItens from '@/components/prescricoes/ListaItens.vue'
 import SeletorCondicoes from '@/components/prescricoes/SeletorCondicoes.vue'
 import { ETIQUETA_REVISAR } from '@/components/biblioteca/etiquetas'
+import { alertasDaPrescricao } from '@/dominio/prescricoes/alertas'
 import type { CondicoesMarcadas } from '@/dominio/prescricoes/condicoes'
 import { itensVisiveis, montarCopiaPrescricao, type EscolhasOu } from '@/dominio/prescricoes/copia'
 import type { UUID } from '@/dominio/tipos'
@@ -50,9 +51,8 @@ const copia = computed(() =>
 )
 
 /** Alertas da prescrição ou condições: ficam acima da lista (no PC, só na coluna principal). */
-const temTopo = computed(
-  () => !!prescricao.value && (prescricao.value.alertas.some((a) => a.itemId === null) || prescricao.value.condicoes.length > 0),
-)
+const alertasTopo = computed(() => (prescricao.value ? alertasDaPrescricao(prescricao.value) : []))
+const temTopo = computed(() => alertasTopo.value.length > 0 || (prescricao.value?.condicoes.length ?? 0) > 0)
 const temReceita = computed(() => (prescricao.value?.receita.trim() ?? '') !== '')
 const ligadas = computed(() =>
   (prescricao.value?.calculadoraIds ?? []).map((cid) => ({ id: cid, nome: calculadoras.obter(cid)?.nome ?? null })),
@@ -290,7 +290,7 @@ async function moverParaLixeira() {
         v-if="temTopo"
         :class="cn('flex flex-col gap-4 md:col-start-1', classePrincipal)"
       >
-        <AlertasPrescricao :alertas="prescricao.alertas" />
+        <AlertasPrescricao :alertas="alertasTopo" />
         <SeletorCondicoes v-model="marcadas" :condicoes="prescricao.condicoes" />
       </div>
 
