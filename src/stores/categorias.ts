@@ -20,6 +20,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
 
   const dePrescricoes = computed(() => doEscopo('prescricao'))
   const deCalculadoras = computed(() => doEscopo('calculadora'))
+  const deEscalas = computed(() => doEscopo('escala'))
 
   async function carregar() {
     // Categorias criadas antes dos ícones não têm o campo.
@@ -71,7 +72,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
     }
   }
 
-  /** Exclui a categoria; prescrições/calculadoras que a usavam ficam "Sem categoria". */
+  /** Exclui a categoria; prescrições, calculadoras e escalas que a usavam ficam "Sem categoria". */
   async function excluir(id: UUID) {
     await db.transaction('rw', db.categorias, db.prescricoes, db.calculadoras, async () => {
       await repoCategorias.moverParaLixeira(id)
@@ -79,6 +80,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
       for (const p of await db.prescricoes.where('categoriaId').equals(id).toArray()) {
         await db.prescricoes.put({ ...p, categoriaId: null, atualizadoEm: agora })
       }
+      // Calculadoras e escalas ficam na mesma tabela: zera o grupo de todas, qualquer que seja a área.
       for (const c of await db.calculadoras.where('categoriaId').equals(id).toArray()) {
         await db.calculadoras.put({ ...c, categoriaId: null, atualizadoEm: agora })
       }
@@ -93,5 +95,5 @@ export const useCategoriasStore = defineStore('categorias', () => {
     )
   }
 
-  return { todas, dePrescricoes, deCalculadoras, doEscopo, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
+  return { todas, dePrescricoes, deCalculadoras, deEscalas, doEscopo, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
 })

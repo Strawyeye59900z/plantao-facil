@@ -5,6 +5,7 @@ import { db } from '@/db/banco'
 import { prescricaoVazia } from '@/dominio/prescricoes/editar'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from './categorias'
 import { usePrescricoesStore } from './prescricoes'
+import { useCalculadorasStore } from './calculadoras'
 import { useConfiguracoesStore } from './configuracoes'
 
 beforeEach(async () => {
@@ -42,6 +43,32 @@ describe('categorias', () => {
     expect(prescricoes.obter(p.id)!.categoriaId).toBeNull()
     expect(categorias.nome(null)).toBe(ROTULO_SEM_CATEGORIA)
     expect((await db.prescricoes.get(p.id))!.categoriaId).toBeNull()
+  })
+})
+
+describe('categorias de escalas', () => {
+  it('deEscalas lista só os grupos de escalas; excluir deixa a escala "Sem categoria"', async () => {
+    const categorias = useCategoriasStore()
+    const calculadoras = useCalculadorasStore()
+    await categorias.criar('Grupo Calc Teste', 'calculadora')
+    const g = await categorias.criar('Grupo Escala Teste', 'escala')
+    expect(categorias.deEscalas.map((c) => c.id)).toEqual([g.id])
+
+    const e = await calculadoras.criar({
+      area: 'escala',
+      tipo: 'pontos',
+      nome: 'Escore Teste',
+      categoriaId: g.id,
+      descricao: '',
+      referencia: '',
+      favorito: false,
+      faixas: [],
+      campos: [],
+    })
+    await categorias.excluir(g.id)
+    expect(categorias.deEscalas).toEqual([])
+    expect(calculadoras.obter(e.id)!.categoriaId).toBeNull()
+    expect((await db.calculadoras.get(e.id))!.categoriaId).toBeNull()
   })
 })
 
