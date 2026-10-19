@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
 import type { CalculadoraDosePeso, CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
 import { avisosCalculadora, calculadoraVazia, duplicarCalculadora, validarCalculadora } from './editar'
-import { analisarExpressao, calcularFormula } from './formula'
+import { analisarExpressao, calcularSaidas, type ValoresFormula } from './formula'
 import { analisarFaixas, interpretar } from './interpretacao'
 import { calcularPontos, intervaloPossivel } from './pontos'
 
@@ -112,27 +112,71 @@ describe('motor de pontos', () => {
 })
 
 describe('avaliador de fórmulas', () => {
+  const um = (c: CalculadoraFormula, v: ValoresFormula) => calcularSaidas(c, v)[0]!
+
   it('calcula e arredonda pelas casas decimais', () => {
-    const r = calcularFormula(formula, { ea: 10, eb: 3 })
-    expect(r).toMatchObject({ estado: 'ok', valor: 5.3 })
+    expect(um(formula, { ea: 10, eb: 3 })).toMatchObject({ ok: true, valor: 5.3 })
   })
 
-  it('incompleto lista as entradas faltando', () => {
-    expect(calcularFormula(formula, { ea: 10, eb: null })).toEqual({ estado: 'incompleto', faltam: ['Entrada B'] })
+  it('campo vazio pede para preencher', () => {
+    expect(um(formula, { ea: 10, eb: null })).toEqual({ saidaId: 's1', ok: false, erro: 'Preencha todos os campos.' })
   })
 
   it('entrada fora do mínimo/máximo é erro', () => {
-    expect(calcularFormula(formula, { ea: 10, eb: 0 })).toMatchObject({ estado: 'erro' })
+    expect(um(formula, { ea: 10, eb: 0 })).toMatchObject({ ok: false })
   })
 
   it('aplica teto e piso por último, com aviso', () => {
-    expect(calcularFormula(comSaida({ teto: 5 }), { ea: 100, eb: 1 })).toMatchObject({ valor: 5, aviso: 'teto' })
-    expect(calcularFormula(comSaida({ piso: 4 }), { ea: 0, eb: 1 })).toMatchObject({ valor: 4, aviso: 'piso' })
+    expect(um(comSaida({ teto: 5 }), { ea: 100, eb: 1 })).toMatchObject({ ok: true, valor: 5, avisos: ['Limitado ao teto.'] })
+    expect(um(comSaida({ piso: 4 }), { ea: 0, eb: 1 })).toMatchObject({ ok: true, valor: 4, avisos: ['Elevado ao piso.'] })
   })
 
   it('resultado não finito é erro', () => {
-    const f = comSaida({ expressao: 'sqrt(a - 50)' })
-    expect(calcularFormula(f, { ea: 10, eb: 1 })).toMatchObject({ estado: 'erro' })
+    expect(um(comSaida({ expressao: 'sqrt(a - 50)' }), { ea: 10, eb: 1 })).toMatchObject({ ok: false })
+  })
+
+  it('exemplo de infusão: vazao * conc / peso', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      campos: [
+        { id: 'c1', tipo: 'numero', variavel: 'vazao', rotulo: 'Vazão', unidade: 'mL/h', min: null, max: null },
+        { id: 'c2', tipo: 'numero', variavel: 'conc', rotulo: 'Concentração', unidade: 'u/mL', min: null, max: null },
+        { id: 'c3', tipo: 'numero', variavel: 'peso', rotulo: 'Peso', unidade: 'kg', min: null, max: null },
+      ],
+      saidas: [{ id: 's1', nome: 'Taxa', expressao: 'vazao * conc / peso', unidade: 'un/kg/h', casasDecimais: 2, teto: null, piso: null, faixas: [] }],
+    }
+    expect(um(f, { c1: 10, c2: 64, c3: 80 })).toMatchObject({ ok: true, valor: 8, texto: '8 un/kg/h' })
+  })
+
+  it('campo sim/não usa valorSim/valorNao; vazio é erro', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      campos: [{ id: 'sn', tipo: 'sim_nao', variavel: 'x', rotulo: 'Fator', valorSim: 2, valorNao: 0 }],
+      saidas: [{ id: 's1', nome: 'R', expressao: 'x + 1', unidade: '', casasDecimais: 0, teto: null, piso: null, faixas: [] }],
+    }
+    expect(um(f, { sn: true })).toMatchObject({ ok: true, valor: 3 })
+    expect(um(f, { sn: false })).toMatchObject({ ok: true, valor: 1 })
+    expect(um(f, { sn: null })).toEqual({ saidaId: 's1', ok: false, erro: 'Preencha todos os campos.' })
+  })
+
+  it('várias saídas são independentes e trazem a faixa', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      saidas: [
+        {
+          id: 's1', nome: 'Soma', expressao: 'a + b', unidade: 'u', casasDecimais: 0, teto: null, piso: null,
+          faixas: [
+            { id: 'f1', de: 0, ate: 5, texto: 'Baixa', gravidade: 'informativo' },
+            { id: 'f2', de: 6, ate: null, texto: 'Alta', gravidade: 'critico' },
+          ],
+        },
+        { id: 's2', nome: 'Quebra', expressao: 'sqrt(a - 50)', unidade: 'u', casasDecimais: 0, teto: null, piso: null, faixas: [] },
+      ],
+    }
+    const [r1, r2] = calcularSaidas(f, { ea: 10, eb: 1 })
+    expect(r1).toMatchObject({ saidaId: 's1', ok: true, valor: 11, texto: '11 u' })
+    expect(r1!.ok && r1!.faixa?.id).toBe('f2')
+    expect(r2).toMatchObject({ saidaId: 's2', ok: false })
   })
 
   it.each([
