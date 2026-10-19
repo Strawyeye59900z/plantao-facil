@@ -1,21 +1,30 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { CircleCheck, ClipboardCopy, Copy, Pencil, Replace, Scale, Star, Trash2 } from '@lucide/vue'
+import { ArrowLeft, Calculator, CircleCheck, ClipboardCopy, Copy, Ellipsis, Pencil, Star, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
-import CartaoAlerta from '@/components/prescricoes/CartaoAlerta.vue'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import IconeCategoria from '@/components/categorias/IconeCategoria.vue'
-import CampoSelect from '@/components/comum/CampoSelect.vue'
-import ResultadoDose from '@/components/prescricoes/ResultadoDose.vue'
-import { lerPeso } from '@/dominio/dose/peso'
-import { calcularPrescricao, montarTextoCopia } from '@/dominio/dose/prescricaoCalculada'
-import { condicaoDoItem, ordenarPorCondicao, type CondicoesMarcadas } from '@/dominio/prescricoes/condicoes'
-import { copiarTexto } from '@/lib/areaTransferencia'
-import { MODO_PENDRIVE } from '@/modo'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
-import type { ItemPrescricao, UUID } from '@/dominio/tipos'
+import AlertasPrescricao from '@/components/prescricoes/AlertasPrescricao.vue'
+import CaixaObservacoes from '@/components/prescricoes/CaixaObservacoes.vue'
+import CartaoReceita from '@/components/prescricoes/CartaoReceita.vue'
+import ListaItens from '@/components/prescricoes/ListaItens.vue'
+import SeletorCondicoes from '@/components/prescricoes/SeletorCondicoes.vue'
+import { ETIQUETA_REVISAR } from '@/components/biblioteca/etiquetas'
+import type { CondicoesMarcadas } from '@/dominio/prescricoes/condicoes'
+import { itensVisiveis, montarCopiaPrescricao, type EscolhasOu } from '@/dominio/prescricoes/copia'
+import type { UUID } from '@/dominio/tipos'
+import { copiarTexto } from '@/lib/areaTransferencia'
 import { cn } from '@/lib/utils'
+import { MODO_PENDRIVE } from '@/modo'
+import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
 import { usePrescricoesStore } from '@/stores/prescricoes'
 
@@ -23,108 +32,90 @@ const route = useRoute()
 const router = useRouter()
 const prescricoes = usePrescricoesStore()
 const categorias = useCategoriasStore()
+const calculadoras = useCalculadorasStore()
 
 const id = computed(() => String(route.params.id))
 const prescricao = computed(() => prescricoes.obter(id.value))
 
-/** Alternativa/opção escolhida por item (id, OPCAO_PRINCIPAL ou null) — só na memória desta tela. */
-const escolhidas = ref<Record<UUID, string | null>>({})
-/** Condições marcadas (os itens delas entram no Copiar) — só na memória desta tela; nenhuma vem marcada. */
+// Estado só desta tela (a view é recriada a cada rota, então volta ao padrão ao sair):
+// nenhuma condição marcada e nenhuma opção "OU" escolhida.
 const marcadas = ref<CondicoesMarcadas>({})
-/** Peso digitado — só na memória desta tela, nunca salvo. */
-const pesoDigitado = ref('')
+const escolhas = ref<EscolhasOu>({})
+/** Item "OU" destacado depois de um Copiar sem escolha. */
+const destacado = ref<UUID | null>(null)
 
-watch(
-  id,
-  () => {
-    escolhidas.value = {}
-    marcadas.value = {}
-    pesoDigitado.value = ''
-  },
-  { immediate: true },
+const itens = computed(() => (prescricao.value ? itensVisiveis(prescricao.value, marcadas.value) : []))
+const copia = computed(() =>
+  prescricao.value ? montarCopiaPrescricao(prescricao.value, marcadas.value, escolhas.value) : null,
 )
 
-/** Itens na ordem de exibição: "Sempre" primeiro, depois cada condição. */
-const condicoes = computed(() => prescricao.value?.condicoes ?? [])
-const itens = computed(() => ordenarPorCondicao(prescricao.value?.itens ?? [], condicoes.value))
-
-function numeroItem(itemId: UUID | null): string | undefined {
-  if (!itemId) return undefined
-  const i = itens.value.findIndex((item) => item.id === itemId)
-  return i === -1 ? undefined : `Item ${i + 1}`
-}
-
-/** Cabeçalho antes do primeiro item de cada grupo (só quando a prescrição tem condições). */
-function cabecalho(i: number): { id: UUID; nome: string } | 'sempre' | null {
-  if (!condicoes.value.length) return null
-  const grupo = condicaoDoItem(itens.value[i]!, condicoes.value)
-  if (i > 0 && condicaoDoItem(itens.value[i - 1]!, condicoes.value) === grupo) return null
-  return grupo === null ? 'sempre' : condicoes.value.find((c) => c.id === grupo)!
-}
-
-function alternarCondicao(condicaoId: UUID) {
-  marcadas.value = { ...marcadas.value, [condicaoId]: !marcadas.value[condicaoId] }
-}
-
-function alertasDoItem(itemId: UUID) {
-  return prescricao.value?.alertas.filter((a) => a.itemId === itemId) ?? []
-}
-
-// ===== Peso e doses (só na memória desta tela; nunca salvo) =====
-const leituraPeso = computed(() => lerPeso(pesoDigitado.value))
-const pesoKg = computed(() => (leituraPeso.value.ok ? leituraPeso.value.kg : null))
-
-/** Mostra o campo de peso se qualquer item ou alternativa tiver regra de dose. */
-const temRegra = computed(
-  () =>
-    prescricao.value?.itens.some((i) => i.regraDose || i.alternativas.some((a) => a.regraDose)) ?? false,
+/** Alertas da prescrição ou condições: ficam acima da lista (no PC, só na coluna principal). */
+const temTopo = computed(
+  () => !!prescricao.value && (prescricao.value.alertas.some((a) => a.itemId === null) || prescricao.value.condicoes.length > 0),
+)
+const temReceita = computed(() => (prescricao.value?.receita.trim() ?? '') !== '')
+const ligadas = computed(() =>
+  (prescricao.value?.calculadoraIds ?? []).map((cid) => ({ id: cid, nome: calculadoras.obter(cid)?.nome ?? null })),
 )
 
-const calculada = computed(() =>
-  calcularPrescricao(itens.value, escolhidas.value, pesoKg.value, condicoes.value, marcadas.value),
+// ===== Abas =====
+// PC: Prescrição | Calculadoras · N (a receita fica na coluna da direita).
+// Celular: Prescrição | Receita | Calculadoras · N.
+type Aba = 'prescricao' | 'receita' | 'calculadoras'
+const aba = ref<Aba>('prescricao')
+/** A barra de abas só aparece se houver mais de uma aba (no PC, a receita não conta). */
+const classeAbas = computed(() =>
+  ligadas.value.length > 0 ? 'flex' : temReceita.value ? 'flex md:hidden' : 'hidden',
+)
+const ESTILO_ABA = 'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors'
+function classeAba(alvo: Aba) {
+  return cn(
+    ESTILO_ABA,
+    aba.value === alvo ? 'bg-foreground text-background' : 'bg-card hover:bg-accent',
+    // No PC, "Receita" não existe como aba: com ela escolhida no celular, Prescrição aparece ativa.
+    alvo === 'prescricao' && aba.value === 'receita' && 'md:bg-foreground md:text-background',
+    alvo === 'receita' && 'md:hidden',
+  )
+}
+// Coluna principal: aba Prescrição (e, no PC, também com "Receita" escolhida no celular).
+const classePrincipal = computed(() =>
+  aba.value === 'prescricao' ? '' : aba.value === 'receita' ? 'hidden md:flex' : 'hidden',
+)
+// Receita: aba própria no celular; coluna da direita no PC.
+const classeReceita = computed(() =>
+  aba.value === 'receita' ? '' : aba.value === 'prescricao' ? 'hidden md:block' : 'hidden',
 )
 
-const motivoBloqueio = computed(() => {
-  if (calculada.value.podeCopiar) return null
-  if (calculada.value.nadaParaCopiar) return 'Marque uma condição para copiar.'
-  const semEscolha = calculada.value.itensSemEscolha
-  if (semEscolha.length) {
-    return semEscolha.length === 1 ? `Escolha uma opção no item ${semEscolha[0]}.` : `Escolha uma opção nos itens ${semEscolha.join(', ')}.`
+// ===== Copiar =====
+async function copiarPrescricao() {
+  const resultado = copia.value
+  if (!resultado) return
+  if (!resultado.ok) {
+    toast.error(resultado.erro)
+    const falta = itens.value.find((i) => i.opcoes.length >= 2 && !i.opcoes.some((o) => o.id === escolhas.value[i.id]))
+    destacado.value = falta?.id ?? null
+    if (falta) {
+      await nextTick()
+      const el = document.getElementById(`item-${falta.id}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el?.querySelector<HTMLInputElement>('input[type=radio]')?.focus({ preventScroll: true })
+    }
+    return
   }
-  if (pesoKg.value === null) return 'Informe o peso para copiar.'
-  return 'Há erro no cálculo de algum item.'
-})
-
-async function copiar() {
-  if (!calculada.value.podeCopiar) return
+  destacado.value = null
   try {
-    await copiarTexto(montarTextoCopia(calculada.value.linhas))
-    toast.success('Copiado para a área de transferência.')
+    await copiarTexto(resultado.texto)
+    toast.success('Prescrição copiada.')
   } catch {
     toast.error('Não foi possível copiar.')
   }
 }
 
-/** Receita pronta: copiada como cadastrada, com as quebras de linha (só texto, sem cálculo). */
-async function copiarReceita() {
-  if (!prescricao.value?.receita) return
-  try {
-    await copiarTexto(prescricao.value.receita)
-    toast.success('Receita copiada para a área de transferência.')
-  } catch {
-    toast.error('Não foi possível copiar.')
-  }
-}
-
-function opcoesItem(item: ItemPrescricao) {
-  return [
-    { valor: null as UUID | null, rotulo: 'Padrão' },
-    ...item.alternativas.map((alt) => ({ valor: alt.id as UUID | null, rotulo: alt.motivo })),
-  ]
-}
-
-function escolher(itemId: UUID, altId: string | null) {
-  escolhidas.value = { ...escolhidas.value, [itemId]: altId }
+// ===== Ações =====
+function voltar() {
+  // Sem histórico (aberta direto pelo link), volta para a lista.
+  if (window.history.state?.back) router.back()
+  else router.push('/prescricoes')
 }
 
 async function favoritar() {
@@ -137,252 +128,211 @@ async function marcarRevisada() {
 }
 
 async function duplicar() {
-  const copia = await prescricoes.duplicar(id.value)
+  const nova = await prescricoes.duplicar(id.value)
   toast.success('Prescrição duplicada.')
-  router.push(`/prescricoes/${copia.id}/editar`)
+  router.push(`/prescricoes/${nova.id}/editar`)
 }
 
 const confirmarLixeira = ref(false)
 async function moverParaLixeira() {
   const titulo = prescricao.value?.titulo
-  await prescricoes.moverParaLixeira(id.value)
+  const alvo = id.value
+  await prescricoes.moverParaLixeira(alvo)
   router.replace('/prescricoes')
   toast(`“${titulo}” foi para a lixeira.`, {
-    action: { label: 'Desfazer', onClick: () => prescricoes.restaurar(id.value) },
+    action: { label: 'Desfazer', onClick: () => prescricoes.restaurar(alvo) },
   })
 }
 </script>
 
 <template>
-  <section v-if="prescricao" class="flex flex-col gap-5 pb-24">
+  <section v-if="prescricao" :class="cn('mx-auto flex w-full flex-col gap-5', !temReceita && 'max-w-3xl')">
     <!-- Cabeçalho -->
     <header class="flex flex-col gap-3">
-      <p class="text-muted-foreground bg-secondary flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
-        <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" class="size-3.5" />
-        {{ categorias.nome(prescricao.categoriaId) }}
-      </p>
-      <div class="flex items-start gap-2">
-        <h1 class="flex-1 text-2xl leading-tight font-semibold md:text-3xl">{{ prescricao.titulo }}</h1>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors"
+          aria-label="Voltar"
+          @click="voltar"
+        >
+          <ArrowLeft class="size-5" />
+        </button>
+        <div class="flex-1" />
         <!-- Pen drive: favorito só exibido (a próxima atualização da biblioteca apagaria a mudança) -->
-        <Star
-          v-if="MODO_PENDRIVE"
-          :class="cn('m-2.5 size-6 shrink-0', prescricao.favorito ? 'fill-atencao text-atencao' : 'hidden')"
+        <span
+          v-if="MODO_PENDRIVE && prescricao.favorito"
+          class="flex size-11 items-center justify-center"
+          role="img"
           aria-label="Favorita"
-        />
+        >
+          <Star class="fill-atencao text-atencao size-6" />
+        </span>
         <Button
-          v-else
+          v-else-if="!MODO_PENDRIVE"
           variant="ghost"
           size="icon-touch"
+          class="rounded-full"
           :aria-label="prescricao.favorito ? 'Remover dos favoritos' : 'Favoritar'"
           :aria-pressed="prescricao.favorito"
           @click="favoritar"
         >
           <Star :class="cn('size-6', prescricao.favorito && 'fill-atencao text-atencao')" />
         </Button>
+        <DropdownMenu v-if="!MODO_PENDRIVE && !prescricao.excluidoEm">
+          <DropdownMenuTrigger as-child>
+            <button
+              type="button"
+              class="bg-card hover:bg-accent flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-colors"
+              aria-label="Mais ações"
+            >
+              <Ellipsis class="size-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-52 rounded-2xl p-1.5">
+            <DropdownMenuItem as-child class="h-11 gap-3 rounded-xl px-3 text-sm font-medium">
+              <RouterLink :to="`/prescricoes/${prescricao.id}/editar`"><Pencil class="size-[18px]" /> Editar</RouterLink>
+            </DropdownMenuItem>
+            <DropdownMenuItem class="h-11 gap-3 rounded-xl px-3 text-sm font-medium" @select="duplicar">
+              <Copy class="size-[18px]" /> Duplicar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              class="h-11 gap-3 rounded-xl px-3 text-sm font-medium"
+              @select="confirmarLixeira = true"
+            >
+              <Trash2 class="size-[18px]" /> Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <div v-if="prescricao.tags.length" class="flex flex-wrap gap-1.5">
-        <span v-for="tag in prescricao.tags" :key="tag" class="text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs">
-          #{{ tag }}
-        </span>
+
+      <h1 class="text-3xl leading-[1.1] font-extrabold tracking-tight break-words md:text-4xl">{{ prescricao.titulo }}</h1>
+
+      <div class="flex flex-col gap-3 md:flex-row md:items-start">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 md:flex-1">
+          <span class="bg-card flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold shadow-xs">
+            <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" class="text-primary" />
+            {{ categorias.nome(prescricao.categoriaId) }}
+          </span>
+          <template v-if="!prescricao.revisada">
+            <span class="bg-atencao-suave text-atencao-suave-foreground flex h-8 items-center rounded-full px-3 text-xs font-semibold">
+              {{ ETIQUETA_REVISAR }}
+            </span>
+            <Button
+              v-if="!MODO_PENDRIVE && !prescricao.excluidoEm"
+              variant="outline"
+              size="touch"
+              class="rounded-full text-sm"
+              @click="marcarRevisada"
+            >
+              <CircleCheck /> Marcar como revisada
+            </Button>
+            <ul
+              v-if="prescricao.duvidasImportacao.length"
+              class="bg-atencao-suave text-atencao-suave-foreground basis-full list-disc rounded-2xl py-3 pr-4 pl-8 text-sm"
+              aria-label="Dúvidas da importação"
+            >
+              <li v-for="(duvida, i) in prescricao.duvidasImportacao" :key="i">{{ duvida }}</li>
+            </ul>
+          </template>
+        </div>
+
+        <nav :class="cn('-m-1 gap-1.5 overflow-x-auto p-1 md:ml-auto', classeAbas)" role="tablist" aria-label="Seções da prescrição">
+          <button type="button" role="tab" :aria-selected="aba === 'prescricao'" :class="classeAba('prescricao')" @click="aba = 'prescricao'">
+            Prescrição
+          </button>
+          <button
+            v-if="temReceita"
+            type="button"
+            role="tab"
+            :aria-selected="aba === 'receita'"
+            :class="classeAba('receita')"
+            @click="aba = 'receita'"
+          >
+            Receita
+          </button>
+          <button
+            v-if="ligadas.length"
+            type="button"
+            role="tab"
+            :aria-selected="aba === 'calculadoras'"
+            :class="classeAba('calculadoras')"
+            @click="aba = 'calculadoras'"
+          >
+            Calculadoras · {{ ligadas.length }}
+          </button>
+        </nav>
       </div>
-      <!-- Ações (antes ficavam no fim da página) -->
-      <div v-if="!prescricao.excluidoEm && !MODO_PENDRIVE" class="-ml-2 flex flex-wrap gap-1">
-        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" as-child>
-          <RouterLink :to="`/prescricoes/${prescricao.id}/editar`"><Pencil /> Editar</RouterLink>
-        </Button>
-        <Button variant="ghost" size="touch" class="text-muted-foreground px-3 text-sm" @click="duplicar"><Copy /> Duplicar</Button>
-        <Button variant="ghost" size="touch" class="text-muted-foreground hover:text-destructive px-3 text-sm" @click="confirmarLixeira = true">
-          <Trash2 /> Excluir
-        </Button>
-      </div>
+
+      <p v-if="prescricao.excluidoEm" class="bg-muted rounded-2xl p-3 text-sm">Esta prescrição está na lixeira.</p>
     </header>
 
-    <div v-if="prescricao.excluidoEm" class="bg-muted rounded-2xl p-3 text-sm">
-      Esta prescrição está na lixeira.
-    </div>
-
-    <!-- Importada e não revisada -->
-    <div v-if="!prescricao.revisada" class="border-atencao/45 bg-atencao/12 flex flex-col gap-2 rounded-2xl border p-4">
-      <p class="font-semibold">Importada — não revisada</p>
-      <ul v-if="prescricao.duvidasImportacao.length" class="list-disc pl-5 text-sm">
-        <li v-for="(duvida, i) in prescricao.duvidasImportacao" :key="i">{{ duvida }}</li>
-      </ul>
-      <Button v-if="!MODO_PENDRIVE" size="touch" variant="outline" class="self-start" @click="marcarRevisada">
-        <CircleCheck /> Marcar como revisada
-      </Button>
-    </div>
-
-    <!-- Todos os alertas, em destaque no topo -->
-    <div v-if="prescricao.alertas.length" class="flex flex-col gap-2">
-      <CartaoAlerta
-        v-for="alerta in prescricao.alertas"
-        :key="alerta.id"
-        :alerta="alerta"
-        :referencia-item="numeroItem(alerta.itemId)"
-      />
-    </div>
-
-    <!-- Peso do paciente (só na memória desta tela) -->
-    <div v-if="temRegra" class="bg-card flex flex-col gap-2 rounded-2xl border p-4 shadow-xs">
-      <label for="peso" class="text-muted-foreground flex items-center gap-2 text-sm font-medium"><Scale class="size-4" /> Peso do paciente</label>
-      <div class="relative">
-        <input
-          id="peso"
-          v-model="pesoDigitado"
-          type="text"
-          inputmode="decimal"
-          autocomplete="off"
-          placeholder="ex.: 12,5"
-          :aria-invalid="(pesoDigitado.trim() !== '' && !leituraPeso.ok) || undefined"
-          aria-describedby="peso-ajuda"
-          class="border-input bg-background dark:bg-input/20 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-14 w-full rounded-xl border pr-12 pl-4 text-2xl font-semibold tabular-nums outline-none focus-visible:ring-3 aria-invalid:ring-3"
-        />
-        <span class="text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">kg</span>
-      </div>
-      <p
-        id="peso-ajuda"
-        :class="cn('text-sm', pesoDigitado.trim() !== '' && !leituraPeso.ok ? 'text-destructive' : 'text-muted-foreground')"
+    <!-- Aba Calculadoras (o conteúdo de uso vem numa fase posterior) -->
+    <section v-if="aba === 'calculadoras'" class="bg-card flex flex-col gap-1 rounded-lg p-2 shadow-xs">
+      <RouterLink
+        v-for="calc in ligadas"
+        :key="calc.id"
+        :to="`/calculadoras/${calc.id}`"
+        class="hover:bg-accent flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-colors"
       >
-        {{
-          pesoDigitado.trim() !== '' && !leituraPeso.ok
-            ? (leituraPeso as { erro: string }).erro
-            : 'Até 1 casa decimal. Não é salvo.'
-        }}
-      </p>
-    </div>
+        <Calculator class="text-primary size-[18px]" />
+        {{ calc.nome ?? 'Calculadora não encontrada' }}
+      </RouterLink>
+    </section>
 
-    <!-- Itens -->
-    <ol class="flex flex-col gap-3">
-      <template v-for="(item, i) in itens" :key="item.id">
-        <!-- Cabeçalho do grupo: condição com caixa de marcar (entra no Copiar) ou "Sempre" -->
-        <li v-if="cabecalho(i) === 'sempre'" class="text-muted-foreground mt-1 px-1 text-xs font-medium">
-          Sempre
-        </li>
-        <li v-else-if="cabecalho(i)" class="mt-1">
-          <label
-            :class="cn(
-              'flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-colors',
-              marcadas[(cabecalho(i) as { id: UUID }).id] ? 'border-primary/50 bg-primary/10' : 'border-dashed hover:bg-accent/60',
-            )"
-          >
-            <input
-              type="checkbox"
-              class="accent-primary size-5 shrink-0"
-              :checked="!!marcadas[(cabecalho(i) as { id: UUID }).id]"
-              @change="alternarCondicao((cabecalho(i) as { id: UUID }).id)"
-            />
-            <span class="flex-1 font-semibold">{{ (cabecalho(i) as { nome: string }).nome }}</span>
-            <span class="text-muted-foreground text-xs">
-              {{ marcadas[(cabecalho(i) as { id: UUID }).id] ? 'entra no Copiar' : 'não entra no Copiar' }}
-            </span>
-          </label>
-        </li>
-        <li
-          :class="cn(
-     'bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs transition-opacity',
-      !calculada.linhas[i]!.copiar &&'opacity-55',
-     )"
-        >
-          <div class="flex flex-wrap gap-3 sm:flex-nowrap">
-            <span class="bg-primary/12 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums">
-              {{ i + 1 }}
-            </span>
-            <!-- Opções equivalentes (OU): todas por extenso; escolher uma é obrigatório para copiar -->
-            <div
-              v-if="calculada.linhas[i]!.opcoesEquivalentes"
-              class="flex min-w-0 flex-1 basis-[calc(100%-2.5rem)] flex-col gap-1.5 sm:basis-0"
-              role="radiogroup"
-              :aria-label="`Opções do item ${i + 1}`"
-            >
-              <p :class="cn('text-xs font-medium', calculada.linhas[i]!.escolhaPendente ? 'text-atencao' : 'text-muted-foreground')">
-                {{ calculada.linhas[i]!.escolhaPendente ? 'Escolha uma opção' : 'Opção escolhida' }}
-              </p>
-              <button
-                v-for="(opcao, k) in calculada.linhas[i]!.opcoes"
-                :key="opcao.id"
-                type="button"
-                role="radio"
-                :aria-checked="escolhidas[item.id] === opcao.id"
-                :class="cn(
-                  'flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors',
-                  escolhidas[item.id] === opcao.id
-                    ? 'border-primary/50 bg-primary/10'
-                    : calculada.linhas[i]!.escolhaPendente
-                      ? 'hover:bg-accent/60'
-                      : 'opacity-50 hover:opacity-100',
-                )"
-                @click="escolher(item.id, opcao.id)"
-              >
-                <span
-                  :class="cn(
-                    'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2',
-                    escolhidas[item.id] === opcao.id ? 'border-primary' : 'border-muted-foreground/50',
-                  )"
-                >
-                  <span v-if="escolhidas[item.id] === opcao.id" class="bg-primary size-2.5 rounded-full" />
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="text-muted-foreground block text-xs">Opção {{ k + 1 }}<template v-if="opcao.rotulo"> · {{ opcao.rotulo }}</template></span>
-                  <span class="text-base whitespace-pre-line">{{ opcao.texto }}</span>
-                </span>
-              </button>
-            </div>
-            <div v-else class="min-w-0 flex-1 basis-[calc(100%-2.5rem)] sm:basis-0">
-              <p v-if="calculada.linhas[i]!.motivoAlternativa" class="text-primary mb-1 flex items-center gap-1 text-xs font-semibold">
-                <Replace class="size-3.5" /> Alternativa: {{ calculada.linhas[i]!.motivoAlternativa }}
-              </p>
-              <p class="text-base leading-relaxed whitespace-pre-line">{{ calculada.linhas[i]!.texto }}</p>
-            </div>
-            <!-- Troca pela alternativa -->
-            <CampoSelect
-              v-if="item.alternativas.length && !calculada.linhas[i]!.opcoesEquivalentes"
-              :model-value="escolhidas[item.id] ?? null"
-              :opcoes="opcoesItem(item)"
-              class="ml-10 w-[calc(100%-2.5rem)] shrink-0 sm:ml-0 sm:w-48"
-              :aria-label="`Substituir item ${i + 1}`"
-              @update:model-value="(altId) => escolher(item.id, altId)"
-            />
-          </div>
-
-          <CartaoAlerta v-for="alerta in alertasDoItem(item.id)" :key="alerta.id" :alerta="alerta" compacto />
-
-          <!-- Dose calculada: avisos de teto/peso limite + memória de cálculo -->
-          <ResultadoDose v-if="calculada.linhas[i]!.resultado" :resultado="calculada.linhas[i]!.resultado!" />
-          <p v-else-if="calculada.linhas[i]!.regra" class="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <Scale class="size-4" /> Informe o peso para calcular a dose.
-          </p>
-        </li>
-      </template>
-    </ol>
-
-    <div v-if="prescricao.receita" class="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs">
-      <div class="flex items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold">Receita pronta</h2>
-        <Button variant="outline" size="touch" class="text-sm" @click="copiarReceita"><ClipboardCopy /> Copiar receita</Button>
+    <!--
+      PC (md+): grade 1.55fr | 1fr. Linha 1: alertas e condições (só na coluna principal);
+      linha 2: lista + observações à esquerda e a receita à direita, alinhada ao topo da lista.
+    -->
+    <div v-else :class="cn('flex flex-col gap-4', temReceita && 'md:grid md:grid-cols-[1.55fr_1fr] md:items-start')">
+      <div
+        v-if="temTopo"
+        :class="cn('flex flex-col gap-4 md:col-start-1', classePrincipal)"
+      >
+        <AlertasPrescricao :alertas="prescricao.alertas" />
+        <SeletorCondicoes v-model="marcadas" :condicoes="prescricao.condicoes" />
       </div>
-      <p class="bg-muted/70 rounded-xl p-3 leading-relaxed whitespace-pre-line">{{ prescricao.receita }}</p>
-    </div>
 
-    <div v-if="prescricao.observacoes" class="flex flex-col gap-1.5 px-1">
-      <h2 class="text-sm font-semibold">Observações</h2>
-      <p class="leading-relaxed whitespace-pre-line">{{ prescricao.observacoes }}</p>
-    </div>
+      <div :class="cn('flex flex-col gap-4 md:col-start-1', classePrincipal)">
+        <div class="bg-card flex flex-col gap-4 rounded-lg p-4 shadow-xs md:p-5">
+          <ListaItens
+            v-if="itens.length"
+            v-model:escolhas="escolhas"
+            :itens="itens"
+            :condicoes="prescricao.condicoes"
+            :alertas="prescricao.alertas"
+            :destacado="destacado"
+          />
+          <p v-else class="text-muted-foreground py-2 text-[15px]">
+            {{ prescricao.itens.length ? 'Marque uma condição acima para ver os itens.' : 'Nenhum item cadastrado.' }}
+          </p>
 
-    <div v-if="prescricao.referencia" class="flex flex-col gap-1.5 border-t px-1 pt-4">
-      <h2 class="text-muted-foreground text-xs font-medium">Referência</h2>
-      <p class="text-muted-foreground text-sm whitespace-pre-line">{{ prescricao.referencia }}</p>
-    </div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Button size="touch" class="rounded-full font-semibold" @click="copiarPrescricao">
+              <ClipboardCopy /> Copiar prescrição
+            </Button>
+            <p v-if="copia && !copia.ok" class="text-muted-foreground text-sm" aria-live="polite">{{ copia.erro }}</p>
+          </div>
+        </div>
 
-    <!-- Copiar: barra fixa -->
-    <div
-      v-if="!prescricao.excluidoEm"
-      class="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-20 px-3 md:px-8"
-    >
-      <div class="bg-card/95 pointer-events-auto mx-auto flex max-w-[44rem] items-center gap-2 rounded-2xl border p-2 shadow-lg backdrop-blur-md">
-        <p v-if="motivoBloqueio" class="text-muted-foreground flex-1 px-2 text-sm">{{ motivoBloqueio }}</p>
-        <Button size="touch" :class="motivoBloqueio ? '' : 'flex-1'" :disabled="!calculada.podeCopiar" @click="copiar">
-          <ClipboardCopy /> Copiar
-        </Button>
+        <CaixaObservacoes :texto="prescricao.observacoes" />
+
+        <div v-if="prescricao.referencia.trim()" class="text-muted-foreground flex flex-col gap-0.5 px-1 text-xs">
+          <h2 class="font-semibold">Referência</h2>
+          <p class="whitespace-pre-line">{{ prescricao.referencia }}</p>
+        </div>
+      </div>
+
+      <div
+        v-if="temReceita"
+        :class="cn(
+          'md:col-start-2',
+          temTopo ? 'md:row-start-2' : 'md:row-start-1',
+          classeReceita,
+        )"
+      >
+        <CartaoReceita :receita="prescricao.receita" />
       </div>
     </div>
 

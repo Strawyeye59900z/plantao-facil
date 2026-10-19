@@ -69,8 +69,11 @@ function ativo(rota: string) {
 
 // Telas de edição: o topo mostra só o voltar e o título.
 const emEdicao = computed(() => /\/(nova|editar)$/.test(route.path))
-// A biblioteca (lateral + grade) usa a largura toda; as demais telas ficam estreitas, para leitura.
-const larguraTotal = computed(() => route.path === '/prescricoes' || route.path === '/calculadoras')
+// A biblioteca (lateral + grade) e a tela da prescrição (lista + receita ao lado) usam a largura toda;
+// as demais telas ficam estreitas, para leitura.
+const larguraTotal = computed(
+  () => route.path === '/prescricoes' || route.path === '/calculadoras' || route.name === 'prescricao',
+)
 const tituloEdicao = computed(() => route.meta.titulo ?? '')
 
 function voltar() {
