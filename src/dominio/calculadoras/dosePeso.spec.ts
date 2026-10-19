@@ -63,6 +63,14 @@ describe('calcularRegraDosePeso', () => {
       limitada: false,
     })
   })
+  it('dose máxima inválida marca regra incompleta', () => {
+    const esperado = { texto: '[regra incompleta]', limitada: false }
+    expect(calcularRegraDosePeso(regra({ doseMaxima: Number.NaN }), 70)).toEqual(esperado)
+    expect(calcularRegraDosePeso(regra({ doseMaxima: Number.POSITIVE_INFINITY }), null)).toEqual(esperado)
+  })
+  it('peso não finito é tratado como sem peso', () => {
+    expect(calcularRegraDosePeso(regra(), Number.NaN).texto).toBe('1 mg/kg')
+  })
   it('concentração inválida omite volume', () => {
     expect(calcularRegraDosePeso(regra({ concentracao: Number.NaN }), 70).texto).toBe('70 mg')
   })
