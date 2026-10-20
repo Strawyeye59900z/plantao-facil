@@ -2,12 +2,15 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { MODELOS, type ModeloTranscricao, useTranscricao } from '@/composables/useTranscricao'
+import { useDitadoLocal } from '@/composables/useDitadoLocal'
 
 /**
  * Página de teste da Fase 1: grava e transcreve no aparelho, sem enviar nada para servidor.
  */
 const t = useTranscricao()
 const modeloEscolhido = ref<ModeloTranscricao>('base')
+const d = useDitadoLocal()
+void d.verificar()
 
 onBeforeUnmount(() => t.liberar())
 
@@ -65,6 +68,34 @@ const rotulosStatus: Record<string, string> = {
     <section aria-labelledby="titulo-texto" class="rounded-2xl border bg-card p-4">
       <h2 id="titulo-texto" class="mb-2 text-sm font-semibold">Texto transcrito</h2>
       <p class="min-h-24 whitespace-pre-wrap text-base leading-relaxed">{{ t.texto.value || 'Nada transcrito ainda.' }}</p>
+    </section>
+
+    <section aria-labelledby="titulo-ditado" class="rounded-2xl border bg-card p-4">
+      <h2 id="titulo-ditado" class="mb-2 text-base font-semibold">Ditado do navegador (no aparelho)</h2>
+      <p class="text-muted-foreground mb-3 text-sm">
+        Usa o reconhecimento de voz do Chrome, forçado a rodar só no aparelho. Se o pacote de português
+        não estiver instalado, o navegador não inicia o ditado.
+      </p>
+      <p class="mb-3 text-sm" role="status">
+        Pacote pt-BR: <strong>{{ d.disponibilidade.value }}</strong>
+      </p>
+      <div class="mb-3 flex flex-wrap gap-2">
+        <Button size="touch" variant="outline" @click="d.verificar()">Verificar pacote</Button>
+        <Button
+          v-if="d.disponibilidade.value === 'downloadable'"
+          size="touch"
+          variant="outline"
+          @click="d.instalar().then(() => d.verificar())"
+        >
+          Instalar pacote pt-BR
+        </Button>
+        <Button v-if="!d.ditando.value" size="touch" :disabled="d.disponibilidade.value !== 'available'" @click="d.iniciar()">
+          Ditar (local)
+        </Button>
+        <Button v-else size="touch" variant="outline" @click="d.parar()">Parar ditado</Button>
+      </div>
+      <p v-if="d.erro.value" class="text-critico mb-2 text-sm" role="alert">{{ d.erro.value }}</p>
+      <p class="min-h-16 whitespace-pre-wrap text-base leading-relaxed">{{ d.texto.value || 'Nada ditado ainda.' }}</p>
     </section>
   </main>
 </template>
