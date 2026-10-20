@@ -90,6 +90,14 @@ describe('calcularRegraDosePeso', () => {
       limitada: true,
     })
   })
+  it('dose arredondada nunca passa da máxima', () => {
+    // bruta 0,26 ≤ 0,28, mas arredonda para 0,3 (> 0,28)
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.26, doseMaxima: 0.28 }), 1)).toEqual({ texto: '0,28 mg', limitada: true })
+    // bruta 10,6 ≤ 10,7, mas arredonda para 11 (> 10,7)
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 10.6, doseMaxima: 10.7, casasDecimais: 0 }), 1)).toEqual({ texto: '10,7 mg', limitada: true })
+    // bruta 2,44 > 2,43; arredondada 2,4 já fica abaixo da máxima
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 2.44, doseMaxima: 2.43 }), 1)).toEqual({ texto: '2,4 mg', limitada: true })
+  })
   it('dose zero continua "0 mg"', () => {
     expect(calcularRegraDosePeso(regra({ dosePorKg: 0 }), 3).texto).toBe('0 mg')
   })
