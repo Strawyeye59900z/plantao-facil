@@ -4,7 +4,15 @@ import { juntarTrechos } from '@/dominio/anamnese/juncao'
 import { iniciarCaptura, type Captura } from '@/lib/audio/captura'
 import type { MensagemDoWorker, MensagemParaWorker } from '@/workers/transcricao.worker'
 
-export const MODELO_PADRAO = 'onnx-community/whisper-small'
+/** Modelos de teste: "base" é mais rápido no celular; "small" é mais preciso e mais pesado. */
+export const MODELOS = {
+  base: 'onnx-community/whisper-base',
+  small: 'onnx-community/whisper-small',
+} as const
+
+export type ModeloTranscricao = keyof typeof MODELOS
+
+export const MODELO_PADRAO = MODELOS.base
 
 export type StatusTranscricao =
   | 'sem-modelo'

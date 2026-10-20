@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { Button } from '@/components/ui/button'
-import { useTranscricao } from '@/composables/useTranscricao'
+import { MODELOS, type ModeloTranscricao, useTranscricao } from '@/composables/useTranscricao'
 
 /**
  * Página de teste da Fase 1: grava e transcreve no aparelho, sem enviar nada para servidor.
  */
 const t = useTranscricao()
+const modeloEscolhido = ref<ModeloTranscricao>('base')
 
 onBeforeUnmount(() => t.liberar())
 
@@ -40,7 +41,12 @@ const rotulosStatus: Record<string, string> = {
     <p v-if="t.erro.value" class="text-critico text-sm" role="alert">{{ t.erro.value }}</p>
 
     <div class="flex flex-wrap gap-2">
-      <Button size="touch" variant="outline" @click="t.carregarModelo()">Carregar modelo</Button>
+      <Button size="touch" variant="outline" @click="t.carregarModelo(MODELOS[modeloEscolhido])">
+        Carregar modelo ({{ modeloEscolhido }})
+      </Button>
+      <Button size="touch" variant="ghost" @click="modeloEscolhido = modeloEscolhido === 'base' ? 'small' : 'base'">
+        Trocar para {{ modeloEscolhido === 'base' ? 'small' : 'base' }}
+      </Button>
       <Button size="touch" :disabled="t.status.value !== 'pronto' && t.status.value !== 'pausado'" @click="t.iniciar()">
         Gravar
       </Button>
