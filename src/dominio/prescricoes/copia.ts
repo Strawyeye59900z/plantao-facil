@@ -36,12 +36,12 @@ export function montarCopiaPrescricao(
 ): ResultadoCopia {
   const visiveis = itensVisiveis(p, marcadas)
   if (visiveis.length === 0) {
-    return { ok: false, erro: p.itens.length > 0 ? 'Marque uma condição para copiar.' : 'Não há itens para copiar.' }
+    return { ok: false, erro: p.itens.length > 0 ? 'Marque a condição do paciente para copiar.' : 'Não há itens para copiar.' }
   }
   const linhas: string[] = []
   for (const [i, item] of visiveis.entries()) {
     const texto = textoEscolhido(item, escolhas)
-    if (texto === undefined) return { ok: false, erro: `Escolha uma opção no item ${i + 1}.` }
+    if (texto === undefined) return { ok: false, erro: `Falta escolher uma opção no item ${i + 1}.` }
     linhas.push(`${i + 1}. ${emUmaLinha(texto)}`)
   }
   return { ok: true, texto: linhas.join('\n') }

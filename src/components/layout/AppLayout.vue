@@ -34,7 +34,7 @@ const listaDaBusca = computed(() =>
   route.path.startsWith('/calculadoras') ? '/calculadoras' : route.path.startsWith('/escalas') ? '/escalas' : '/prescricoes',
 )
 const rotuloBusca = computed(() =>
-  listaDaBusca.value === '/calculadoras' ? 'Buscar calculadora' : listaDaBusca.value === '/escalas' ? 'Buscar escala' : 'Buscar prescrição',
+  listaDaBusca.value === '/calculadoras' ? 'Buscar calculadora' : listaDaBusca.value === '/escalas' ? 'Buscar escala' : 'Buscar prescrição, grupo ou medicação',
 )
 
 function buscar() {
@@ -132,7 +132,7 @@ function voltar() {
               :to="area.rota"
               :aria-current="ativo(area.rota) ? 'page' : undefined"
               :class="cn(
-                'flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 text-[11px] leading-tight font-semibold shadow-xs transition-colors',
+                'flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 text-xs leading-tight font-semibold shadow-xs transition-colors',
                 'sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 sm:text-sm',
                 ativo(area.rota) ? 'bg-foreground text-background' : 'bg-card hover:bg-accent',
               )"

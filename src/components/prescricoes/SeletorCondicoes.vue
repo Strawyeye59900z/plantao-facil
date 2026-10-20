@@ -15,7 +15,7 @@ function alternar(id: UUID) {
 
 <template>
   <div v-if="condicoes.length" class="flex flex-col gap-2">
-    <p id="rotulo-condicoes" class="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">O paciente tem…</p>
+    <p id="rotulo-condicoes" class="text-muted-foreground text-sm font-semibold">O paciente tem…</p>
     <div class="flex flex-wrap gap-2" role="group" aria-labelledby="rotulo-condicoes">
       <button
         v-for="condicao in condicoes"

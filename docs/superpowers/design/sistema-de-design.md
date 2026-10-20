@@ -1,6 +1,8 @@
 # Sistema de design — Plantão Fácil v2 (rascunho para aprovação)
 
-Data: 20/10/2026. Status: **rascunho, aguardando aprovação do Gabriel** (visual, texto e usabilidade).
+Data: 20/10/2026. Status: **direção visual aprovada (20/10/2026)**; textos da seção 7 aprovados nas telas de prescrição; tela inicial e modo consulta em aplicação.
+
+Decisões de aprovação: cor padrão verde-água (`#0f9d8a`) escolhível nos Ajustes; prioridade: prescrições, depois modo consulta.
 
 ## 1. Direção aprovada até aqui
 
@@ -71,7 +73,15 @@ Já aprovada na Fase 1: fundo cinza-azulado claro, cartões brancos bem arredond
 | "Marque uma condição para copiar." | "Marque a condição do paciente para copiar." | mais concreto |
 | "Importada — não revisada" | "Revisar antes de usar" | ação, não estado |
 
-## 8. Perguntas para você decidir
+## 8. Decisões de aprovação
+
+- Direção visual aprovada.
+- Verde-água como padrão.
+- Prioridade: prescrições e modo consulta.
+- Modo consulta mantém o fundo escuro da referência enviada pelo Gabriel, por ser usado durante a consulta.
+- Rótulo da lista de lembretes: "Perguntar ainda" (a referência dizia "Não esquecer"); pendente de confirmação.
+
+## 9. Perguntas em aberto (históricas)
 
 1. Você aprova a direção visual acima (cores, tamanhos, pílulas)?
 2. O tamanho mínimo de texto de 12 px serve para o seu uso na UPA?

@@ -72,7 +72,7 @@ describe('montarCopiaPrescricao', () => {
 
     it('condição marcada sem escolha: erro com o número VISÍVEL (renumerado)', () => {
       // ordem visível: A, C, B -> B é o 3º (posição de cadastro é 2)
-      expect(montarCopiaPrescricao(p, { x: true }, {})).toEqual({ ok: false, erro: 'Escolha uma opção no item 3.' })
+      expect(montarCopiaPrescricao(p, { x: true }, {})).toEqual({ ok: false, erro: 'Falta escolher uma opção no item 3.' })
     })
 
     it('condição marcada com escolha: copia o texto da opção escolhida', () => {
@@ -82,21 +82,21 @@ describe('montarCopiaPrescricao', () => {
     it('escolha para uma opção que não existe no item conta como sem escolha', () => {
       expect(montarCopiaPrescricao(p, { x: true }, { B: 'inexistente' })).toEqual({
         ok: false,
-        erro: 'Escolha uma opção no item 3.',
+        erro: 'Falta escolher uma opção no item 3.',
       })
     })
 
     it('opção de outro item não vale como escolha', () => {
       expect(montarCopiaPrescricao(p, { x: true }, { B: 'C-o' })).toEqual({
         ok: false,
-        erro: 'Escolha uma opção no item 3.',
+        erro: 'Falta escolher uma opção no item 3.',
       })
     })
 
     it('com vários "OU" sem escolha, aponta o primeiro na ordem visível', () => {
       const q = prescricaoTeste({ itens: [ou('P', ['p1', 'p2']), ou('Q', ['q1', 'q2'])], condicoes: [] })
-      expect(montarCopiaPrescricao(q, {}, { P: 'P1' })).toEqual({ ok: false, erro: 'Escolha uma opção no item 2.' })
-      expect(montarCopiaPrescricao(q, {}, {})).toEqual({ ok: false, erro: 'Escolha uma opção no item 1.' })
+      expect(montarCopiaPrescricao(q, {}, { P: 'P1' })).toEqual({ ok: false, erro: 'Falta escolher uma opção no item 2.' })
+      expect(montarCopiaPrescricao(q, {}, {})).toEqual({ ok: false, erro: 'Falta escolher uma opção no item 1.' })
     })
   })
 
@@ -110,8 +110,8 @@ describe('montarCopiaPrescricao', () => {
 
   it('só itens condicionais e nada marcado: pede para marcar uma condição', () => {
     const p = prescricaoTeste({ itens: [simples('x1', 'X1', 'x'), simples('y1', 'Y1', 'y')], condicoes })
-    expect(montarCopiaPrescricao(p, {}, {})).toEqual({ ok: false, erro: 'Marque uma condição para copiar.' })
-    expect(montarCopiaPrescricao(p, { x: false }, {})).toEqual({ ok: false, erro: 'Marque uma condição para copiar.' })
+    expect(montarCopiaPrescricao(p, {}, {})).toEqual({ ok: false, erro: 'Marque a condição do paciente para copiar.' })
+    expect(montarCopiaPrescricao(p, { x: false }, {})).toEqual({ ok: false, erro: 'Marque a condição do paciente para copiar.' })
     expect(montarCopiaPrescricao(p, { x: true }, {})).toEqual({ ok: true, texto: '1. X1' })
   })
 

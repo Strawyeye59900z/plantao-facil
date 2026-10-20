@@ -83,6 +83,12 @@ export const router = createRouter({
       meta: { titulo: 'Escala' },
     },
     {
+      path: '/anamnese/demo',
+      name: 'anamnese-demo',
+      component: () => import('@/views/AnamneseDemoView.vue'),
+      meta: { titulo: 'Modo consulta (demonstração)' },
+    },
+    {
       path: '/ajustes',
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),
