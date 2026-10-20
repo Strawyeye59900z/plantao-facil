@@ -28,14 +28,16 @@ export function calcularRegraDosePeso(
   }
   const fator = 10 ** r.casasDecimais
   const semArredondar = limpar(r.dosePorKg * pesoKg)
-  const calculada = Math.round(limpar(r.dosePorKg * pesoKg * fator)) / fator
-  const limitada = r.doseMaxima !== null && calculada > r.doseMaxima
-  let dose = limitada ? (r.doseMaxima as number) : calculada
+  // Teto aplicado à dose sem arredondar, antes de qualquer arredondamento.
+  const limitada = r.doseMaxima !== null && semArredondar > r.doseMaxima
+  const capada = limitada ? (r.doseMaxima as number) : semArredondar
+  const arredondada = Math.round(limpar(capada * fator)) / fator
+  let dose = limitada ? capada : arredondada
   let texto = `${formatarNumero(dose)} ${r.unidade}`
-  if (!limitada && semArredondar > 0 && calculada === 0) {
-    // Dose positiva que some no arredondamento: mostra "< 0,1 mg" e o volume usa a dose sem arredondar.
+  if (capada > 0 && arredondada === 0) {
+    // Dose positiva que some no arredondamento: mostra "< 0,1 mg" e o volume usa a dose (já com o teto) sem arredondar.
     texto = `< ${formatarNumero(1 / fator)} ${r.unidade}`
-    dose = semArredondar
+    dose = capada
   }
   if (r.concentracao !== null && Number.isFinite(r.concentracao) && r.concentracao > 0) {
     const bruto = limpar(dose / r.concentracao)

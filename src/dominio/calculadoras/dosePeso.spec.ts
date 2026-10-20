@@ -83,6 +83,13 @@ describe('calcularRegraDosePeso', () => {
     expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01, concentracao: 0.1 }), 3).texto).toBe('< 0,1 mg (0,3 mL)')
     expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01, concentracao: 10 }), 3).texto).toBe('< 0,1 mg (< 0,01 mL)')
   })
+  it('dose mínima acima do teto: teto aplicado antes do arredondamento (volume pelo teto)', () => {
+    // bruta 0,04 mg, teto 0,03 mg, 1 casa: 0,03 ÷ 0,1 mg/mL = 0,3 mL (pela bruta daria 0,4 mL)
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01, doseMaxima: 0.03, concentracao: 0.1 }), 4)).toEqual({
+      texto: '< 0,1 mg (0,3 mL)',
+      limitada: true,
+    })
+  })
   it('dose zero continua "0 mg"', () => {
     expect(calcularRegraDosePeso(regra({ dosePorKg: 0 }), 3).texto).toBe('0 mg')
   })
