@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import AjudaRecolhivel from '@/components/comum/AjudaRecolhivel.vue'
 import CampoSelect from '@/components/comum/CampoSelect.vue'
 import CampoTags from '@/components/comum/CampoTags.vue'
 import {
@@ -245,10 +246,10 @@ const ROTULO_GRUPO = 'text-xs font-semibold'
     <!-- 2. Condições -->
     <section :class="CARTAO" :aria-labelledby="id('titulo-condicoes')">
       <h2 :id="id('titulo-condicoes')" :class="TITULO">Condições</h2>
-      <p :class="DICA">
-        Opcional. Itens de uma condição só entram no Copiar quando ela é marcada na tela da prescrição; itens “Sempre” entram
-        sempre.
-      </p>
+      <AjudaRecolhivel
+        curta="Opcional. Itens de condição só entram no Copiar quando a condição for marcada."
+        completa="Opcional. Itens de uma condição só entram no Copiar quando ela é marcada na tela da prescrição; itens “Sempre” entram sempre."
+      />
       <div v-for="(condicao, i) in dados.condicoes" :key="condicao.id" class="flex items-center gap-1">
         <Input
           :id="id(`condicao-${condicao.id}`)"
@@ -298,10 +299,10 @@ const ROTULO_GRUPO = 'text-xs font-semibold'
     <!-- 3. Itens -->
     <section :class="CARTAO" :aria-labelledby="id('titulo-itens')">
       <h2 :id="id('titulo-itens')" :class="TITULO">Itens *</h2>
-      <p :class="DICA">
-        Para opções equivalentes, use “+ opção OU”: na prescrição nenhuma vem escolhida e é preciso escolher uma antes de
-        copiar.
-      </p>
+      <AjudaRecolhivel
+        curta="Para opções equivalentes, use “+ opção OU”."
+        completa="Para opções equivalentes, use “+ opção OU”: na prescrição nenhuma vem escolhida e é preciso escolher uma antes de copiar."
+      />
 
       <template v-for="(item, i) in dados.itens" :key="item.id">
         <h3
