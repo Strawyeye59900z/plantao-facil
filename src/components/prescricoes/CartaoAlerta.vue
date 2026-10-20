@@ -15,7 +15,7 @@ const icone = computed(() => ESTILO_GRAVIDADE[props.alerta.gravidade].componente
   <div role="note" :class="cn('flex items-start gap-3 rounded-2xl border px-4 py-3', TINTA_GRAVIDADE[alerta.gravidade])">
     <component :is="icone" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
     <div class="min-w-0 flex-1">
-      <p class="text-[11px] font-bold tracking-wider uppercase">
+      <p class="text-xs font-semibold">
         {{ ROTULO_TIPO_ALERTA[alerta.tipo] }}
         <span class="sr-only">· {{ ROTULO_GRAVIDADE[alerta.gravidade] }}</span>
       </p>

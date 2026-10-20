@@ -187,7 +187,7 @@ const CARTAO = 'bg-card flex flex-col gap-4 rounded-lg p-4 shadow-xs md:p-5'
 const TITULO = 'text-lg font-extrabold tracking-tight'
 const DICA = 'text-muted-foreground -mt-2 text-sm'
 const BOTAO_ICONE = 'rounded-full'
-const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
+const ROTULO_GRUPO = 'text-xs font-semibold'
 </script>
 
 <template>
@@ -327,7 +327,7 @@ const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
               <span class="font-semibold">Item {{ i + 1 }}</span>
               <span
                 v-if="item.opcoes.length >= 2"
-                class="bg-accent text-primary rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap"
+                class="bg-accent text-primary rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap"
               >
                 OU · {{ item.opcoes.length }} opções
               </span>
@@ -384,7 +384,7 @@ const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
           <template v-for="(opcao, j) in item.opcoes" :key="opcao.id">
             <div v-if="j > 0" class="flex items-center gap-2" aria-hidden="true">
               <span class="bg-border h-px flex-1" />
-              <span class="bg-foreground text-background rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wider">OU</span>
+              <span class="bg-foreground text-background rounded-full px-2.5 py-0.5 text-xs font-bold">OU</span>
               <span class="bg-border h-px flex-1" />
             </div>
             <div

@@ -122,7 +122,7 @@ function mover(indice: number, direcao: -1 | 1) {
       {{ busca.trim() ? 'Nada encontrado.' : 'Todas já estão ligadas.' }}
     </p>
     <div v-for="grupo in porArea" :key="grupo.area" class="flex flex-col gap-1">
-      <h3 class="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">{{ grupo.titulo }}</h3>
+      <h3 class="text-muted-foreground text-xs font-semibold">{{ grupo.titulo }}</h3>
       <ul class="flex max-h-64 flex-col gap-1 overflow-y-auto">
         <li v-for="c in grupo.itens" :key="c.id">
           <button

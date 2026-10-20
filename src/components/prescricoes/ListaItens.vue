@@ -28,7 +28,7 @@ function escolher(itemId: UUID, opcaoId: UUID) {
   escolhas.value = { ...escolhas.value, [itemId]: opcaoId }
 }
 
-const ETIQUETA = 'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap'
+const ETIQUETA = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold whitespace-nowrap'
 </script>
 
 <template>
@@ -41,7 +41,7 @@ const ETIQUETA = 'inline-flex items-center rounded-full border px-2 py-0.5 text-
     >
       <span
         :class="cn(
-          'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums md:size-6 md:text-[11px]',
+          'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums md:size-6 md:text-xs',
           condicaoDoItem(item, condicoes) ? 'bg-primary text-primary-foreground' : 'bg-secondary',
         )"
       >

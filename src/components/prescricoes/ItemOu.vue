@@ -30,7 +30,7 @@ const nome = `ou-${props.item.id}`
       <span
         :id="`${nome}-rotulo`"
         :class="cn(
-          'text-[11px] font-bold tracking-wider uppercase',
+          'text-xs font-semibold',
           destacado && !escolhida ? 'text-atencao-suave-foreground' : 'text-muted-foreground',
         )"
       >

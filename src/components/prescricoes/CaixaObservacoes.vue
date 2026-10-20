@@ -14,7 +14,7 @@ const paragrafos = computed(() => paragrafosObservacoes(props.texto))
     aria-labelledby="titulo-observacoes"
     class="bg-observacoes text-observacoes-foreground border-atencao/25 flex flex-col gap-2 rounded-lg border px-4 py-3.5 md:px-5"
   >
-    <h2 id="titulo-observacoes" class="text-atencao-suave-foreground text-[11px] font-bold tracking-wider uppercase">
+    <h2 id="titulo-observacoes" class="text-atencao-suave-foreground text-xs font-semibold">
       Observações
     </h2>
     <p v-for="(paragrafo, i) in paragrafos" :key="i" class="text-[15px] leading-relaxed whitespace-pre-line">

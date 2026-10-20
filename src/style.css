@@ -79,7 +79,7 @@
     --secondary: #e5e9f1;
     --secondary-foreground: #151a2d;
     --muted: #e5e9f1;
-    --muted-foreground: #7b8297;
+    --muted-foreground: #5b6378;
     --accent: color-mix(in srgb, var(--primary) 12%, #ffffff);
     --accent-foreground: #151a2d;
     --destructive: oklch(0.55 0.2 27);

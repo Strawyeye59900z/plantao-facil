@@ -19,7 +19,7 @@ async function copiar() {
 
 <template>
   <section aria-labelledby="titulo-receita" class="bg-card flex flex-col gap-3 rounded-lg p-4 shadow-xs md:p-5">
-    <h2 id="titulo-receita" class="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">Receita de alta</h2>
+    <h2 id="titulo-receita" class="text-muted-foreground text-xs font-semibold">Receita de alta</h2>
     <pre class="bg-secondary/70 rounded-2xl p-3.5 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">{{ receita }}</pre>
     <Button size="touch" class="bg-foreground text-background hover:bg-foreground/90 self-start rounded-full font-semibold" @click="copiar">
       <ClipboardCopy /> Copiar receita
