@@ -27,21 +27,34 @@ escopo.onmessage = async (evento: MessageEvent<MensagemParaWorker>) => {
   const mensagem = evento.data
   try {
     if (mensagem.tipo === 'carregar') {
-      const modelo = await pipeline('automatic-speech-recognition', mensagem.modelo, {
-        device: mensagem.dispositivo,
-        dtype: mensagem.dispositivo === 'webgpu' ? 'fp16' : 'q8',
-        progress_callback: (p: { status?: string; file?: string; progress?: number }) => {
-          if (p.status === 'progress' && p.file) {
-            escopo.postMessage({
-              tipo: 'progresso',
-              arquivo: p.file,
-              porcentagem: Math.round(p.progress ?? 0),
-            } satisfies MensagemDoWorker)
-          }
-        },
-      })
-      transcritor = modelo as unknown as Transcritor
-      escopo.postMessage({ tipo: 'pronto', dispositivo: mensagem.dispositivo } satisfies MensagemDoWorker)
+      const progresso = (p: { status?: string; file?: string; progress?: number }) => {
+        if (p.status === 'progress' && p.file) {
+          escopo.postMessage({
+            tipo: 'progresso',
+            arquivo: p.file,
+            porcentagem: Math.round(p.progress ?? 0),
+          } satisfies MensagemDoWorker)
+        }
+      }
+      const carregar = (dispositivo: 'webgpu' | 'wasm') =>
+        pipeline('automatic-speech-recognition', mensagem.modelo, {
+          device: dispositivo,
+          dtype: dispositivo === 'webgpu' ? 'fp16' : 'q8',
+          progress_callback: progresso,
+        })
+
+      // Alguns aparelhos têm WebGPU, mas sem suporte a fp16: nesse caso usa o processador (WASM).
+      let dispositivoUsado: 'webgpu' | 'wasm' = mensagem.dispositivo
+      let modelo: unknown
+      try {
+        modelo = await carregar(mensagem.dispositivo)
+      } catch (falha) {
+        if (mensagem.dispositivo !== 'webgpu') throw falha
+        dispositivoUsado = 'wasm'
+        modelo = await carregar('wasm')
+      }
+      transcritor = modelo as Transcritor
+      escopo.postMessage({ tipo: 'pronto', dispositivo: dispositivoUsado } satisfies MensagemDoWorker)
       return
     }
 
