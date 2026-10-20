@@ -213,3 +213,11 @@ npm run build      # checagem de tipos + build de produção (dist/)
 npm run preview    # serve o build (http://localhost:4173) — para testar PWA/offline
 npm run build:pendrive  # arquivo único dist-pendrive/plantao-facil.html (modo pen drive)
 ```
+
+## Anamnese por voz (em implementação, Fase 1)
+
+- Plano: `plano-transcricao-anamnese.md` (Downloads). Decisões: `docs/superpowers/decisoes/2026-10-20-anamnese-e-hospedagem.md`.
+- **Transcrição no aparelho:** Whisper (`onnx-community/whisper-small`, via `@huggingface/transformers` fixado em 4.3.1) rodando em Web Worker (`src/workers/transcricao.worker.ts`). O áudio é PCM 16 kHz em blocos de 30 s com 2 s de sobreposição (`src/dominio/anamnese/blocos.ts`), fica só em memória e é descartado após transcrito. Nada de áudio em disco.
+- Junção dos blocos sem repetir palavras: `src/dominio/anamnese/juncao.ts`.
+- Página de teste da Fase 1: `/#/anamnese/transcricao`. Modo consulta (visual e demonstração): `/#/anamnese/demo`.
+- Telas `/anamnese/*` ficam fora do modo pen drive (`rotaBloqueadaNoPenDrive`).

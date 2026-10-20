@@ -13,6 +13,7 @@
     "build:pendrive": "vue-tsc -b && vite build --mode pendrive"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.1",
     "@lucide/vue": "^1.57.0",
     "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
