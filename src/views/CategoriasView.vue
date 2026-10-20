@@ -14,6 +14,17 @@ const categorias = useCategoriasStore()
 
 // Grupos são separados por módulo.
 const escopo = ref<EscopoCategoria>('prescricao')
+const ABAS: { valor: EscopoCategoria; rotulo: string }[] = [
+  { valor: 'prescricao', rotulo: 'Prescrições' },
+  { valor: 'calculadora', rotulo: 'Calculadoras' },
+  { valor: 'escala', rotulo: 'Escalas' },
+]
+/** Singular e plural do item de cada módulo (contagem e mensagem de exclusão). */
+const PALAVRAS: Record<EscopoCategoria, [string, string]> = {
+  prescricao: ['prescrição', 'prescrições'],
+  calculadora: ['calculadora', 'calculadoras'],
+  escala: ['escala', 'escalas'],
+}
 const lista = computed(() => categorias.doEscopo(escopo.value))
 const nova = ref('')
 const novoIcone = ref<string | null>(null)
@@ -64,11 +75,16 @@ const confirmarExclusao = computed({
   },
 })
 
+function contagem(n: number): string {
+  const [um, varios] = PALAVRAS[escopo.value]
+  return `${n} ${n === 1 ? um : varios}`
+}
+
 const descricaoExclusao = computed(() => {
   if (!paraExcluir.value) return ''
   const n = categorias.emUso(paraExcluir.value.id)
   if (n === 0) return 'Nenhum item usa este grupo.'
-  const [um, varios] = escopo.value === 'prescricao' ? ['prescrição', 'prescrições'] : ['calculadora', 'calculadoras']
+  const [um, varios] = PALAVRAS[escopo.value]
   return `${n} ${n === 1 ? `${um} ficará` : `${varios} ficarão`} como “${ROTULO_SEM_CATEGORIA}”.`
 })
 
@@ -83,14 +99,14 @@ async function excluir() {
   <section class="flex flex-col gap-4">
     <h1 class="text-2xl font-semibold md:text-3xl">Grupos</h1>
 
-    <div class="bg-muted grid grid-cols-2 gap-1 rounded-xl p-1" role="tablist" aria-label="Módulo">
+    <div class="bg-muted grid grid-cols-3 gap-1 rounded-xl p-1" role="tablist" aria-label="Módulo">
       <button
-        v-for="opcao in [{ valor: 'prescricao', rotulo: 'Prescrições' }, { valor: 'calculadora', rotulo: 'Calculadoras' }] as const"
+        v-for="opcao in ABAS"
         :key="opcao.valor"
         type="button"
         role="tab"
         :aria-selected="escopo === opcao.valor"
-        :class="cn('h-10 rounded-lg text-sm font-medium', escopo === opcao.valor ? 'bg-background shadow-sm' : 'text-muted-foreground')"
+        :class="cn('h-11 rounded-lg text-sm font-medium', escopo === opcao.valor ? 'bg-background shadow-sm' : 'text-muted-foreground')"
         @click="escopo = opcao.valor"
       >
         {{ opcao.rotulo }}
@@ -128,7 +144,7 @@ async function excluir() {
           />
           <span class="flex-1 px-2">
             {{ c.nome }}
-            <span class="text-muted-foreground text-sm">· {{ categorias.emUso(c.id) }}</span>
+            <span class="text-muted-foreground block text-xs">{{ contagem(categorias.emUso(c.id)) }}</span>
           </span>
           <Button variant="ghost" size="icon-touch" :disabled="i === 0" aria-label="Mover para cima" @click="categorias.mover(c.id, -1)">
             <ArrowUp />

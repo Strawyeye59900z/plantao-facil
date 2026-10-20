@@ -38,6 +38,9 @@ const ROTULOS: Record<string, string> = {
   campos: 'campos',
   entradas: 'entradas',
   expressao: 'expressão',
+  area: 'área',
+  linhas: 'linhas',
+  saidas: 'resultados',
 }
 
 const campos = computed(() => props.item.campos.map((c) => ROTULOS[c] ?? c).join(', '))

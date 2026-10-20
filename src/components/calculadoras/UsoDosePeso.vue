@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { TriangleAlert } from '@lucide/vue'
 import { montarLinhaDosePeso } from '@/dominio/calculadoras/dosePeso'
 import { lerPeso } from '@/dominio/dose/peso'
@@ -10,6 +10,10 @@ import type { CalculadoraDosePeso } from '@/dominio/tipos'
  * (nenhum dado de paciente é salvo). Sem peso válido, as linhas mostram as regras.
  */
 const props = defineProps<{ calculadora: Pick<CalculadoraDosePeso, 'linhas'> }>()
+
+/** Ids únicos: a tela da prescrição pode mostrar várias calculadoras ao mesmo tempo. */
+const idPeso = useId()
+const idErro = `${idPeso}-erro`
 
 const textoPeso = ref('')
 const leitura = computed(() => (textoPeso.value.trim() === '' ? null : lerPeso(textoPeso.value)))
@@ -22,22 +26,22 @@ const linhas = computed(() => props.calculadora.linhas.map((l) => ({ id: l.id, p
 <template>
   <div class="flex flex-col gap-4">
     <div class="bg-card flex flex-col gap-2 rounded-3xl p-4 shadow-xs">
-      <label for="peso-paciente" class="text-muted-foreground text-xs font-semibold">Peso (kg)</label>
+      <label :for="idPeso" class="text-muted-foreground text-xs font-semibold">Peso (kg)</label>
       <div class="relative">
         <input
-          id="peso-paciente"
+          :id="idPeso"
           v-model="textoPeso"
           type="text"
           inputmode="decimal"
           autocomplete="off"
           placeholder="0"
           :aria-invalid="!!erro || undefined"
-          aria-describedby="peso-erro"
+          :aria-describedby="idErro"
           class="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 h-16 w-full rounded-2xl border px-4 pr-14 text-3xl font-extrabold outline-none focus-visible:ring-3 aria-invalid:ring-3"
         />
         <span class="text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-base">kg</span>
       </div>
-      <p id="peso-erro" class="text-destructive min-h-0 text-sm" role="alert">{{ erro }}</p>
+      <p :id="idErro" class="text-destructive min-h-0 text-sm" role="alert">{{ erro }}</p>
     </div>
 
     <ul class="flex flex-col gap-2">

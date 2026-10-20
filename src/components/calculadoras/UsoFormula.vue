@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import CampoNumero from '@/components/comum/CampoNumero.vue'
 import { ESTILO_GRAVIDADE } from '@/components/prescricoes/gravidade'
 import { calcularSaidas, type ValoresFormula } from '@/dominio/calculadoras/formula'
+import { formatarNumero } from '@/dominio/dose/numeros'
 import type { CalculadoraFormula, UUID } from '@/dominio/tipos'
 import { ROTULO_GRAVIDADE } from '@/dominio/tipos'
 import { cn } from '@/lib/utils'
@@ -48,9 +49,9 @@ const cartoes = computed(() => {
         <label :for="`campo-${campo.id}`" class="min-w-0 flex-1 text-sm font-semibold">
           {{ campo.rotulo || campo.variavel }}
           <span v-if="campo.tipo === 'numero' && (campo.min !== null || campo.max !== null)" class="text-muted-foreground block text-xs font-normal">
-            <template v-if="campo.min !== null && campo.max !== null">de {{ campo.min }} a {{ campo.max }} {{ campo.unidade }}</template>
-            <template v-else-if="campo.min !== null">a partir de {{ campo.min }} {{ campo.unidade }}</template>
-            <template v-else>até {{ campo.max }} {{ campo.unidade }}</template>
+            <template v-if="campo.min !== null && campo.max !== null">de {{ formatarNumero(campo.min) }} a {{ formatarNumero(campo.max) }} {{ campo.unidade }}</template>
+            <template v-else-if="campo.min !== null">a partir de {{ formatarNumero(campo.min) }} {{ campo.unidade }}</template>
+            <template v-else>até {{ formatarNumero(campo.max as number) }} {{ campo.unidade }}</template>
           </span>
         </label>
 
