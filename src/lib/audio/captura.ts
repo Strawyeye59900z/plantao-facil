@@ -20,6 +20,11 @@ export interface Captura {
 }
 
 export async function iniciarCaptura(aoReceberTrecho: (trecho: Float32Array) => void): Promise<Captura> {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    throw new Error(
+      'O microfone não está liberado neste endereço, porque a conexão não é segura. Use o endereço https ou abra pelo localhost, e confira as instruções de teste.',
+    )
+  }
   const fluxo = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
   })
