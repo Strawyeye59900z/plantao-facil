@@ -71,7 +71,7 @@ Testes ficam ao lado do código: `*.spec.ts`.
 
 ### Layout (v2, branch `v2`)
 - Largura: a biblioteca (`/prescricoes`, `/calculadoras`) usa `max-w-6xl`; as demais telas ficam em `max-w-3xl`, para leitura.
-- Topo único (sem menu lateral nem navegação inferior): logo redondo na cor de destaque, pílulas das áreas (`AREAS` em `navegacao.ts`; a ativa em `--foreground`), busca em pílula (grava `?q=` na rota da área) e botão redondo de menu (`MENU`: Grupos, Importar PDF, Backup, Lixeira, Ajustes). No celular, logo + busca + menu numa linha e as pílulas embaixo.
+- Topo único (sem menu lateral nem navegação inferior): logo redondo na cor de destaque, pílulas das áreas (`AREAS` em `navegacao.ts`; a ativa em `--foreground`), busca em pílula (grava `?q=` na rota da área) e botão redondo de menu (`MENU`: Grupos, Importar PDF, Backup, Lixeira, Ajustes). No celular, logo + busca + menu numa linha e as pílulas embaixo: **3 pílulas iguais na largura toda, ícone sobre o rótulo** (cabem em 320 px, 44 px de altura); a partir de `sm`, ícone ao lado do rótulo.
 - Rotas `/nova` e `/editar`: o topo mostra só voltar + `route.meta.titulo`.
 
 ### Visual (v2, branch `v2`)

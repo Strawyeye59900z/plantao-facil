@@ -124,6 +124,7 @@ function voltar() {
             <ClipboardCheck class="size-5" />
           </RouterLink>
 
+          <!-- Celular: 3 pílulas iguais na largura toda, ícone sobre o rótulo (cabe em 320 px). sm+: ícone ao lado. -->
           <nav class="order-last flex w-full gap-1.5 md:order-none md:w-auto" aria-label="Áreas">
             <RouterLink
               v-for="area in AREAS"
@@ -131,12 +132,13 @@ function voltar() {
               :to="area.rota"
               :aria-current="ativo(area.rota) ? 'page' : undefined"
               :class="cn(
-                'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold shadow-xs transition-colors',
+                'flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 text-[11px] leading-tight font-semibold shadow-xs transition-colors',
+                'sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 sm:text-sm',
                 ativo(area.rota) ? 'bg-foreground text-background' : 'bg-card hover:bg-accent',
               )"
             >
-              <component :is="area.icone" class="size-4" :stroke-width="2" />
-              {{ area.rotulo }}
+              <component :is="area.icone" class="size-4 shrink-0" :stroke-width="2" />
+              <span class="max-w-full truncate">{{ area.rotulo }}</span>
             </RouterLink>
           </nav>
 
