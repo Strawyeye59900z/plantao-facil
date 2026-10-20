@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import FormularioPrescricao from '@/components/prescricoes/FormularioPrescricao.vue'
 import { useAvisoSaida } from '@/composables/useAvisoSaida'
-import { paraDados, prescricaoVazia, validarPrescricao, type DadosPrescricao } from '@/dominio/prescricoes/editar'
+import { paraDados, prescricaoVazia, semCalculadorasInexistentes, validarPrescricao, type DadosPrescricao } from '@/dominio/prescricoes/editar'
+import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
 import { usePrescricoesStore } from '@/stores/prescricoes'
 
@@ -15,6 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const prescricoes = usePrescricoesStore()
 const categorias = useCategoriasStore()
+const calculadoras = useCalculadorasStore()
 
 const idEdicao = computed(() => (route.params.id ? String(route.params.id) : null))
 const original = idEdicao.value ? prescricoes.obter(idEdicao.value) : undefined
@@ -44,9 +46,11 @@ async function salvar() {
   }
   salvando = true
   try {
+    // Vínculos com calculadoras excluídas de vez são descartados; as da lixeira continuam ligadas.
+    const limpos = semCalculadorasInexistentes(dados.value, (cid) => !!calculadoras.obter(cid))
     const salva = idEdicao.value
-      ? await prescricoes.atualizar(idEdicao.value, dados.value)
-      : await prescricoes.criar(dados.value)
+      ? await prescricoes.atualizar(idEdicao.value, limpos)
+      : await prescricoes.criar(limpos)
     inicial.value = JSON.stringify(dados.value)
     toast.success('Prescrição salva.')
     await router.replace(`/prescricoes/${salva.id}`)

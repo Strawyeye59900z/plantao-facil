@@ -165,8 +165,14 @@ export function normalizarTags(tags: string[]): string[] {
   return resultado
 }
 
+/** Tira de `calculadoraIds` os ids de calculadoras que não existem mais (a lixeira conta como existente). */
+export function semCalculadorasInexistentes(dados: DadosPrescricao, existe: (id: UUID) => boolean): DadosPrescricao {
+  return { ...dados, calculadoraIds: dados.calculadoraIds.filter(existe) }
+}
+
 /** Erros que impedem salvar. Lista vazia = válido. */
 /**
+ * Ids em `calculadoraIds` de calculadoras que não existem mais são ignorados (não bloqueiam; ver `semCalculadorasInexistentes`).
  * `aceitarSemCategoria`: na revisão de importação por IA, sem categoria correspondente
  * a prescrição pode ser salva como "Sem categoria" (decisão do usuário).
  */

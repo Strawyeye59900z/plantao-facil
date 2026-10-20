@@ -2,7 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { ArrowLeft, Calculator, CircleCheck, ClipboardCopy, Copy, Ellipsis, Pencil, Star, Trash2 } from '@lucide/vue'
+import { ArrowLeft, CircleCheck, ClipboardCopy, Copy, Ellipsis, Pencil, Star, Trash2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 import IconeCategoria from '@/components/categorias/IconeCategoria.vue'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import AlertasPrescricao from '@/components/prescricoes/AlertasPrescricao.vue'
+import CartaoCalculadoraLigada from '@/components/prescricoes/CartaoCalculadoraLigada.vue'
 import CaixaObservacoes from '@/components/prescricoes/CaixaObservacoes.vue'
 import CartaoReceita from '@/components/prescricoes/CartaoReceita.vue'
 import ListaItens from '@/components/prescricoes/ListaItens.vue'
@@ -21,7 +22,7 @@ import { ETIQUETA_REVISAR } from '@/components/biblioteca/etiquetas'
 import { alertasDaPrescricao } from '@/dominio/prescricoes/alertas'
 import type { CondicoesMarcadas } from '@/dominio/prescricoes/condicoes'
 import { itensVisiveis, montarCopiaPrescricao, type EscolhasOu } from '@/dominio/prescricoes/copia'
-import type { UUID } from '@/dominio/tipos'
+import type { Calculadora, UUID } from '@/dominio/tipos'
 import { copiarTexto } from '@/lib/areaTransferencia'
 import { cn } from '@/lib/utils'
 import { MODO_PENDRIVE } from '@/modo'
@@ -54,8 +55,11 @@ const copia = computed(() =>
 const alertasTopo = computed(() => (prescricao.value ? alertasDaPrescricao(prescricao.value) : []))
 const temTopo = computed(() => alertasTopo.value.length > 0 || (prescricao.value?.condicoes.length ?? 0) > 0)
 const temReceita = computed(() => (prescricao.value?.receita.trim() ?? '') !== '')
+/** Calculadoras e escalas ligadas, na ordem do editor; as da lixeira (ou que sumiram) não aparecem, mas o vínculo fica. */
 const ligadas = computed(() =>
-  (prescricao.value?.calculadoraIds ?? []).map((cid) => ({ id: cid, nome: calculadoras.obter(cid)?.nome ?? null })),
+  (prescricao.value?.calculadoraIds ?? [])
+    .map((cid) => calculadoras.obter(cid))
+    .filter((c): c is Calculadora => !!c && c.excluidoEm === null),
 )
 
 // ===== Abas =====
@@ -268,17 +272,9 @@ async function moverParaLixeira() {
       <p v-if="prescricao.excluidoEm" class="bg-muted rounded-2xl p-3 text-sm">Esta prescrição está na lixeira.</p>
     </header>
 
-    <!-- Aba Calculadoras (o conteúdo de uso vem numa fase posterior) -->
-    <section v-if="aba === 'calculadoras'" class="bg-card flex flex-col gap-1 rounded-lg p-2 shadow-xs">
-      <RouterLink
-        v-for="calc in ligadas"
-        :key="calc.id"
-        :to="`/calculadoras/${calc.id}`"
-        class="hover:bg-accent flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-colors"
-      >
-        <Calculator class="text-primary size-[18px]" />
-        {{ calc.nome ?? 'Calculadora não encontrada' }}
-      </RouterLink>
+    <!-- Aba Calculadoras: um cartão recolhível por item; o primeiro já vem aberto -->
+    <section v-if="aba === 'calculadoras'" class="flex flex-col gap-3" aria-label="Calculadoras e escalas">
+      <CartaoCalculadoraLigada v-for="(calc, i) in ligadas" :key="calc.id" :calculadora="calc" :aberta="i === 0" />
     </section>
 
     <!--

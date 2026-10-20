@@ -72,6 +72,46 @@ describe('categorias de escalas', () => {
   })
 })
 
+describe('calculadoras ligadas às prescrições', () => {
+  const escalaVazia = {
+    area: 'escala' as const,
+    tipo: 'pontos' as const,
+    nome: 'Escore Teste',
+    categoriaId: null,
+    descricao: '',
+    referencia: '',
+    favorito: false,
+    faixas: [],
+    campos: [],
+  }
+
+  it('excluir de vez remove o id de calculadoraIds nas prescrições (memória e banco)', async () => {
+    const calculadoras = useCalculadorasStore()
+    const prescricoes = usePrescricoesStore()
+    const a = await calculadoras.criar(escalaVazia)
+    const b = await calculadoras.criar({ ...escalaVazia, nome: 'Escore Teste B' })
+    const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A', calculadoraIds: [a.id, b.id] })
+    const outra = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste B', calculadoraIds: [b.id] })
+
+    await calculadoras.moverParaLixeira(a.id)
+    await calculadoras.excluirPermanentemente(a.id)
+    expect(prescricoes.obter(p.id)!.calculadoraIds).toEqual([b.id])
+    expect((await db.prescricoes.get(p.id))!.calculadoraIds).toEqual([b.id])
+    expect(prescricoes.obter(outra.id)!.calculadoraIds).toEqual([b.id])
+  })
+
+  it('mover para a lixeira mantém o vínculo', async () => {
+    const calculadoras = useCalculadorasStore()
+    const prescricoes = usePrescricoesStore()
+    const a = await calculadoras.criar(escalaVazia)
+    const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A', calculadoraIds: [a.id] })
+    await calculadoras.moverParaLixeira(a.id)
+    expect(prescricoes.obter(p.id)!.calculadoraIds).toEqual([a.id])
+    expect(calculadoras.ativas.map((c) => c.id)).not.toContain(a.id)
+    expect((await db.prescricoes.get(p.id))!.calculadoraIds).toEqual([a.id])
+  })
+})
+
 describe('prescricoes', () => {
   it('duplicar cria nova prescrição com "(cópia)"; lixeira e restauração funcionam', async () => {
     const prescricoes = usePrescricoesStore()

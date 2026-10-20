@@ -14,6 +14,7 @@ import {
   opcaoVazia,
   prescricaoVazia,
   removerItem,
+  semCalculadorasInexistentes,
   validarPrescricao,
   type DadosPrescricao,
 } from './editar'
@@ -212,6 +213,14 @@ describe('validarPrescricao', () => {
       'Escolha o grupo.',
       'Item 1: texto vazio.',
     ])
+  })
+
+  it('ignora ids de calculadoras que não existem mais (não bloqueia)', () => {
+    const dados = { ...prescricaoTeste(), calculadoraIds: ['calc-que-sumiu'] }
+    expect(validarPrescricao(dados, existe)).toEqual([])
+    expect(semCalculadorasInexistentes(dados, (id) => id === 'ok').calculadoraIds).toEqual([])
+    const mista = { ...dados, calculadoraIds: ['ok', 'calc-que-sumiu'] }
+    expect(semCalculadorasInexistentes(mista, (id) => id === 'ok').calculadoraIds).toEqual(['ok'])
   })
 
   it('exige pelo menos 1 item', () => {

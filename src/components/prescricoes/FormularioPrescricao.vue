@@ -33,10 +33,11 @@ import {
 import { cn } from '@/lib/utils'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from '@/stores/categorias'
 import { ESTILO_GRAVIDADE } from './gravidade'
+import SeletorCalculadoras from './SeletorCalculadoras.vue'
 
 /**
  * Formulário de prescrição (editor e revisão da importação por IA), em cartões:
- * dados gerais → condições → itens (opções "OU") → alertas → observações → receita → referência.
+ * dados gerais → condições → itens (opções "OU") → alertas → calculadoras e escalas → observações → receita → referência.
  * `prefixo` deixa os ids únicos quando há mais de um formulário na tela.
  */
 const props = withDefaults(defineProps<{ prefixo?: string; aceitarSemCategoria?: boolean }>(), {
@@ -484,7 +485,14 @@ const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
       </Button>
     </section>
 
-    <!-- 5. Observações -->
+    <!-- 5. Calculadoras e escalas -->
+    <section :class="CARTAO" :aria-labelledby="id('titulo-calculadoras')">
+      <h2 :id="id('titulo-calculadoras')" :class="TITULO">Calculadoras e escalas</h2>
+      <p :class="DICA">Opcional. Aparecem na aba “Calculadoras” da prescrição, na ordem desta lista.</p>
+      <SeletorCalculadoras v-model="dados.calculadoraIds" :id-campo="id('busca-calculadoras')" />
+    </section>
+
+    <!-- 6. Observações -->
     <section :class="CARTAO">
       <div class="flex flex-col gap-1.5">
         <Label :for="id('observacoes')" :class="TITULO">Observações</Label>
@@ -500,7 +508,7 @@ const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
       />
     </section>
 
-    <!-- 6. Receita de alta -->
+    <!-- 7. Receita de alta -->
     <section :class="CARTAO">
       <div class="flex flex-col gap-1.5">
         <Label :for="id('receita')" :class="TITULO">Receita de alta</Label>
@@ -516,7 +524,7 @@ const ROTULO_GRUPO = 'text-[11px] font-bold tracking-wider uppercase'
       />
     </section>
 
-    <!-- 7. Referência -->
+    <!-- 8. Referência -->
     <section :class="CARTAO">
       <Label :for="id('referencia')" :class="TITULO">Referência</Label>
       <Textarea :id="id('referencia')" v-model="dados.referencia" placeholder="Fonte, link, documento…" />
