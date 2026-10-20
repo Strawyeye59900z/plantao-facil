@@ -69,7 +69,7 @@ export function useTranscricao() {
   }
 
   /** Baixa e prepara o modelo; na primeira vez mostra o progresso, depois usa o cache do navegador. */
-  function carregarModelo(modelo = MODELO_PADRAO) {
+  function carregarModelo(modelo: string = MODELO_PADRAO) {
     status.value = 'carregando-modelo'
     erro.value = null
     worker ??= new Worker(new URL('../workers/transcricao.worker.ts', import.meta.url), { type: 'module' })
