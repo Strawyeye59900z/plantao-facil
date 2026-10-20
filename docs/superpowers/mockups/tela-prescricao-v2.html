@@ -1,0 +1,93 @@
+<style>
+  .mk { font-size: 12px; line-height: 1.45; color: var(--text-primary); text-align: left; }
+  .mk .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .mk .t { font-weight:700; font-size:15px; }
+  .mk .pill { font-size:10px; padding:2px 8px; border-radius:99px; background:var(--bg-tertiary); color:var(--text-secondary); }
+  .mk .cols { display:grid; grid-template-columns: 1.6fr 1fr; gap:10px; align-items:start; }
+  .mk .box { border:1px solid var(--border); border-radius:8px; padding:8px; background:var(--bg-secondary); }
+  .mk .h { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); margin-bottom:4px; }
+  .mk ol { margin:0; padding-left:16px; }
+  .mk li { margin:2px 0; }
+  .mk .btn { display:inline-block; margin-top:6px; font-size:10px; padding:3px 8px; border-radius:6px; background:var(--accent); color:#fff; }
+  .mk .chip { display:inline-block; font-size:10px; padding:3px 8px; border-radius:99px; border:1px solid var(--border); margin:0 4px 4px 0; }
+  .mk .chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .mk .obs { background: rgba(255,159,10,.12); border-left:3px solid var(--warning); border-radius:6px; padding:6px 8px; margin-top:8px; }
+  .mk .obs p { margin:2px 0; }
+  .mk .tabs span { display:inline-block; font-size:11px; padding:3px 8px; margin-right:2px; border-bottom:2px solid transparent; }
+  .mk .tabs span.on { border-color:var(--accent); font-weight:600; }
+  .mk .rx { font-family: ui-monospace, Consolas, monospace; font-size:11px; white-space:pre-line; }
+  .phone { width: 220px; margin: 0 auto; border:2px solid var(--border); border-radius:22px; padding:10px 8px; background:var(--bg-primary); position:relative; min-height:380px; }
+  .phone .fab { position:absolute; bottom:10px; left:8px; right:8px; display:flex; gap:6px; }
+  .phone .fab span { flex:1; text-align:center; font-size:10px; padding:6px; border-radius:99px; background:var(--accent); color:#fff; }
+  .phone .fab span.sec { background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border); }
+</style>
+
+<h2>Prescrição — versão C ajustada</h2>
+<p class="subtitle">Observações agora no fim da prescrição, sempre visíveis. A aba que sobra é a de calculadoras ligadas a essa prescrição.</p>
+
+<div class="mockup">
+  <div class="mockup-header">PC / tablet</div>
+  <div class="mockup-body">
+    <div class="mk">
+      <div class="top"><span class="t">Fibrilação atrial</span><span class="pill">Cardiovascular</span></div>
+      <div class="tabs"><span class="on">Prescrição</span><span>Calculadoras (1)</span></div>
+      <div class="cols" style="margin-top:6px">
+        <div>
+          <div class="box">
+            <div><span class="chip on">✓ Instável hemodinamicamente</span><span class="chip">Condição B</span></div>
+            <ol>
+              <li>Medicamento Teste A — dose X</li>
+              <li>Medicamento Teste B — dose Y</li>
+              <li><b>Cardioversão elétrica sincronizada</b></li>
+            </ol>
+            <span class="btn">Copiar prescrição</span>
+          </div>
+          <div class="obs">
+            <div class="h">Observações</div>
+            <p><b>Obs:</b> texto de observação fictício, em parágrafo próprio.</p>
+            <p><b>Bizu:</b> outro parágrafo, com o rótulo mantido.</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="h">Receita de alta</div>
+          <div class="rx">1. Medicamento Teste C
+          Tomar 1 cp de 12/12h</div>
+          <span class="btn">Copiar receita</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:2rem">No celular não cabe a coluna do lado. Onde fica a receita?</h3>
+
+<div class="cards">
+  <div class="card" data-choice="cel-abaixo" onclick="toggleSelect(this)">
+    <div class="card-image" style="aspect-ratio:auto; padding:12px; display:block;">
+      <div class="phone"><div class="mk">
+        <div class="t" style="font-size:13px">Fibrilação atrial</div>
+        <div class="tabs"><span class="on">Prescrição</span><span>Calc. (1)</span></div>
+        <div style="margin-top:4px"><span class="chip on">✓ Instável</span><span class="chip">Cond. B</span></div>
+        <div class="box"><ol><li>Med. Teste A — dose X</li><li>Med. Teste B — dose Y</li><li><b>Cardioversão</b></li></ol></div>
+        <div class="box" style="margin-top:6px"><div class="h">Receita de alta</div><div class="rx">1. Med. Teste C…</div></div>
+        <div class="obs"><b>Obs:</b> texto…</div>
+      </div>
+      <div class="fab"><span>Copiar prescrição</span><span class="sec">Copiar receita</span></div></div>
+    </div>
+    <div class="card-body"><h3>1 — Logo abaixo da prescrição</h3><p>Tudo numa rolagem só. Os dois botões de copiar ficam fixos no rodapé.</p></div>
+  </div>
+
+  <div class="card" data-choice="cel-aba" onclick="toggleSelect(this)">
+    <div class="card-image" style="aspect-ratio:auto; padding:12px; display:block;">
+      <div class="phone"><div class="mk">
+        <div class="t" style="font-size:13px">Fibrilação atrial</div>
+        <div class="tabs"><span class="on">Prescrição</span><span>Receita</span><span>Calc.</span></div>
+        <div style="margin-top:4px"><span class="chip on">✓ Instável</span><span class="chip">Cond. B</span></div>
+        <div class="box"><ol><li>Med. Teste A — dose X</li><li>Med. Teste B — dose Y</li><li><b>Cardioversão</b></li></ol></div>
+        <div class="obs"><b>Obs:</b> texto…</div>
+      </div>
+      <div class="fab"><span>Copiar prescrição</span></div></div>
+    </div>
+    <div class="card-body"><h3>2 — Aba "Receita"</h3><p>No celular a receita vira uma aba ao lado da prescrição. Tela mais curta, mas um toque a mais.</p></div>
+  </div>
+</div>

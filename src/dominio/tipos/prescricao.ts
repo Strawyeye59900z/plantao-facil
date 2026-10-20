@@ -1,5 +1,4 @@
 import type { Entidade, Gravidade, UUID } from './base'
-import type { RegraDose } from './dose'
 
 export type TipoAlerta =
   | 'contraindicacao'
@@ -23,31 +22,26 @@ export interface Alerta {
   tipo: TipoAlerta
   gravidade: Gravidade
   texto: string
-  /** null = alerta da prescrição; preenchido = ligado a um item (aparece junto dele e também no topo). */
+  /** null = alerta da prescrição; preenchido = ligado a um item (aparece só junto dele; se o item não existir, aparece no topo — ver `alertasDaPrescricao`). */
   itemId: UUID | null
 }
 
-export interface Alternativa {
+export interface OpcaoItem {
   id: UUID
-  /** Ex.: "alergia a ...". */
-  motivo: string
   texto: string
-  regraDose: RegraDose | null
+  /** Rótulo opcional da opção (ex.: "alergia a ..."). Vazio = sem motivo. */
+  motivo: string
 }
 
+/**
+ * Item da prescrição. `opcoes.length === 1`: item simples; ≥ 2: item "OU"
+ * (nenhuma opção vem escolhida e copiar fica bloqueado até escolher).
+ */
 export interface ItemPrescricao {
   id: UUID
-  /** Pode conter marcadores ({dose}, {volume}, {dose_diaria}, {tomadas}). */
-  texto: string
-  regraDose: RegraDose | null
-  alternativas: Alternativa[]
-  /**
-   * Opções equivalentes ("OU"): o texto principal é a opção 1 e as alternativas são as opções 2, 3…;
-   * nenhuma vem escolhida e copiar fica bloqueado até escolher. Motivo opcional. Ausente em dados antigos = false.
-   */
-  opcoesEquivalentes?: boolean
-  /** Condição em que o item entra (ex.: "Refratário após 5 min"). null/ausente = "Sempre". */
-  condicaoId?: UUID | null
+  /** Condição em que o item entra (ex.: "Refratário após 5 min"). null = "Sempre". */
+  condicaoId: UUID | null
+  opcoes: OpcaoItem[]
 }
 
 /**
@@ -68,10 +62,12 @@ export interface Prescricao extends Entidade {
   tags: string[]
   /** A ordem do array é a ordem de exibição (o editor mantém "Sempre" primeiro e depois cada condição). */
   itens: ItemPrescricao[]
-  /** Condições na ordem de exibição. Ausente em dados antigos = []. */
+  /** Condições na ordem de exibição. */
   condicoes: Condicao[]
   alertas: Alerta[]
-  /** Receita pronta (texto simples, quebras de linha preservadas). Ausente em dados antigos = ''. */
+  /** Calculadoras ligadas à prescrição (aba Calculadoras). */
+  calculadoraIds: UUID[]
+  /** Receita pronta (texto simples, quebras de linha preservadas). */
   receita: string
   observacoes: string
   referencia: string

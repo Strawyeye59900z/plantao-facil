@@ -1,7 +1,5 @@
-import type { Alerta, Alternativa, DadosNovos, ItemPrescricao, Prescricao, RegraDose, UUID } from '@/dominio/tipos'
-import { ordenarPorCondicao } from './condicoes'
-import { validarMarcadores } from '@/dominio/dose/marcadores'
-import { validarRegraDose } from '@/dominio/dose/validarRegra'
+import type { Alerta, DadosNovos, ItemPrescricao, OpcaoItem, Prescricao, UUID } from '@/dominio/tipos'
+import { condicaoDoItem, ordenarPorCondicao } from './condicoes'
 
 export type DadosPrescricao = DadosNovos<Prescricao>
 type GerarId = () => UUID
@@ -16,6 +14,7 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
     itens: [itemVazio(gerarId)],
     condicoes: [],
     alertas: [],
+    calculadoraIds: [],
     receita: '',
     observacoes: '',
     referencia: '',
@@ -26,28 +25,13 @@ export function prescricaoVazia(gerarId: GerarId = idPadrao): DadosPrescricao {
   }
 }
 
+/** Item novo com uma opção vazia (item simples). */
 export function itemVazio(gerarId: GerarId = idPadrao, condicaoId: UUID | null = null): ItemPrescricao {
-  return { id: gerarId(), texto: '', regraDose: null, alternativas: [], condicaoId }
+  return { id: gerarId(), condicaoId, opcoes: [opcaoVazia(gerarId)] }
 }
 
-export function alternativaVazia(gerarId: GerarId = idPadrao): Alternativa {
-  return { id: gerarId(), motivo: '', texto: '', regraDose: null }
-}
-
-/** Regra nova: campos numéricos vazios (NaN) para o usuário preencher; dose sempre inteira. */
-export function regraDoseVazia(): RegraDose {
-  return {
-    dosePorKg: Number.NaN,
-    unidade: '',
-    baseDoseKg: 'por_tomada',
-    tomadasPorDia: null,
-    doseMaximaPorTomada: null,
-    doseMaximaDiaria: null,
-    pesoLimite: null,
-    concentracao: null,
-    arredondamentoDose: { modo: 'inteiro' },
-    arredondamentoVolume: { modo: 'casas_decimais', casas: 1 },
-  }
+export function opcaoVazia(gerarId: GerarId = idPadrao): OpcaoItem {
+  return { id: gerarId(), texto: '', motivo: '' }
 }
 
 export function alertaVazio(gerarId: GerarId = idPadrao): Alerta {
@@ -65,7 +49,7 @@ export function paraDados(p: Prescricao): DadosPrescricao {
 }
 
 /**
- * Duplica com IDs novos em itens, alternativas, condições e alertas (mantendo os vínculos alerta→item e item→condição).
+ * Duplica com IDs novos em itens, opções, condições e alertas (mantendo os vínculos alerta→item e item→condição).
  * Título recebe "(cópia)", sai sem favorito; origem e status de revisão são mantidos,
  * para uma cópia de importação não revisada continuar não revisada.
  */
@@ -85,7 +69,7 @@ export function duplicarPrescricao(p: Prescricao, gerarId: GerarId = idPadrao): 
     return {
       ...item,
       id,
-      alternativas: item.alternativas.map((alt) => ({ ...alt, id: gerarId() })),
+      opcoes: item.opcoes.map((opcao) => ({ ...opcao, id: gerarId() })),
       condicaoId: item.condicaoId ? (novoIdCondicao.get(item.condicaoId) ?? null) : null,
     }
   })
@@ -130,6 +114,42 @@ export function removerCondicao(dados: DadosPrescricao, condicaoId: UUID): Dados
   }
 }
 
+/** Troca a condição de um item e reagrupa os itens ("Sempre" primeiro, depois cada condição na ordem). */
+export function definirCondicaoDoItem(dados: DadosPrescricao, itemId: UUID, condicaoId: UUID | null): DadosPrescricao {
+  return {
+    ...dados,
+    itens: ordenarPorCondicao(
+      dados.itens.map((i) => (i.id === itemId ? { ...i, condicaoId } : i)),
+      dados.condicoes,
+    ),
+  }
+}
+
+/** Move uma condição uma posição; os grupos de itens acompanham a nova ordem. */
+export function moverCondicao(dados: DadosPrescricao, indice: number, direcao: -1 | 1): DadosPrescricao {
+  const condicoes = moverItem(dados.condicoes, indice, direcao)
+  return { ...dados, condicoes, itens: ordenarPorCondicao(dados.itens, condicoes) }
+}
+
+/** ↑/↓ de item só dentro do grupo da condição (para mudar de grupo, troca-se a condição do item). */
+export function podeMoverItemNoGrupo(dados: DadosPrescricao, indice: number, direcao: -1 | 1): boolean {
+  const atual = dados.itens[indice]
+  const vizinho = dados.itens[indice + direcao]
+  if (!atual || !vizinho) return false
+  return condicaoDoItem(atual, dados.condicoes) === condicaoDoItem(vizinho, dados.condicoes)
+}
+
+export function moverItemNoGrupo(dados: DadosPrescricao, indice: number, direcao: -1 | 1): DadosPrescricao {
+  if (!podeMoverItemNoGrupo(dados, indice, direcao)) return dados
+  return { ...dados, itens: moverItem(dados.itens, indice, direcao) }
+}
+
+/** Remove uma opção do item; o item fica sempre com pelo menos 1 (com 1, volta a ser item simples). */
+export function removerOpcao(item: ItemPrescricao, opcaoId: UUID): ItemPrescricao {
+  if (item.opcoes.length <= 1) return item
+  return { ...item, opcoes: item.opcoes.filter((o) => o.id !== opcaoId) }
+}
+
 /** Separa tags digitadas por vírgula, sem vazias nem repetidas (ignorando maiúsculas). */
 export function normalizarTags(tags: string[]): string[] {
   const vistas = new Set<string>()
@@ -145,8 +165,14 @@ export function normalizarTags(tags: string[]): string[] {
   return resultado
 }
 
+/** Tira de `calculadoraIds` os ids de calculadoras que não existem mais (a lixeira conta como existente). */
+export function semCalculadorasInexistentes(dados: DadosPrescricao, existe: (id: UUID) => boolean): DadosPrescricao {
+  return { ...dados, calculadoraIds: dados.calculadoraIds.filter(existe) }
+}
+
 /** Erros que impedem salvar. Lista vazia = válido. */
 /**
+ * Ids em `calculadoraIds` de calculadoras que não existem mais são ignorados (não bloqueiam; ver `semCalculadorasInexistentes`).
  * `aceitarSemCategoria`: na revisão de importação por IA, sem categoria correspondente
  * a prescrição pode ser salva como "Sem categoria" (decisão do usuário).
  */
@@ -158,26 +184,14 @@ export function validarPrescricao(
   const erros: string[] = []
   if (!dados.titulo.trim()) erros.push('Informe o título.')
   const semCategoriaOk = opcoes.aceitarSemCategoria && dados.categoriaId === null
-  if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha a categoria.')
+  if (!semCategoriaOk && (!dados.categoriaId || !categoriaExiste(dados.categoriaId))) erros.push('Escolha o grupo.')
   if (dados.itens.length === 0) erros.push('Inclua pelo menos 1 item.')
 
-  const validarDose = (prefixo: string, texto: string, regra: RegraDose | null) => {
-    if (regra) for (const e of validarRegraDose(regra)) erros.push(`${prefixo}, regra de dose: ${e}`)
-    for (const e of validarMarcadores(texto, regra)) erros.push(`${prefixo}: ${e}`)
-  }
-
   dados.itens.forEach((item, i) => {
-    if (!item.texto.trim()) erros.push(`Item ${i + 1}: texto vazio.`)
-    if (item.opcoesEquivalentes && item.alternativas.length === 0) {
-      erros.push(`Item ${i + 1}: opções equivalentes precisam de pelo menos 2 opções.`)
-    }
-    validarDose(`Item ${i + 1}`, item.texto, item.regraDose)
-    item.alternativas.forEach((alt, j) => {
-      const prefixo = `Item ${i + 1}, alternativa ${j + 1}`
-      if (!alt.texto.trim()) erros.push(`${prefixo}: texto vazio.`)
-      // Em opções equivalentes (OU) o motivo é opcional.
-      if (!item.opcoesEquivalentes && !alt.motivo.trim()) erros.push(`${prefixo}: informe o motivo.`)
-      validarDose(prefixo, alt.texto, alt.regraDose)
+    if (item.opcoes.length === 0) erros.push(`Item ${i + 1}: inclua pelo menos 1 opção.`)
+    item.opcoes.forEach((opcao, j) => {
+      if (opcao.texto.trim()) return
+      erros.push(item.opcoes.length === 1 ? `Item ${i + 1}: texto vazio.` : `Item ${i + 1}, opção ${j + 1}: texto vazio.`)
     })
   })
   dados.alertas.forEach((alerta, i) => {

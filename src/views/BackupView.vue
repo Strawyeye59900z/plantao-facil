@@ -111,10 +111,19 @@ async function aoEscolherArquivo(evento: Event) {
 const resumo = computed(() => {
   if (!plano.value || !backup.value) return []
   const b = backup.value
+  const planoAtual = plano.value
   return [
     { rotulo: 'Prescrições', total: b.prescricoes.length, lixeira: b.prescricoes.filter((p) => p.excluidoEm).length, ...contarSituacoes(plano.value.prescricoes) },
-    { rotulo: 'Categorias', total: b.categorias.length, lixeira: b.categorias.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.categorias) },
-    { rotulo: 'Calculadoras', total: b.calculadoras.length, lixeira: b.calculadoras.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.calculadoras) },
+    { rotulo: 'Grupos', total: b.categorias.length, lixeira: b.categorias.filter((c) => c.excluidoEm).length, ...contarSituacoes(plano.value.categorias) },
+    ...(['calculadora', 'escala'] as const).map((area) => {
+      const doArquivo = b.calculadoras.filter((c) => c.area === area)
+      return {
+        rotulo: area === 'calculadora' ? 'Calculadoras' : 'Escalas',
+        total: doArquivo.length,
+        lixeira: doArquivo.filter((c) => c.excluidoEm).length,
+        ...contarSituacoes(planoAtual.calculadoras.filter((item) => item.arquivo.area === area)),
+      }
+    }),
   ]
 })
 
@@ -126,9 +135,9 @@ function nomeEntidade(e: Entidade) {
 const conflitos = computed(() => {
   if (!plano.value) return []
   const lista: { item: ItemPlano<Entidade>; tipo: string }[] = [
-    ...plano.value.categorias.map((item) => ({ item, tipo: 'Categoria' })),
+    ...plano.value.categorias.map((item) => ({ item, tipo: 'Grupo' })),
     ...plano.value.prescricoes.map((item) => ({ item, tipo: 'Prescrição' })),
-    ...plano.value.calculadoras.map((item) => ({ item, tipo: 'Calculadora' })),
+    ...plano.value.calculadoras.map((item) => ({ item, tipo: item.arquivo.area === 'escala' ? 'Escala' : 'Calculadora' })),
   ]
   return lista.filter((c) => c.item.situacao === 'conflito')
 })
@@ -198,7 +207,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
       <CardHeader>
         <CardTitle>Exportar biblioteca</CardTitle>
         <CardDescription>
-          Prescrições, categorias e calculadoras (inclusive a lixeira). Tema e chaves de IA não entram.
+          Prescrições, grupos, calculadoras e escalas (inclusive a lixeira). Tema e chaves de IA não entram.
         </CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col gap-3">
@@ -275,7 +284,7 @@ const totalNoAparelho = computed(() => prescricoes.todas.length)
             </table>
           </div>
           <p v-if="plano.categoriasUnificadas.length" class="text-muted-foreground text-sm">
-            Categorias com o mesmo nome serão juntadas:
+            Grupos com o mesmo nome serão juntados:
             {{ plano.categoriasUnificadas.map((c) => c.nome).join(', ') }}.
           </p>
 

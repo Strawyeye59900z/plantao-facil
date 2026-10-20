@@ -19,7 +19,9 @@ export interface RascunhoImportado {
  * Converte a resposta da IA em prescrições "importada — não revisada", ainda não salvas.
  * - Categoria: se o nome bater (sem maiúsculas/acentos) com uma categoria de prescrições, já seleciona;
  *   senão fica "Sem categoria" (decisão do usuário).
- * - Doses ficam só no texto; nenhuma regra de dose é criada.
+ * - Doses ficam só no texto. Texto principal + alternativas viram as opções do item (principal com o motivo "Padrão"
+ *   quando há alternativas e elas não são equivalentes ("OU"); nos itens "OU" fica sem motivo).
+ *   Adaptação temporária: a resposta ainda é a da v1 (até a Fase 4).
  * - Alerta que aponta para um item inexistente vale para a prescrição inteira e vira dúvida.
  * - Item que aponta para uma condição inexistente fica "Sempre" e vira dúvida. Itens ficam na ordem
  *   de exibição ("Sempre" primeiro, depois cada condição); os alertas continuam ligados pelo id.
@@ -47,12 +49,11 @@ export function criarRascunhos(
       }
       return {
         id: gerarId(),
-        texto: item.texto,
-        regraDose: null,
-        alternativas: item.alternativas.map((a) => ({ id: gerarId(), motivo: a.motivo, texto: a.texto, regraDose: null })),
-        // Opções "OU" só fazem sentido com pelo menos 2 opções.
-        opcoesEquivalentes: item.opcoesEquivalentes && item.alternativas.length > 0,
         condicaoId,
+        opcoes: [
+          { id: gerarId(), texto: item.texto, motivo: item.alternativas.length > 0 && !item.opcoesEquivalentes ? 'Padrão' : '' },
+          ...item.alternativas.map((a) => ({ id: gerarId(), texto: a.texto, motivo: a.motivo })),
+        ],
       }
     })
 
@@ -76,6 +77,7 @@ export function criarRascunhos(
         itens: ordenarPorCondicao(itens, condicoes),
         condicoes,
         alertas,
+        calculadoraIds: [],
         receita: p.receita,
         observacoes: p.observacoes,
         referencia: p.referencia,

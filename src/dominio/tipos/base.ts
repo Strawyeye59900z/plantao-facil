@@ -26,7 +26,7 @@ export const ROTULO_GRAVIDADE: Record<Gravidade, string> = {
 }
 
 /** Lista gerenciada de categorias, separada por módulo. */
-export type EscopoCategoria = 'prescricao' | 'calculadora'
+export type EscopoCategoria = 'prescricao' | 'calculadora' | 'escala'
 
 export interface Categoria extends Entidade {
   nome: string

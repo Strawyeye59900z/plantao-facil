@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calculator, ClipboardList, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
+import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
 
 export interface ItemNavegacao {
   rota: string
@@ -7,17 +7,18 @@ export interface ItemNavegacao {
   icone: Component
 }
 
-/** Itens da navegação inferior (celular) e do topo do menu lateral (PC). */
-export const NAVEGACAO_PRINCIPAL: ItemNavegacao[] = [
+/** Áreas do app, mostradas como pílulas no topo. */
+export const AREAS: ItemNavegacao[] = [
   { rota: '/prescricoes', rotulo: 'Prescrições', icone: ClipboardList },
   { rota: '/calculadoras', rotulo: 'Calculadoras', icone: Calculator },
-  { rota: '/ajustes', rotulo: 'Ajustes', icone: Settings },
+  { rota: '/escalas', rotulo: 'Escalas', icone: ListChecks },
 ]
 
-/** No celular ficam dentro de Ajustes; no PC aparecem também no menu lateral. */
-export const NAVEGACAO_SECUNDARIA: ItemNavegacao[] = [
-  { rota: '/categorias', rotulo: 'Categorias', icone: Tags },
-  { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },
+/** Itens do menu redondo do topo (no pen drive some o que a rota bloqueia). */
+export const MENU: ItemNavegacao[] = [
+  { rota: '/categorias', rotulo: 'Grupos', icone: Tags },
   { rota: '/importar', rotulo: 'Importar PDF', icone: FileUp },
+  { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },
   { rota: '/lixeira', rotulo: 'Lixeira', icone: Trash2 },
+  { rota: '/ajustes', rotulo: 'Ajustes', icone: Settings },
 ]

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db } from '@/db/banco'
 import type { Configuracoes, IdProvedor, Tema } from '@/dominio/tipos'
+import { aplicarDestaque, COR_DESTAQUE_PADRAO, type CorDestaque } from '@/dominio/aparencia/destaque'
 import { PROVEDORES } from '@/dominio/ia/provedores'
 
 /** Cópia do tema no localStorage só para aplicar antes do primeiro desenho (sem piscar). */
@@ -11,6 +12,7 @@ function padrao(): Configuracoes {
   return {
     id: 'local',
     tema: 'claro',
+    corDestaque: COR_DESTAQUE_PADRAO,
     ia: { provedor: 'gemini', chaves: {}, modelos: {} },
     ultimoBackupEm: null,
     bibliotecaPenDriveDe: null,
@@ -37,6 +39,7 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
     // Configurações salvas antes de algum campo existir.
     config.value.ia = { ...padrao().ia, ...config.value.ia }
     aplicarTema(config.value.tema)
+    aplicarDestaque(config.value.corDestaque)
   }
 
   async function salvar() {
@@ -47,6 +50,12 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
   async function definirTema(tema: Tema) {
     config.value.tema = tema
     aplicarTema(tema)
+    await salvar()
+  }
+
+  async function definirCorDestaque(cor: CorDestaque) {
+    config.value.corDestaque = cor
+    aplicarDestaque(cor)
     await salvar()
   }
 
@@ -87,6 +96,7 @@ export const useConfiguracoesStore = defineStore('configuracoes', () => {
     config,
     carregar,
     definirTema,
+    definirCorDestaque,
     registrarBackup,
     registrarBibliotecaPenDrive,
     definirProvedor,

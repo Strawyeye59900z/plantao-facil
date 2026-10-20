@@ -5,22 +5,12 @@ import { db } from '@/db/banco'
 import { prescricaoVazia } from '@/dominio/prescricoes/editar'
 import { ROTULO_SEM_CATEGORIA, useCategoriasStore } from './categorias'
 import { usePrescricoesStore } from './prescricoes'
-import { MAX_RECENTES, useRecentesStore } from './recentes'
+import { useCalculadorasStore } from './calculadoras'
+import { useConfiguracoesStore } from './configuracoes'
 
 beforeEach(async () => {
   setActivePinia(createPinia())
   await Promise.all(db.tables.map((t) => t.clear()))
-})
-
-describe('recentes', () => {
-  it(`guarda no máximo ${MAX_RECENTES} por tipo, mais recente primeiro e sem repetir`, () => {
-    const recentes = useRecentesStore()
-    for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) recentes.registrar('prescricao', id)
-    recentes.registrar('prescricao', 'd')
-    recentes.registrar('calculadora', 'x')
-    expect(recentes.ids('prescricao')).toEqual(['d', 'f', 'e', 'c', 'b'])
-    expect(recentes.ids('calculadora')).toEqual(['x'])
-  })
 })
 
 describe('categorias', () => {
@@ -56,6 +46,72 @@ describe('categorias', () => {
   })
 })
 
+describe('categorias de escalas', () => {
+  it('deEscalas lista só os grupos de escalas; excluir deixa a escala "Sem categoria"', async () => {
+    const categorias = useCategoriasStore()
+    const calculadoras = useCalculadorasStore()
+    await categorias.criar('Grupo Calc Teste', 'calculadora')
+    const g = await categorias.criar('Grupo Escala Teste', 'escala')
+    expect(categorias.deEscalas.map((c) => c.id)).toEqual([g.id])
+
+    const e = await calculadoras.criar({
+      area: 'escala',
+      tipo: 'pontos',
+      nome: 'Escore Teste',
+      categoriaId: g.id,
+      descricao: '',
+      referencia: '',
+      favorito: false,
+      faixas: [],
+      campos: [],
+    })
+    await categorias.excluir(g.id)
+    expect(categorias.deEscalas).toEqual([])
+    expect(calculadoras.obter(e.id)!.categoriaId).toBeNull()
+    expect((await db.calculadoras.get(e.id))!.categoriaId).toBeNull()
+  })
+})
+
+describe('calculadoras ligadas às prescrições', () => {
+  const escalaVazia = {
+    area: 'escala' as const,
+    tipo: 'pontos' as const,
+    nome: 'Escore Teste',
+    categoriaId: null,
+    descricao: '',
+    referencia: '',
+    favorito: false,
+    faixas: [],
+    campos: [],
+  }
+
+  it('excluir de vez remove o id de calculadoraIds nas prescrições (memória e banco)', async () => {
+    const calculadoras = useCalculadorasStore()
+    const prescricoes = usePrescricoesStore()
+    const a = await calculadoras.criar(escalaVazia)
+    const b = await calculadoras.criar({ ...escalaVazia, nome: 'Escore Teste B' })
+    const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A', calculadoraIds: [a.id, b.id] })
+    const outra = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste B', calculadoraIds: [b.id] })
+
+    await calculadoras.moverParaLixeira(a.id)
+    await calculadoras.excluirPermanentemente(a.id)
+    expect(prescricoes.obter(p.id)!.calculadoraIds).toEqual([b.id])
+    expect((await db.prescricoes.get(p.id))!.calculadoraIds).toEqual([b.id])
+    expect(prescricoes.obter(outra.id)!.calculadoraIds).toEqual([b.id])
+  })
+
+  it('mover para a lixeira mantém o vínculo', async () => {
+    const calculadoras = useCalculadorasStore()
+    const prescricoes = usePrescricoesStore()
+    const a = await calculadoras.criar(escalaVazia)
+    const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A', calculadoraIds: [a.id] })
+    await calculadoras.moverParaLixeira(a.id)
+    expect(prescricoes.obter(p.id)!.calculadoraIds).toEqual([a.id])
+    expect(calculadoras.ativas.map((c) => c.id)).not.toContain(a.id)
+    expect((await db.prescricoes.get(p.id))!.calculadoraIds).toEqual([a.id])
+  })
+})
+
 describe('prescricoes', () => {
   it('duplicar cria nova prescrição com "(cópia)"; lixeira e restauração funcionam', async () => {
     const prescricoes = usePrescricoesStore()
@@ -78,5 +134,29 @@ describe('prescricoes', () => {
     const p = await prescricoes.criar({ ...prescricaoVazia(), titulo: 'Situação Teste A' })
     await prescricoes.alternarFavorito(p.id)
     expect(prescricoes.favoritas.map((x) => x.id)).toEqual([p.id])
+  })
+})
+
+describe('configurações', () => {
+  it('configurações sem corDestaque salva carregam com verde', async () => {
+    await db.configuracoes.put({
+      id: 'local',
+      tema: 'claro',
+      ia: { provedor: 'gemini', chaves: {}, modelos: {} },
+      ultimoBackupEm: null,
+      bibliotecaPenDriveDe: null,
+    } as never)
+    const store = useConfiguracoesStore()
+    await store.carregar()
+    expect(store.config.corDestaque).toBe('verde')
+    expect(document.documentElement.dataset.destaque).toBe('verde')
+  })
+
+  it('definirCorDestaque aplica e salva', async () => {
+    const store = useConfiguracoesStore()
+    await store.carregar()
+    await store.definirCorDestaque('violeta')
+    expect(document.documentElement.dataset.destaque).toBe('violeta')
+    expect((await db.configuracoes.get('local'))!.corDestaque).toBe('violeta')
   })
 })

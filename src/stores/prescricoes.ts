@@ -24,7 +24,7 @@ export const usePrescricoesStore = defineStore('prescricoes', () => {
 
   async function carregar() {
     // Prescrições criadas antes da receita pronta/condições não têm os campos.
-    todas.value = (await db.prescricoes.toArray()).map((p) => ({ ...p, receita: p.receita ?? '', condicoes: p.condicoes ?? [] }))
+    todas.value = (await db.prescricoes.toArray()).map((p) => ({ ...p, receita: p.receita ?? '', condicoes: p.condicoes ?? [], calculadoraIds: p.calculadoraIds ?? [] }))
   }
 
   function obter(id: UUID): Prescricao | undefined {

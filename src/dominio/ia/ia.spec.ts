@@ -211,13 +211,13 @@ describe('condições na importação', () => {
     const d = criarRascunhos(comCondicoes, [], () => `c${++n}`)[0]!.dados
     expect(d.condicoes.map((c) => c.nome)).toEqual(['Condição Teste A', 'Condição Teste B'])
     const [ca, cb] = d.condicoes
-    expect(d.itens.map((i) => [i.texto, i.condicaoId])).toEqual([
+    expect(d.itens.map((i) => [i.opcoes[0]!.texto, i.condicaoId])).toEqual([
       ['Medicamento Teste S', null],
       ['Medicamento Teste X', null],
       ['Medicamento Teste A1', ca!.id],
       ['Medicamento Teste B1', cb!.id],
     ])
-    expect(d.alertas[0]!.itemId).toBe(d.itens.find((i) => i.texto === 'Medicamento Teste B1')!.id)
+    expect(d.alertas[0]!.itemId).toBe(d.itens.find((i) => i.opcoes[0]!.texto === 'Medicamento Teste B1')!.id)
     expect(d.duvidasImportacao.some((x) => x.includes('condição 9'))).toBe(true)
   })
 
@@ -254,23 +254,32 @@ describe('rascunhos a partir da resposta', () => {
     expect(rascunhos[1]!.categoriaSugerida).toBe('Categoria Que Não Existe')
   })
 
-  it('marca como importada e não revisada, sem regra de dose, com dúvidas da prescrição', () => {
+  it('marca como importada e não revisada, sem calculadoras ligadas, com dúvidas da prescrição', () => {
     const d = rascunhos[0]!.dados
     expect(d.origem).toBe('importada_ia')
     expect(d.revisada).toBe(false)
-    expect(d.itens.every((i) => i.regraDose === null && i.alternativas.every((a) => a.regraDose === null))).toBe(true)
+    expect(d.calculadoraIds).toEqual([])
     expect(d.duvidasImportacao[0]).toBe('Dúvida Teste')
     expect(d.tags).toEqual(['tag teste'])
     expect(d.receita).toBe(RECEITA_TESTE)
     expect(rascunhos[1]!.dados.receita).toBe('')
   })
 
-  it('opções "OU" viram item de opções equivalentes; sem alternativas, a marca é ignorada', () => {
+  it('texto principal + alternativas viram as opções do item (principal "Padrão" só quando não é "OU")', () => {
     const ou = rascunhos[0]!.dados.itens[2]!
-    expect(ou.opcoesEquivalentes).toBe(true)
-    expect([ou.texto, ...ou.alternativas.map((a) => a.texto)]).toEqual(['Opção Teste 1', 'Opção Teste 2', 'Opção Teste 3'])
-    expect(rascunhos[0]!.dados.itens[0]!.opcoesEquivalentes).toBe(false)
-    expect(rascunhos[1]!.dados.itens[0]!.opcoesEquivalentes).toBe(false)
+    expect(ou.opcoes.map((o) => [o.texto, o.motivo])).toEqual([
+      ['Opção Teste 1', ''],
+      ['Opção Teste 2', ''],
+      ['Opção Teste 3', ''],
+    ])
+    expect(rascunhos[0]!.dados.itens[0]!.opcoes.map((o) => [o.texto, o.motivo])).toEqual([
+      ['Medicamento Teste A', 'Padrão'],
+      ['Medicamento Teste B', 'Motivo Teste'],
+    ])
+    // Sem alternativas, a opção única não recebe motivo.
+    expect(rascunhos[0]!.dados.itens[1]!.opcoes.map((o) => o.motivo)).toEqual([''])
+    expect(rascunhos[1]!.dados.itens[0]!.opcoes.map((o) => o.texto)).toEqual(['Medicamento Teste D'])
+    expect(new Set(rascunhos.flatMap((r) => r.dados.itens.flatMap((i) => i.opcoes.map((o) => o.id)))).size).toBe(7)
   })
 
   it('liga alertas aos itens; item inexistente vira alerta geral + dúvida', () => {
@@ -283,7 +292,7 @@ describe('rascunhos a partir da resposta', () => {
 
   it('aprovação aceita "Sem categoria" só com a opção da importação', () => {
     const d = rascunhos[1]!.dados
-    expect(validarPrescricao(d, () => true)).toContain('Escolha a categoria.')
+    expect(validarPrescricao(d, () => true)).toContain('Escolha o grupo.')
     expect(validarPrescricao(d, () => true, { aceitarSemCategoria: true })).toEqual([])
   })
 })

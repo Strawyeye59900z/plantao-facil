@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
-import { NAVEGACAO_SECUNDARIA } from '@/components/layout/navegacao'
+import { MENU } from '@/components/layout/navegacao'
 import {
   consultarArmazenamento,
   pedirArmazenamentoPersistente,
@@ -59,6 +59,8 @@ onMounted(() => {
 
 // ===== Modo pen drive =====
 const router = useRouter()
+/** O menu do topo sem o próprio Ajustes. */
+const itensDeDados = MENU.filter((item) => item.rota !== '/ajustes')
 const entradaBackup = ref<HTMLInputElement | null>(null)
 const confirmarApagar = ref(false)
 const dataBiblioteca = computed(() => {
@@ -121,11 +123,11 @@ async function apagar() {
     <!-- Importação por IA (desativada no pen drive: a chave nunca fica em PC do hospital) -->
     <ConfiguracaoIA v-if="!MODO_PENDRIVE" />
 
-    <!-- No PC estes itens também estão no menu lateral -->
+    <!-- Atalhos do menu do topo -->
     <Card v-if="!MODO_PENDRIVE" class="py-1">
       <nav class="flex flex-col" aria-label="Dados">
         <RouterLink
-          v-for="item in NAVEGACAO_SECUNDARIA"
+          v-for="item in itensDeDados"
           :key="item.rota"
           :to="item.rota"
           class="hover:bg-accent/70 flex h-14 items-center gap-3 px-4 text-base not-last:border-b"

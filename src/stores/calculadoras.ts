@@ -4,6 +4,7 @@ import { db } from '@/db/banco'
 import { repoCalculadoras } from '@/db/repositorios'
 import { duplicarCalculadora, type DadosCalculadora } from '@/dominio/calculadoras/editar'
 import type { Calculadora, UUID } from '@/dominio/tipos'
+import { usePrescricoesStore } from './prescricoes'
 
 /** Cópia simples: o IndexedDB não aceita o proxy reativo do Vue. */
 function semProxy<T>(valor: T): T {
@@ -66,6 +67,11 @@ export const useCalculadorasStore = defineStore('calculadoras', () => {
   async function excluirPermanentemente(id: UUID) {
     await repoCalculadoras.excluirPermanentemente(id)
     todas.value = todas.value.filter((c) => c.id !== id)
+    // Some o vínculo em todas as prescrições (inclusive as da lixeira).
+    const prescricoes = usePrescricoesStore()
+    for (const p of prescricoes.todas.filter((x) => x.calculadoraIds.includes(id))) {
+      await prescricoes.atualizar(p.id, { calculadoraIds: p.calculadoraIds.filter((cid) => cid !== id) })
+    }
   }
 
   return {

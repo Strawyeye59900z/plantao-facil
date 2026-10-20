@@ -1,29 +1,34 @@
 <script setup lang="ts">
-import ListaBiblioteca from '@/components/comum/ListaBiblioteca.vue'
+import { computed } from 'vue'
+import PainelBiblioteca from '@/components/biblioteca/PainelBiblioteca.vue'
 import { filtrarCalculadoras } from '@/dominio/calculadoras/busca'
 import type { Calculadora } from '@/dominio/tipos'
 import { useCalculadorasStore } from '@/stores/calculadoras'
 import { useCategoriasStore } from '@/stores/categorias'
-import { useRecentesStore } from '@/stores/recentes'
 
 const calculadoras = useCalculadorasStore()
 const categorias = useCategoriasStore()
-const recentes = useRecentesStore()
 
-function filtrar(itens: Calculadora[], termo: string) {
-  return filtrarCalculadoras(itens, termo, (id) => categorias.obter(id)?.nome ?? '')
+const itens = computed(() => calculadoras.ativas.filter((c) => c.area === 'calculadora'))
+
+function filtrar(lista: Calculadora[], termo: string) {
+  return filtrarCalculadoras(lista, termo, (id) => categorias.obter(id)?.nome ?? '')
+}
+
+function descrever(c: Calculadora) {
+  return { etiquetas: [c.tipo === 'dose_peso' ? 'Doses por peso' : 'Fórmula'], meta: c.descricao.trim() }
 }
 </script>
 
 <template>
-  <ListaBiblioteca
-    titulo="Calculadoras"
+  <PainelBiblioteca
     rota-base="/calculadoras"
     rotulo-novo="Nova calculadora"
     texto-vazio="Nenhuma calculadora cadastrada."
-    :itens="calculadoras.ativas"
-    :categorias="categorias.deCalculadoras"
-    :recentes-ids="recentes.ids('calculadora')"
+    :nome-itens="{ um: 'calculadora', varios: 'calculadoras' }"
+    :itens="itens"
+    :grupos="categorias.deCalculadoras"
     :filtrar="filtrar"
+    :descrever="descrever"
   />
 </template>

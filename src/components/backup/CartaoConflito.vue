@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 const props = defineProps<{
   item: ItemPlano<Entidade>
-  /** Ex.: "Prescrição", "Categoria". */
+  /** Ex.: "Prescrição", "Grupo". */
   tipo: string
   nome: (e: Entidade) => string
 }>()
@@ -16,11 +16,12 @@ const escolha = defineModel<'local' | 'arquivo'>({ required: true })
 const ROTULOS: Record<string, string> = {
   titulo: 'título',
   nome: 'nome',
-  categoriaId: 'categoria',
+  categoriaId: 'grupo',
   tags: 'tags',
   itens: 'itens',
   condicoes: 'condições',
   alertas: 'alertas',
+  calculadoraIds: 'calculadoras ligadas',
   receita: 'receita pronta',
   observacoes: 'observações',
   referencia: 'referência',
@@ -37,6 +38,9 @@ const ROTULOS: Record<string, string> = {
   campos: 'campos',
   entradas: 'entradas',
   expressao: 'expressão',
+  area: 'área',
+  linhas: 'linhas',
+  saidas: 'resultados',
 }
 
 const campos = computed(() => props.item.campos.map((c) => ROTULOS[c] ?? c).join(', '))

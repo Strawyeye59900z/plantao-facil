@@ -9,12 +9,14 @@ export interface FaixaInterpretacao {
   gravidade: Gravidade
 }
 
+export type AreaCalculadora = 'calculadora' | 'escala'
+
 interface CalculadoraBase extends Entidade {
+  area: AreaCalculadora
   nome: string
   categoriaId: UUID | null
   descricao: string
   referencia: string
-  faixas: FaixaInterpretacao[]
   favorito: boolean
 }
 
@@ -59,28 +61,55 @@ export interface CampoNumero {
 export type CampoPontos = CampoSimNao | CampoSelecao | CampoNumero
 
 export interface CalculadoraPontos extends CalculadoraBase {
+  area: 'escala'
   tipo: 'pontos'
   campos: CampoPontos[]
+  faixas: FaixaInterpretacao[]
 }
 
-export interface EntradaFormula {
+export interface RegraDosePeso {
   id: UUID
-  /** Nome usado na expressão, ex.: "peso". */
-  variavel: string
-  rotulo: string
+  /** Nome usado no texto da linha entre chaves, ex.: "inducao" em {inducao}. */
+  marcador: string
+  dosePorKg: number
   unidade: string
-  min: number
-  max: number
+  /** Unidade por mL; null = sem conversão para volume. */
+  concentracao: number | null
+  doseMaxima: number | null
+  casasDecimais: number
+}
+
+export interface LinhaDosePeso {
+  id: UUID
+  texto: string
+  regras: RegraDosePeso[]
+}
+
+export interface CalculadoraDosePeso extends CalculadoraBase {
+  area: 'calculadora'
+  tipo: 'dose_peso'
+  linhas: LinhaDosePeso[]
+}
+
+export type CampoFormula =
+  | { id: UUID; tipo: 'numero'; variavel: string; rotulo: string; unidade: string; min: number | null; max: number | null }
+  | { id: UUID; tipo: 'sim_nao'; variavel: string; rotulo: string; valorSim: number; valorNao: number }
+
+export interface SaidaFormula {
+  id: UUID
+  nome: string
+  expressao: string
+  unidade: string
+  casasDecimais: number
+  teto: number | null
+  piso: number | null
+  faixas: FaixaInterpretacao[]
 }
 
 export interface CalculadoraFormula extends CalculadoraBase {
   tipo: 'formula'
-  entradas: EntradaFormula[]
-  expressao: string
-  unidadeResultado: string
-  casasDecimais: number
-  teto: number | null
-  piso: number | null
+  campos: CampoFormula[]
+  saidas: SaidaFormula[]
 }
 
-export type Calculadora = CalculadoraPontos | CalculadoraFormula
+export type Calculadora = CalculadoraDosePeso | CalculadoraFormula | CalculadoraPontos

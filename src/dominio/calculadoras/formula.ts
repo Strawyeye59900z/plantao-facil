@@ -20,8 +20,9 @@ import {
   unaryPlusDependencies,
   type MathNode,
 } from 'mathjs/number'
-import type { CalculadoraFormula } from '@/dominio/tipos'
+import type { CalculadoraFormula, FaixaInterpretacao, SaidaFormula, UUID } from '@/dominio/tipos'
 import { formatarNumero, limpar } from '@/dominio/dose/numeros'
+import { interpretar } from './interpretacao'
 
 /**
  * Avaliador de fórmulas (nunca eval/new Function):
@@ -115,8 +116,14 @@ export function analisarExpressao(expressao: string, variaveis: string[]): Anali
 
 // ===== Cálculo =====
 
-export type ResultadoFormula =
-  | { estado: 'incompleto'; faltam: string[] }
+/** Valores informados por campo.id: número, sim/não (boolean) ou null (vazio). */
+export type ValoresFormula = Record<UUID, number | boolean | null>
+
+export type ResultadoSaida =
+  | { saidaId: UUID; ok: true; valor: number; texto: string; faixa: FaixaInterpretacao | undefined; avisos: string[] }
+  | { saidaId: UUID; ok: false; erro: string }
+
+type ResultadoFormula =
   | { estado: 'erro'; erro: string }
   | {
       estado: 'ok'
@@ -127,27 +134,30 @@ export type ResultadoFormula =
     }
 
 /**
- * Calcula a fórmula com as entradas digitadas (null = vazio).
- * Ordem: valida entradas → avalia → arredonda (casas decimais) → teto/piso por último.
+ * Calcula uma saída da fórmula com valores já numéricos (sim/não convertido em valorSim/valorNao).
+ * Ordem: valida mín./máx. → avalia → arredonda (casas decimais) → teto/piso por último.
  */
-export function calcularFormula(calc: CalculadoraFormula, valores: Record<string, number | null>): ResultadoFormula {
-  const faltam = calc.entradas.filter((e) => valores[e.id] === null || valores[e.id] === undefined)
-  for (const e of calc.entradas) {
-    const v = valores[e.id]
-    if (v === null || v === undefined) continue
-    if (!Number.isFinite(v)) return { estado: 'erro', erro: `${e.rotulo}: valor inválido.` }
-    if (v < e.min || v > e.max) {
-      return { estado: 'erro', erro: `${e.rotulo}: use um valor entre ${formatarNumero(e.min)} e ${formatarNumero(e.max)} ${e.unidade}`.trim() + '.' }
+function calcularFormula(calc: CalculadoraFormula, valores: Record<string, number>, saida: SaidaFormula): ResultadoFormula {
+  for (const c of calc.campos) {
+    const v = valores[c.id]!
+    if (!Number.isFinite(v)) return { estado: 'erro', erro: `${c.rotulo}: valor inválido.` }
+    if (c.tipo === 'numero' && ((c.min !== null && v < c.min) || (c.max !== null && v > c.max))) {
+      const intervalo =
+        c.min !== null && c.max !== null
+          ? `entre ${formatarNumero(c.min)} e ${formatarNumero(c.max)}`
+          : c.min !== null
+            ? `a partir de ${formatarNumero(c.min)}`
+            : `até ${formatarNumero(c.max!)}`
+      return { estado: 'erro', erro: `${c.rotulo}: use um valor ${intervalo} ${c.unidade}`.trim() + '.' }
     }
   }
-  if (faltam.length) return { estado: 'incompleto', faltam: faltam.map((e) => e.rotulo) }
 
-  const analise = analisarExpressao(calc.expressao, calc.entradas.map((e) => e.variavel))
+  const analise = analisarExpressao(saida.expressao, calc.campos.map((c) => c.variavel))
   if (!analise.ok) return { estado: 'erro', erro: analise.erro }
 
   let bruto: unknown
   try {
-    bruto = analise.avaliar(Object.fromEntries(calc.entradas.map((e) => [e.variavel, valores[e.id]!])))
+    bruto = analise.avaliar(Object.fromEntries(calc.campos.map((c) => [c.variavel, valores[c.id]!])))
   } catch (e) {
     return { estado: 'erro', erro: `Não foi possível calcular: ${e instanceof Error ? e.message : String(e)}` }
   }
@@ -155,16 +165,41 @@ export function calcularFormula(calc: CalculadoraFormula, valores: Record<string
     return { estado: 'erro', erro: 'Resultado inválido (ex.: divisão por zero ou raiz de número negativo).' }
   }
 
-  const fator = 10 ** calc.casasDecimais
+  const fator = 10 ** saida.casasDecimais
   let valor = limpar(Math.round(limpar(bruto * fator)) / fator)
   let aviso: 'teto' | 'piso' | null = null
-  if (calc.teto !== null && valor > calc.teto) {
-    valor = calc.teto
+  if (saida.teto !== null && valor > saida.teto) {
+    valor = saida.teto
     aviso = 'teto'
   }
-  if (calc.piso !== null && valor < calc.piso) {
-    valor = calc.piso
+  if (saida.piso !== null && valor < saida.piso) {
+    valor = saida.piso
     aviso = 'piso'
   }
   return { estado: 'ok', valor, bruto, aviso }
+}
+
+/** Calcula todas as saídas, cada uma de forma independente. */
+export function calcularSaidas(c: CalculadoraFormula, valores: ValoresFormula): ResultadoSaida[] {
+  const numericos: Record<string, number> = {}
+  let completo = true
+  for (const campo of c.campos) {
+    const v = valores[campo.id]
+    if (campo.tipo === 'sim_nao' && typeof v === 'boolean') numericos[campo.id] = v ? campo.valorSim : campo.valorNao
+    else if (campo.tipo === 'numero' && typeof v === 'number') numericos[campo.id] = v
+    else completo = false
+  }
+  return c.saidas.map((saida): ResultadoSaida => {
+    if (!completo) return { saidaId: saida.id, ok: false, erro: 'Preencha todos os campos.' }
+    const r = calcularFormula(c, numericos, saida)
+    if (r.estado === 'erro') return { saidaId: saida.id, ok: false, erro: r.erro }
+    return {
+      saidaId: saida.id,
+      ok: true,
+      valor: r.valor,
+      texto: `${formatarNumero(r.valor)} ${saida.unidade}`.trim(),
+      faixa: interpretar(r.valor, saida.faixas),
+      avisos: r.aviso === 'teto' ? ['Limitado ao teto.'] : r.aviso === 'piso' ? ['Elevado ao piso.'] : [],
+    }
+  })
 }

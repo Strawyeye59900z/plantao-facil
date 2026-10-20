@@ -15,22 +15,24 @@ const categorias = useCategoriasStore()
 
 interface ItemLixeira {
   id: UUID
-  tipo: 'prescricao' | 'calculadora'
+  tipo: 'prescricao' | 'calculadora' | 'escala'
   nome: string
   categoriaId: UUID | null
   excluidoEm: ISODate
 }
 
-/** Prescrições e calculadoras na lixeira, mais recentes primeiro. */
+/** Prescrições, calculadoras e escalas na lixeira, mais recentes primeiro. */
 const itens = computed<ItemLixeira[]>(() =>
   [
     ...prescricoes.lixeira.map((p) => ({ id: p.id, tipo: 'prescricao' as const, nome: p.titulo, categoriaId: p.categoriaId, excluidoEm: p.excluidoEm! })),
-    ...calculadoras.lixeira.map((c) => ({ id: c.id, tipo: 'calculadora' as const, nome: c.nome, categoriaId: c.categoriaId, excluidoEm: c.excluidoEm! })),
+    ...calculadoras.lixeira.map((c) => ({ id: c.id, tipo: c.area, nome: c.nome, categoriaId: c.categoriaId, excluidoEm: c.excluidoEm! })),
   ].sort((a, b) => b.excluidoEm.localeCompare(a.excluidoEm)),
 )
 
 const store = (item: ItemLixeira) => (item.tipo === 'prescricao' ? prescricoes : calculadoras)
-const rota = (item: ItemLixeira) => `/${item.tipo === 'prescricao' ? 'prescricoes' : 'calculadoras'}/${item.id}`
+const ROTA: Record<ItemLixeira['tipo'], string> = { prescricao: 'prescricoes', calculadora: 'calculadoras', escala: 'escalas' }
+const ROTULO: Record<ItemLixeira['tipo'], string> = { prescricao: 'Prescrição', calculadora: 'Calculadora', escala: 'Escala' }
+const rota = (item: ItemLixeira) => `/${ROTA[item.tipo]}/${item.id}`
 
 const paraExcluir = ref<ItemLixeira | null>(null)
 const confirmar = computed({
@@ -67,7 +69,7 @@ async function excluirDeVez() {
         <RouterLink :to="rota(item)" class="min-w-0 flex-1">
           <p class="truncate font-medium">{{ item.nome }}</p>
           <p class="text-muted-foreground text-xs">
-            {{ item.tipo === 'prescricao' ? 'Prescrição' : 'Calculadora' }} · {{ categorias.nome(item.categoriaId) }} ·
+            {{ ROTULO[item.tipo] }} · {{ categorias.nome(item.categoriaId) }} ·
             excluída em {{ dataExclusao(item) }}
           </p>
         </RouterLink>

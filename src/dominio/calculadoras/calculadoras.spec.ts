@@ -1,9 +1,18 @@
 // Calculadoras fictícias de teste — nenhum escore ou fórmula clínica real.
 import { describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
-import type { CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
-import { avisosCalculadora, calculadoraVazia, duplicarCalculadora, validarCalculadora } from './editar'
-import { analisarExpressao, calcularFormula } from './formula'
+import type { CalculadoraDosePeso, CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
+import {
+  avisosCalculadora,
+  calculadoraVazia,
+  duplicarCalculadora,
+  marcadoresCalculaveis,
+  marcadoresInvalidos,
+  regraDosePesoVazia,
+  sincronizarRegras,
+  validarCalculadora,
+} from './editar'
+import { analisarExpressao, calcularSaidas, type ValoresFormula } from './formula'
 import { analisarFaixas, interpretar } from './interpretacao'
 import { calcularPontos, intervaloPossivel } from './pontos'
 
@@ -12,6 +21,7 @@ const ent = { id: 'calc', criadoEm: T, atualizadoEm: T, excluidoEm: null, catego
 
 const escore: CalculadoraPontos = {
   ...ent,
+  area: 'escala',
   tipo: 'pontos',
   nome: 'Escore Teste',
   campos: [
@@ -47,19 +57,34 @@ const escore: CalculadoraPontos = {
 
 const formula: CalculadoraFormula = {
   ...ent,
+  area: 'calculadora',
   tipo: 'formula',
   nome: 'Fórmula Teste',
-  entradas: [
-    { id: 'ea', variavel: 'a', rotulo: 'Entrada A', unidade: 'u', min: 0, max: 100 },
-    { id: 'eb', variavel: 'b', rotulo: 'Entrada B', unidade: 'u', min: 1, max: 10 },
+  campos: [
+    { id: 'ea', tipo: 'numero', variavel: 'a', rotulo: 'Entrada A', unidade: 'u', min: 0, max: 100 },
+    { id: 'eb', tipo: 'numero', variavel: 'b', rotulo: 'Entrada B', unidade: 'u', min: 1, max: 10 },
   ],
-  expressao: 'a / b + sqrt(4)',
-  unidadeResultado: 'u',
-  casasDecimais: 1,
-  teto: null,
-  piso: null,
-  faixas: [],
+  saidas: [{ id: 's1', nome: 'Resultado', expressao: 'a / b + sqrt(4)', unidade: 'u', casasDecimais: 1, teto: null, piso: null, faixas: [] }],
 }
+
+const dosePeso: CalculadoraDosePeso = {
+  ...ent,
+  area: 'calculadora',
+  tipo: 'dose_peso',
+  nome: 'Dose Teste',
+  linhas: [
+    {
+      id: 'l1',
+      texto: 'Medicamento Teste A {inducao}',
+      regras: [{ id: 'r1', marcador: 'inducao', dosePorKg: 2, unidade: 'mg', concentracao: null, doseMaxima: null, casasDecimais: 1 }],
+    },
+  ],
+}
+
+const comSaida = (alt: Partial<CalculadoraFormula['saidas'][number]>): CalculadoraFormula => ({
+  ...formula,
+  saidas: [{ ...formula.saidas[0]!, ...alt }],
+})
 
 describe('motor de pontos', () => {
   it('soma sim/não, seleção e número', () => {
@@ -96,27 +121,71 @@ describe('motor de pontos', () => {
 })
 
 describe('avaliador de fórmulas', () => {
+  const um = (c: CalculadoraFormula, v: ValoresFormula) => calcularSaidas(c, v)[0]!
+
   it('calcula e arredonda pelas casas decimais', () => {
-    const r = calcularFormula(formula, { ea: 10, eb: 3 })
-    expect(r).toMatchObject({ estado: 'ok', valor: 5.3 })
+    expect(um(formula, { ea: 10, eb: 3 })).toMatchObject({ ok: true, valor: 5.3 })
   })
 
-  it('incompleto lista as entradas faltando', () => {
-    expect(calcularFormula(formula, { ea: 10, eb: null })).toEqual({ estado: 'incompleto', faltam: ['Entrada B'] })
+  it('campo vazio pede para preencher', () => {
+    expect(um(formula, { ea: 10, eb: null })).toEqual({ saidaId: 's1', ok: false, erro: 'Preencha todos os campos.' })
   })
 
   it('entrada fora do mínimo/máximo é erro', () => {
-    expect(calcularFormula(formula, { ea: 10, eb: 0 })).toMatchObject({ estado: 'erro' })
+    expect(um(formula, { ea: 10, eb: 0 })).toMatchObject({ ok: false })
   })
 
   it('aplica teto e piso por último, com aviso', () => {
-    expect(calcularFormula({ ...formula, teto: 5 }, { ea: 100, eb: 1 })).toMatchObject({ valor: 5, aviso: 'teto' })
-    expect(calcularFormula({ ...formula, piso: 4 }, { ea: 0, eb: 1 })).toMatchObject({ valor: 4, aviso: 'piso' })
+    expect(um(comSaida({ teto: 5 }), { ea: 100, eb: 1 })).toMatchObject({ ok: true, valor: 5, avisos: ['Limitado ao teto.'] })
+    expect(um(comSaida({ piso: 4 }), { ea: 0, eb: 1 })).toMatchObject({ ok: true, valor: 4, avisos: ['Elevado ao piso.'] })
   })
 
   it('resultado não finito é erro', () => {
-    const f = { ...formula, expressao: 'sqrt(a - 50)' }
-    expect(calcularFormula(f, { ea: 10, eb: 1 })).toMatchObject({ estado: 'erro' })
+    expect(um(comSaida({ expressao: 'sqrt(a - 50)' }), { ea: 10, eb: 1 })).toMatchObject({ ok: false })
+  })
+
+  it('exemplo de infusão: vazao * conc / peso', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      campos: [
+        { id: 'c1', tipo: 'numero', variavel: 'vazao', rotulo: 'Vazão', unidade: 'mL/h', min: null, max: null },
+        { id: 'c2', tipo: 'numero', variavel: 'conc', rotulo: 'Concentração', unidade: 'u/mL', min: null, max: null },
+        { id: 'c3', tipo: 'numero', variavel: 'peso', rotulo: 'Peso', unidade: 'kg', min: null, max: null },
+      ],
+      saidas: [{ id: 's1', nome: 'Taxa', expressao: 'vazao * conc / peso', unidade: 'un/kg/h', casasDecimais: 2, teto: null, piso: null, faixas: [] }],
+    }
+    expect(um(f, { c1: 10, c2: 64, c3: 80 })).toMatchObject({ ok: true, valor: 8, texto: '8 un/kg/h' })
+  })
+
+  it('campo sim/não usa valorSim/valorNao; vazio é erro', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      campos: [{ id: 'sn', tipo: 'sim_nao', variavel: 'x', rotulo: 'Fator', valorSim: 2, valorNao: 0 }],
+      saidas: [{ id: 's1', nome: 'R', expressao: 'x + 1', unidade: '', casasDecimais: 0, teto: null, piso: null, faixas: [] }],
+    }
+    expect(um(f, { sn: true })).toMatchObject({ ok: true, valor: 3 })
+    expect(um(f, { sn: false })).toMatchObject({ ok: true, valor: 1 })
+    expect(um(f, { sn: null })).toEqual({ saidaId: 's1', ok: false, erro: 'Preencha todos os campos.' })
+  })
+
+  it('várias saídas são independentes e trazem a faixa', () => {
+    const f: CalculadoraFormula = {
+      ...formula,
+      saidas: [
+        {
+          id: 's1', nome: 'Soma', expressao: 'a + b', unidade: 'u', casasDecimais: 0, teto: null, piso: null,
+          faixas: [
+            { id: 'f1', de: 0, ate: 5, texto: 'Baixa', gravidade: 'informativo' },
+            { id: 'f2', de: 6, ate: null, texto: 'Alta', gravidade: 'critico' },
+          ],
+        },
+        { id: 's2', nome: 'Quebra', expressao: 'sqrt(a - 50)', unidade: 'u', casasDecimais: 0, teto: null, piso: null, faixas: [] },
+      ],
+    }
+    const [r1, r2] = calcularSaidas(f, { ea: 10, eb: 1 })
+    expect(r1).toMatchObject({ saidaId: 's1', ok: true, valor: 11, texto: '11 u' })
+    expect(r1!.ok && r1!.faixa?.id).toBe('f2')
+    expect(r2).toMatchObject({ saidaId: 's2', ok: false })
   })
 
   it.each([
@@ -176,30 +245,68 @@ describe('editor de calculadoras', () => {
   it('calculadoras completas são válidas', () => {
     expect(validarCalculadora(escore, existe)).toEqual([])
     expect(validarCalculadora(formula, existe)).toEqual([])
+    expect(validarCalculadora(dosePeso, existe)).toEqual([])
   })
 
   it('nova calculadora vazia aponta o que falta', () => {
-    expect(validarCalculadora(calculadoraVazia('pontos'), existe)).toEqual([
+    expect(validarCalculadora(calculadoraVazia('escala', 'pontos'), existe)).toEqual([
       'Informe o nome.',
-      'Escolha a categoria.',
+      'Escolha o grupo.',
       'Campo 1: informe o texto.',
       'Campo 1: informe os pontos de "sim" e "não".',
     ])
-    const erros = validarCalculadora(calculadoraVazia('formula'), existe)
-    expect(erros).toContain('Entrada 1: informe mínimo e máximo.')
-    expect(erros).toContain('Escreva a expressão.')
+    const erros = validarCalculadora(calculadoraVazia('calculadora', 'formula'), existe)
+    expect(erros).toContain('Saída 1: Escreva a expressão.')
+    expect(erros).toContain('Saída 1: informe o nome.')
+    expect(validarCalculadora(calculadoraVazia('calculadora', 'dose_peso'), existe)).toContain('Linha 1: informe o texto.')
   })
 
-  it('variável inválida ou repetida', () => {
-    const d = { ...formula, entradas: [...formula.entradas, { ...formula.entradas[0]!, id: 'x' }, { ...formula.entradas[0]!, id: 'y', variavel: 'peso_ação' }] }
+  it('dose por peso: marcador sem regra', () => {
+    const d = { ...dosePeso, linhas: [{ ...dosePeso.linhas[0]!, regras: [] }] }
+    expect(validarCalculadora(d, existe)).toEqual(['A linha 1 usa {inducao}, que não tem regra.'])
+  })
+
+  it('dose por peso: marcador com nome que o motor não calcula', () => {
+    const linha = { ...dosePeso.linhas[0]!, texto: dosePeso.linhas[0]!.texto + ' {dose máxima}' }
+    const d = { ...dosePeso, linhas: [linha] }
+    expect(validarCalculadora(d, existe)).toEqual([
+      'A linha 1 usa {dose máxima}: o nome do marcador só pode ter letras sem acento, números e _.',
+    ])
+    expect(marcadoresInvalidos('A {ok} {dose máxima} {} {indução}')).toEqual(['dose máxima', '', 'indução'])
+  })
+
+  it('dose por peso: regra sem uso', () => {
+    const l = dosePeso.linhas[0]!
+    const d = { ...dosePeso, linhas: [{ ...l, regras: [...l.regras, { ...l.regras[0]!, id: 'r2', marcador: 'manutencao' }] }] }
+    expect(validarCalculadora(d, existe)).toEqual(['A regra {manutencao} não é usada em nenhuma linha.'])
+  })
+
+  it('dose por peso só existe em calculadora e pontos só em escala', () => {
+    expect(validarCalculadora({ ...dosePeso, area: 'escala' } as never, existe)).toContain('Dose por peso só existe em calculadoras.')
+    expect(validarCalculadora({ ...escore, area: 'calculadora' } as never, existe)).toContain('Pontos só existe em escalas.')
+  })
+
+  it('casas decimais de 0 a 4 (regra de dose e saída de fórmula)', () => {
+    const comCasas = (casasDecimais: number) => ({
+      ...dosePeso,
+      linhas: [{ ...dosePeso.linhas[0]!, regras: [{ ...dosePeso.linhas[0]!.regras[0]!, casasDecimais }] }],
+    })
+    expect(validarCalculadora(comCasas(4), existe)).toEqual([])
+    expect(validarCalculadora(comCasas(5), existe)).toEqual(['Linha 1, regra {inducao}: casas decimais de 0 a 4.'])
+    expect(validarCalculadora(comSaida({ casasDecimais: 4 }), existe)).toEqual([])
+    expect(validarCalculadora(comSaida({ casasDecimais: 5 }), existe)).toEqual(['Saída 1: casas decimais de 0 a 4.'])
+  })
+
+  it('fórmula: variável repetida ou inválida', () => {
+    const d = { ...formula, campos: [...formula.campos, { ...formula.campos[0]!, id: 'x', variavel: 'peso' }, { ...formula.campos[0]!, id: 'y', variavel: 'peso' }, { ...formula.campos[0]!, id: 'z', variavel: 'peso_ação' }] }
     const erros = validarCalculadora(d, existe)
-    expect(erros.some((e) => e.includes('repetida'))).toBe(true)
+    expect(erros).toContain('Variável repetida: peso.')
     expect(erros.some((e) => e.includes('sem acento'))).toBe(true)
   })
 
   it('avisos: lacuna na interpretação e variável não usada', () => {
     expect(avisosCalculadora({ ...escore, faixas: [{ ...escore.faixas[0]!, ate: 1 }, escore.faixas[1]!] })[0]).toMatch(/Lacuna/)
-    expect(avisosCalculadora({ ...formula, expressao: 'a * 2' })).toEqual(['A variável "b" não é usada na expressão.'])
+    expect(avisosCalculadora(comSaida({ expressao: 'a * 2' }))).toEqual(['A variável "b" não é usada em nenhuma saída.'])
   })
 
   it('duplicar gera IDs novos, "(cópia)" e aceita objeto reativo', () => {
@@ -208,5 +315,95 @@ describe('editor de calculadoras', () => {
     expect(copia.nome).toBe('Escore Teste (cópia)')
     expect(copia.tipo === 'pontos' && copia.campos.map((c) => c.id)).toEqual(['novo-3', 'novo-4', 'novo-5', 'novo-8'])
     expect(copia).not.toHaveProperty('id')
+  })
+
+  it('duplicar dose por peso: IDs novos em linhas e regras, marcadores iguais', () => {
+    let n = 0
+    const copia = duplicarCalculadora(dosePeso, () => `novo-${++n}`)
+    if (copia.tipo !== 'dose_peso') throw new Error('tipo')
+    expect(copia.nome).toBe('Dose Teste (cópia)')
+    const l = copia.linhas[0]!
+    expect(l.id).not.toBe('l1')
+    expect(l.regras[0]!.id).not.toBe('r1')
+    expect(l.id).not.toBe(l.regras[0]!.id)
+    expect(l.texto).toBe('Medicamento Teste A {inducao}')
+    expect({ ...l.regras[0]!, id: 'r1' }).toEqual(dosePeso.linhas[0]!.regras[0])
+  })
+
+  it('duplicar fórmula: IDs novos em campos, saídas e faixas', () => {
+    let n = 0
+    const original = comSaida({ faixas: [{ id: 'fx', de: 0, ate: 1, texto: 'Faixa Teste', gravidade: 'informativo' }] })
+    const copia = duplicarCalculadora(original, () => `novo-${++n}`)
+    if (copia.tipo !== 'formula') throw new Error('tipo')
+    const ids = [...copia.campos.map((c) => c.id), copia.saidas[0]!.id, copia.saidas[0]!.faixas[0]!.id]
+    expect(new Set(ids).size).toBe(4)
+    expect(ids.every((i) => i.startsWith('novo-'))).toBe(true)
+    expect(copia.campos.map((c) => c.variavel)).toEqual(['a', 'b'])
+    expect(copia.saidas[0]!.expressao).toBe(original.saidas[0]!.expressao)
+    expect({ ...copia.saidas[0]!.faixas[0]!, id: 'fx' }).toEqual(original.saidas[0]!.faixas[0])
+  })
+})
+
+describe('regras de dose por peso acompanham os marcadores do texto', () => {
+  let n = 0
+  const gerar = () => `r${++n}`
+  const preenchida = (marcador: string, id = `p-${marcador}`) => ({
+    ...regraDosePesoVazia(marcador, () => id),
+    dosePorKg: 1,
+    unidade: 'mg',
+  })
+
+  it('só conta marcadores que o motor substitui, sem repetir', () => {
+    expect(marcadoresCalculaveis('A {a} e {b_2} e {a} e {com espaço} e {}')).toEqual(['a', 'b_2'])
+  })
+
+  it('marcador novo ganha regra vazia', () => {
+    const regras = sincronizarRegras('Medicamento Teste A {inducao}', 'Medicamento Teste A {inducao', [], gerar).regras
+    expect(regras.map((r) => r.marcador)).toEqual(['inducao'])
+    expect(Number.isNaN(regras[0]!.dosePorKg)).toBe(true)
+  })
+
+  it('renomear o marcador leva a regra preenchida junto', () => {
+    const r = preenchida('inducao')
+    const { regras, renomeada } = sincronizarRegras('X {induca}', 'X {inducao}', [r], gerar)
+    expect(regras).toEqual([{ ...r, marcador: 'induca' }])
+    expect(renomeada).toEqual({ regraId: r.id, de: 'inducao', para: 'induca' })
+  })
+
+  it('renomear regra ainda vazia não gera aviso', () => {
+    const r = regraDosePesoVazia('dose', () => 'v')
+    const { regras, renomeada } = sincronizarRegras('X {dose2}', 'X {dose}', [r], gerar)
+    expect(regras).toEqual([{ ...r, marcador: 'dose2' }])
+    expect(renomeada).toBeNull()
+  })
+
+  it('marcador apagado: regra preenchida fica; regra intocada sai', () => {
+    const cheia = preenchida('inducao')
+    const vazia = regraDosePesoVazia('manutencao', () => 'v')
+    const { regras, renomeada } = sincronizarRegras('X', 'X {inducao} {manutencao}', [cheia, vazia], gerar)
+    expect(regras).toEqual([cheia])
+    expect(renomeada).toBeNull()
+  })
+
+  it('apagar e depois digitar outro marcador não reaproveita a regra órfã', () => {
+    const cheia = preenchida('inducao')
+    const depoisDeApagar = sincronizarRegras('X {', 'X {inducao}', [cheia], gerar).regras
+    expect(depoisDeApagar).toEqual([cheia])
+    const regras = sincronizarRegras('X {outra}', 'X {outra', depoisDeApagar, gerar).regras
+    expect(regras.map((r) => r.marcador)).toEqual(['inducao', 'outra'])
+    expect(regras[0]).toBe(cheia)
+  })
+
+  it('não renomeia por cima de uma regra que já existe', () => {
+    const a = preenchida('a')
+    const b = preenchida('b')
+    const { regras, renomeada } = sincronizarRegras('X {b}', 'X {a}', [a, b], gerar)
+    expect(regras).toEqual([a, b])
+    expect(renomeada).toBeNull()
+  })
+
+  it('texto sem mudança de marcadores mantém as regras', () => {
+    const a = preenchida('a')
+    expect(sincronizarRegras('Y {a} mais texto', 'Y {a}', [a], gerar)).toEqual({ regras: [a], renomeada: null })
   })
 })

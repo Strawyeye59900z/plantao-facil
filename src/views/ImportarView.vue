@@ -538,25 +538,21 @@ onBeforeUnmount(() => {
             aceitar-sem-categoria
           />
           <template v-else>
-            <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Categoria" />
+            <CampoSelect v-model="r.dados.categoriaId" :opcoes="opcoesCategoria" aria-label="Grupo" />
             <ol class="list-decimal pl-5 text-sm">
               <li v-for="item in r.dados.itens" :key="item.id" class="whitespace-pre-line">
                 <span v-if="nomeCondicao(r, item.condicaoId)" class="text-primary block text-xs font-semibold">
                   Condição: {{ nomeCondicao(r, item.condicaoId) }}
                 </span>
-                <template v-if="item.opcoesEquivalentes">
+                <template v-if="item.opcoes.length >= 2">
                   <span class="text-primary text-xs font-semibold">Opções equivalentes (escolher uma):</span>
                   <ul class="list-disc pl-4">
-                    <li>{{ item.texto }}</li>
-                    <li v-for="alt in item.alternativas" :key="alt.id">{{ alt.texto }}</li>
+                    <li v-for="opcao in item.opcoes" :key="opcao.id">
+                      {{ opcao.texto }}<span v-if="opcao.motivo" class="text-muted-foreground"> ({{ opcao.motivo }})</span>
+                    </li>
                   </ul>
                 </template>
-                <template v-else>
-                  {{ item.texto }}
-                  <span v-if="item.alternativas.length" class="text-muted-foreground">
-                    ({{ item.alternativas.length }} {{ item.alternativas.length === 1 ? 'alternativa' : 'alternativas' }})
-                  </span>
-                </template>
+                <template v-else>{{ item.opcoes[0]?.texto }}</template>
               </li>
             </ol>
             <p v-if="r.dados.alertas.length" class="text-muted-foreground text-sm">
