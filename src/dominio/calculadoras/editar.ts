@@ -54,17 +54,31 @@ export function marcadoresCalculaveis(texto: string): string[] {
   return [...new Set([...texto.matchAll(/\{([A-Za-z0-9_]+)\}/g)].map((m) => m[1]!))]
 }
 
+/** Marcadores `{…}` do texto que o motor não substitui (nome com acento, espaço, vazio…). */
+export function marcadoresInvalidos(texto: string): string[] {
+  return marcadoresDoTexto(texto).filter((m) => !/^[A-Za-z0-9_]+$/.test(m))
+}
+
+/** Por que um marcador não é calculado (validação e dica do editor). */
+export const MSG_NOME_MARCADOR = 'o nome do marcador só pode ter letras sem acento, números e _.'
+
 /** Regra ainda como nasceu (nada preenchido): pode sumir junto com o marcador sem perder trabalho do usuário. */
 function regraIntocada(r: RegraDosePeso): boolean {
   const vazia = regraDosePesoVazia(r.marcador, () => r.id)
   return (Object.keys(vazia) as (keyof RegraDosePeso)[]).every((k) => Object.is(r[k], vazia[k]))
 }
 
+export interface Sincronizacao {
+  regras: RegraDosePeso[]
+  /** Regra preenchida que passou para um marcador renomeado (o editor avisa); null se nenhuma. */
+  renomeada: { regraId: UUID; de: string; para: string } | null
+}
+
 /**
  * Regras de uma linha depois de o texto mudar de `textoAnterior` para `texto`:
  * - marcador novo ganha regra vazia (no fim da lista);
  * - numa mesma edição em que sai um marcador e entra outro (renomear, ex.: {inducao} → {inducao2}),
- *   a regra acompanha o nome novo;
+ *   a regra acompanha o nome novo (se estiver preenchida, volta em `renomeada`);
  * - marcador que sumiu: a regra preenchida fica (a validação acusa); a intocada é descartada.
  */
 export function sincronizarRegras(
@@ -72,7 +86,7 @@ export function sincronizarRegras(
   textoAnterior: string,
   regras: RegraDosePeso[],
   gerarId: GerarId = idPadrao,
-): RegraDosePeso[] {
+): Sincronizacao {
   const atuais = marcadoresCalculaveis(texto)
   const anteriores = marcadoresCalculaveis(textoAnterior)
   const saiu = anteriores.filter((m) => !atuais.includes(m))
@@ -80,12 +94,19 @@ export function sincronizarRegras(
   const temRegra = (m: string, lista: RegraDosePeso[]) => lista.some((r) => r.marcador === m)
 
   let resultado = regras
-  if (saiu.length === 1 && entrou.length === 1 && temRegra(saiu[0]!, regras) && !temRegra(entrou[0]!, regras)) {
-    resultado = regras.map((r) => (r.marcador === saiu[0] ? { ...r, marcador: entrou[0]! } : r))
+  let renomeada: Sincronizacao['renomeada'] = null
+  const de = saiu[0]
+  const para = entrou[0]
+  if (saiu.length === 1 && entrou.length === 1 && de && para && temRegra(de, regras) && !temRegra(para, regras)) {
+    resultado = regras.map((r) => {
+      if (r.marcador !== de) return r
+      if (!regraIntocada(r)) renomeada = { regraId: r.id, de, para }
+      return { ...r, marcador: para }
+    })
   }
   resultado = resultado.filter((r) => atuais.includes(r.marcador) || !regraIntocada(r))
   for (const m of atuais) if (!temRegra(m, resultado)) resultado = [...resultado, regraDosePesoVazia(m, gerarId)]
-  return resultado
+  return { regras: resultado, renomeada }
 }
 
 export function campoFormulaVazio(tipo: CampoFormula['tipo'], gerarId: GerarId = idPadrao): CampoFormula {
@@ -202,8 +223,10 @@ function errosDosePeso(d: SemEntidade<CalculadoraDosePeso>): string[] {
     if (!l.texto.trim()) erros.push(`Linha ${n}: informe o texto.`)
     const usados = marcadoresDoTexto(l.texto)
     const definidos = new Set<string>()
+    const invalidos = marcadoresInvalidos(l.texto)
     for (const m of usados) {
-      if (!l.regras.some((r) => r.marcador === m)) erros.push(`A linha ${n} usa {${m}}, que não tem regra.`)
+      if (invalidos.includes(m)) erros.push(`A linha ${n} usa {${m}}: ${MSG_NOME_MARCADOR}`)
+      else if (!l.regras.some((r) => r.marcador === m)) erros.push(`A linha ${n} usa {${m}}, que não tem regra.`)
     }
     for (const r of l.regras) {
       if (definidos.has(r.marcador)) erros.push(`Linha ${n}: regra {${r.marcador}} repetida.`)

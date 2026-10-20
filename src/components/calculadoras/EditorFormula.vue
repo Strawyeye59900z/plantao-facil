@@ -277,9 +277,11 @@ const BOTAO_ICONE = 'rounded-full'
         </div>
         <div class="flex flex-col gap-1">
           <Label :for="`saida-${saida.id}-piso`">Piso</Label>
+          <CampoNumero :id="`saida-${saida.id}-piso`" v-model="saida.piso" :sufixo="saida.unidade" />
         </div>
         <div class="flex flex-col gap-1">
           <Label :for="`saida-${saida.id}-teto`">Teto</Label>
+          <CampoNumero :id="`saida-${saida.id}-teto`" v-model="saida.teto" :sufixo="saida.unidade" />
         </div>
       </div>
 

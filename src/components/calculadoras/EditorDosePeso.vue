@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick } from 'vue'
-import { ArrowDown, ArrowUp, Plus, Trash2, TriangleAlert, X } from '@lucide/vue'
+import { nextTick, reactive } from 'vue'
+import { ArrowDown, ArrowUp, Info, Plus, Trash2, TriangleAlert, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,8 @@ import CampoNumeroObrigatorio from '@/components/comum/CampoNumeroObrigatorio.vu
 import {
   linhaDosePesoVazia,
   marcadoresCalculaveis,
+  marcadoresInvalidos,
+  MSG_NOME_MARCADOR,
   regraDosePesoVazia,
   sincronizarRegras,
 } from '@/dominio/calculadoras/editar'
@@ -33,9 +35,22 @@ async function focar(idCampo: string) {
   campo?.focus({ preventScroll: true })
 }
 
+/**
+ * Regra preenchida que mudou de marcador ao renomear no texto → marcador de origem.
+ * Só na memória da tela: o aviso some quando o cartão é editado (ou ao sair do editor).
+ */
+const trazidaDe = reactive<Record<UUID, string>>({})
+
 function alterarTexto(linha: LinhaDosePeso, texto: string) {
-  linha.regras = sincronizarRegras(texto, linha.texto, linha.regras)
+  const { regras, renomeada } = sincronizarRegras(texto, linha.texto, linha.regras)
+  linha.regras = regras
   linha.texto = texto
+  if (renomeada) {
+    // Renomear letra a letra: o aviso guarda o nome original; voltar ao original tira o aviso.
+    const origem = trazidaDe[renomeada.regraId] ?? renomeada.de
+    if (origem === renomeada.para) delete trazidaDe[renomeada.regraId]
+    else trazidaDe[renomeada.regraId] = origem
+  }
 }
 
 function adicionarLinha() {
@@ -137,6 +152,14 @@ const BOTAO_ICONE = 'rounded-full'
         spellcheck="false"
         @update:model-value="(t) => alterarTexto(linha, String(t))"
       />
+      <p
+        v-for="marcador in marcadoresInvalidos(linha.texto)"
+        :key="`invalido-${marcador}`"
+        class="text-destructive flex items-start gap-1.5 text-sm"
+      >
+        <TriangleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span><code class="font-mono">{{ chave(marcador) }}</code>: {{ MSG_NOME_MARCADOR }}</span>
+      </p>
 
       <!-- Regras: uma por marcador -->
       <div
@@ -145,6 +168,7 @@ const BOTAO_ICONE = 'rounded-full'
         class="bg-secondary/50 flex flex-col gap-3 rounded-2xl p-3"
         role="group"
         :aria-label="`Regra ${chave(regra.marcador)} da linha ${i + 1}`"
+        @input="delete trazidaDe[regra.id]"
       >
         <div class="flex items-center gap-2">
           <span class="flex-1 font-mono text-sm font-bold">{{ chave(regra.marcador) }}</span>
@@ -160,6 +184,13 @@ const BOTAO_ICONE = 'rounded-full'
             <X />
           </Button>
         </div>
+        <p
+          v-if="trazidaDe[regra.id]"
+          class="border-informativo/35 bg-informativo/10 flex items-start gap-2 rounded-xl border px-3 py-2 text-sm"
+        >
+          <Info class="text-informativo mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>Regra trazida de {{ chave(trazidaDe[regra.id]!) }}. Confira os valores.</span>
+        </p>
         <p
           v-if="!usada"
           class="bg-atencao-suave text-atencao-suave-foreground border-atencao/30 flex items-start gap-2 rounded-xl border px-3 py-2 text-sm"

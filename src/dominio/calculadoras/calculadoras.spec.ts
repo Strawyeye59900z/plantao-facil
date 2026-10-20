@@ -7,6 +7,7 @@ import {
   calculadoraVazia,
   duplicarCalculadora,
   marcadoresCalculaveis,
+  marcadoresInvalidos,
   regraDosePesoVazia,
   sincronizarRegras,
   validarCalculadora,
@@ -265,6 +266,15 @@ describe('editor de calculadoras', () => {
     expect(validarCalculadora(d, existe)).toEqual(['A linha 1 usa {inducao}, que não tem regra.'])
   })
 
+  it('dose por peso: marcador com nome que o motor não calcula', () => {
+    const linha = { ...dosePeso.linhas[0]!, texto: dosePeso.linhas[0]!.texto + ' {dose máxima}' }
+    const d = { ...dosePeso, linhas: [linha] }
+    expect(validarCalculadora(d, existe)).toEqual([
+      'A linha 1 usa {dose máxima}: o nome do marcador só pode ter letras sem acento, números e _.',
+    ])
+    expect(marcadoresInvalidos('A {ok} {dose máxima} {} {indução}')).toEqual(['dose máxima', '', 'indução'])
+  })
+
   it('dose por peso: regra sem uso', () => {
     const l = dosePeso.linhas[0]!
     const d = { ...dosePeso, linhas: [{ ...l, regras: [...l.regras, { ...l.regras[0]!, id: 'r2', marcador: 'manutencao' }] }] }
@@ -337,29 +347,38 @@ describe('regras de dose por peso acompanham os marcadores do texto', () => {
   })
 
   it('marcador novo ganha regra vazia', () => {
-    const regras = sincronizarRegras('Medicamento Teste A {inducao}', 'Medicamento Teste A {inducao', [], gerar)
+    const regras = sincronizarRegras('Medicamento Teste A {inducao}', 'Medicamento Teste A {inducao', [], gerar).regras
     expect(regras.map((r) => r.marcador)).toEqual(['inducao'])
     expect(Number.isNaN(regras[0]!.dosePorKg)).toBe(true)
   })
 
   it('renomear o marcador leva a regra preenchida junto', () => {
     const r = preenchida('inducao')
-    const regras = sincronizarRegras('X {induca}', 'X {inducao}', [r], gerar)
+    const { regras, renomeada } = sincronizarRegras('X {induca}', 'X {inducao}', [r], gerar)
     expect(regras).toEqual([{ ...r, marcador: 'induca' }])
+    expect(renomeada).toEqual({ regraId: r.id, de: 'inducao', para: 'induca' })
+  })
+
+  it('renomear regra ainda vazia não gera aviso', () => {
+    const r = regraDosePesoVazia('dose', () => 'v')
+    const { regras, renomeada } = sincronizarRegras('X {dose2}', 'X {dose}', [r], gerar)
+    expect(regras).toEqual([{ ...r, marcador: 'dose2' }])
+    expect(renomeada).toBeNull()
   })
 
   it('marcador apagado: regra preenchida fica; regra intocada sai', () => {
     const cheia = preenchida('inducao')
     const vazia = regraDosePesoVazia('manutencao', () => 'v')
-    const regras = sincronizarRegras('X', 'X {inducao} {manutencao}', [cheia, vazia], gerar)
+    const { regras, renomeada } = sincronizarRegras('X', 'X {inducao} {manutencao}', [cheia, vazia], gerar)
     expect(regras).toEqual([cheia])
+    expect(renomeada).toBeNull()
   })
 
   it('apagar e depois digitar outro marcador não reaproveita a regra órfã', () => {
     const cheia = preenchida('inducao')
-    const depoisDeApagar = sincronizarRegras('X {', 'X {inducao}', [cheia], gerar)
+    const depoisDeApagar = sincronizarRegras('X {', 'X {inducao}', [cheia], gerar).regras
     expect(depoisDeApagar).toEqual([cheia])
-    const regras = sincronizarRegras('X {outra}', 'X {outra', depoisDeApagar, gerar)
+    const regras = sincronizarRegras('X {outra}', 'X {outra', depoisDeApagar, gerar).regras
     expect(regras.map((r) => r.marcador)).toEqual(['inducao', 'outra'])
     expect(regras[0]).toBe(cheia)
   })
@@ -367,12 +386,13 @@ describe('regras de dose por peso acompanham os marcadores do texto', () => {
   it('não renomeia por cima de uma regra que já existe', () => {
     const a = preenchida('a')
     const b = preenchida('b')
-    const regras = sincronizarRegras('X {b}', 'X {a}', [a, b], gerar)
+    const { regras, renomeada } = sincronizarRegras('X {b}', 'X {a}', [a, b], gerar)
     expect(regras).toEqual([a, b])
+    expect(renomeada).toBeNull()
   })
 
   it('texto sem mudança de marcadores mantém as regras', () => {
     const a = preenchida('a')
-    expect(sincronizarRegras('Y {a} mais texto', 'Y {a}', [a], gerar)).toEqual([a])
+    expect(sincronizarRegras('Y {a} mais texto', 'Y {a}', [a], gerar)).toEqual({ regras: [a], renomeada: null })
   })
 })
