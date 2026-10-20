@@ -12,7 +12,7 @@ export const MODELOS = {
 
 export type ModeloTranscricao = keyof typeof MODELOS
 
-export const MODELO_PADRAO = MODELOS.base
+export const MODELO_PADRAO = MODELOS.small
 
 export type StatusTranscricao =
   | 'sem-modelo'

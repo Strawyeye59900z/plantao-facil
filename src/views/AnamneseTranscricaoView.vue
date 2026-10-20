@@ -8,7 +8,7 @@ import { useDitadoLocal } from '@/composables/useDitadoLocal'
  * Página de teste da Fase 1: grava e transcreve no aparelho, sem enviar nada para servidor.
  */
 const t = useTranscricao()
-const modeloEscolhido = ref<ModeloTranscricao>('base')
+const modeloEscolhido = ref<ModeloTranscricao>('small')
 const d = useDitadoLocal()
 void d.verificar()
 
@@ -47,8 +47,8 @@ const rotulosStatus: Record<string, string> = {
       <Button size="touch" variant="outline" @click="t.carregarModelo(MODELOS[modeloEscolhido])">
         Carregar modelo ({{ modeloEscolhido }})
       </Button>
-      <Button size="touch" variant="ghost" @click="modeloEscolhido = modeloEscolhido === 'base' ? 'small' : 'base'">
-        Trocar para {{ modeloEscolhido === 'base' ? 'small' : 'base' }}
+      <Button size="touch" variant="ghost" @click="modeloEscolhido = modeloEscolhido === 'small' ? 'base' : 'small'">
+        Trocar para {{ modeloEscolhido === 'small' ? 'base' : 'small' }}
       </Button>
       <Button size="touch" :disabled="t.status.value !== 'pronto' && t.status.value !== 'pausado'" @click="t.iniciar()">
         Gravar
