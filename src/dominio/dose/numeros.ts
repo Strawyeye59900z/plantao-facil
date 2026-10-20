@@ -3,7 +3,10 @@ export function limpar(x: number): number {
   return Math.round(x * 1e9) / 1e9
 }
 
-const formatador = new Intl.NumberFormat('pt-BR', { useGrouping: false, maximumFractionDigits: 4 })
+/** Casas decimais que `formatarNumero` mostra (regras de dose e saídas não podem pedir mais). */
+export const CASAS_MAXIMAS = 4
+
+const formatador = new Intl.NumberFormat('pt-BR', { useGrouping: false, maximumFractionDigits: CASAS_MAXIMAS })
 
 /** Vírgula decimal, sem separador de milhar, sem zeros sobrando: 2,5 · 300 · 1000. */
 export function formatarNumero(x: number): string {

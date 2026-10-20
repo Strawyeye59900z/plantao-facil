@@ -14,6 +14,7 @@ import type {
   SaidaFormula,
   UUID,
 } from '@/dominio/tipos'
+import { CASAS_MAXIMAS } from '@/dominio/dose/numeros'
 import { analisarExpressao, PADRAO_VARIAVEL } from './formula'
 import { analisarFaixas } from './interpretacao'
 import { casasDosPontos, intervaloPossivel } from './pontos'
@@ -174,7 +175,7 @@ const finito = (x: unknown): x is number => typeof x === 'number' && Number.isFi
 const opcionalOk = (x: number | null) => x === null || finito(x)
 
 const MSG_VARIAVEL = 'variável deve começar com letra e ter só letras, números ou _ (sem acento).'
-const casasOk = (n: number) => Number.isInteger(n) && n >= 0 && n <= 6
+const casasOk = (n: number) => Number.isInteger(n) && n >= 0 && n <= CASAS_MAXIMAS
 
 function errosPontos(d: SemEntidade<CalculadoraPontos>): string[] {
   const erros: string[] = []
@@ -238,7 +239,7 @@ function errosDosePeso(d: SemEntidade<CalculadoraDosePeso>): string[] {
       if (!r.unidade.trim()) erros.push(`${p}: informe a unidade.`)
       if (r.concentracao !== null && !(finito(r.concentracao) && r.concentracao > 0)) erros.push(`${p}: a concentração deve ser maior que zero.`)
       if (r.doseMaxima !== null && !(finito(r.doseMaxima) && r.doseMaxima > 0)) erros.push(`${p}: a dose máxima deve ser maior que zero.`)
-      if (!casasOk(r.casasDecimais)) erros.push(`${p}: casas decimais de 0 a 6.`)
+      if (!casasOk(r.casasDecimais)) erros.push(`${p}: casas decimais de 0 a ${CASAS_MAXIMAS}.`)
     }
   })
   return erros
@@ -268,7 +269,7 @@ function errosFormula(d: SemEntidade<CalculadoraFormula>): string[] {
     if (!saida.nome.trim()) erros.push(`${p}: informe o nome.`)
     const analise = analisarExpressao(saida.expressao, variaveis)
     if (!analise.ok) erros.push(`${p}: ${analise.erro}`)
-    if (!casasOk(saida.casasDecimais)) erros.push(`${p}: casas decimais de 0 a 6.`)
+    if (!casasOk(saida.casasDecimais)) erros.push(`${p}: casas decimais de 0 a ${CASAS_MAXIMAS}.`)
     if (!opcionalOk(saida.teto) || !opcionalOk(saida.piso)) erros.push(`${p}: teto/piso inválido.`)
     if (finito(saida.teto) && finito(saida.piso) && saida.piso > saida.teto) erros.push(`${p}: o piso deve ser menor que o teto.`)
     erros.push(...errosInterpretacao(saida.faixas, `${p}, interpretação`))

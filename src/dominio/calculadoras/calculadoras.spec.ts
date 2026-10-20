@@ -286,6 +286,17 @@ describe('editor de calculadoras', () => {
     expect(validarCalculadora({ ...escore, area: 'calculadora' } as never, existe)).toContain('Pontos só existe em escalas.')
   })
 
+  it('casas decimais de 0 a 4 (regra de dose e saída de fórmula)', () => {
+    const comCasas = (casasDecimais: number) => ({
+      ...dosePeso,
+      linhas: [{ ...dosePeso.linhas[0]!, regras: [{ ...dosePeso.linhas[0]!.regras[0]!, casasDecimais }] }],
+    })
+    expect(validarCalculadora(comCasas(4), existe)).toEqual([])
+    expect(validarCalculadora(comCasas(5), existe)).toEqual(['Linha 1, regra {inducao}: casas decimais de 0 a 4.'])
+    expect(validarCalculadora(comSaida({ casasDecimais: 4 }), existe)).toEqual([])
+    expect(validarCalculadora(comSaida({ casasDecimais: 5 }), existe)).toEqual(['Saída 1: casas decimais de 0 a 4.'])
+  })
+
   it('fórmula: variável repetida ou inválida', () => {
     const d = { ...formula, campos: [...formula.campos, { ...formula.campos[0]!, id: 'x', variavel: 'peso' }, { ...formula.campos[0]!, id: 'y', variavel: 'peso' }, { ...formula.campos[0]!, id: 'z', variavel: 'peso_ação' }] }
     const erros = validarCalculadora(d, existe)

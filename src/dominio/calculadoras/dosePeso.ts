@@ -1,5 +1,5 @@
 import type { LinhaDosePeso, RegraDosePeso } from '@/dominio/tipos'
-import { formatarNumero, limpar } from '@/dominio/dose/numeros'
+import { CASAS_MAXIMAS, formatarNumero, limpar } from '@/dominio/dose/numeros'
 
 export type ParteLinha =
   | { tipo: 'texto'; texto: string }
@@ -10,7 +10,14 @@ export function calcularRegraDosePeso(
   r: RegraDosePeso,
   pesoKg: number | null,
 ): { texto: string; limitada: boolean } {
-  if (!Number.isFinite(r.dosePorKg) || (r.doseMaxima !== null && !Number.isFinite(r.doseMaxima))) return { texto: '[regra incompleta]', limitada: false }
+  if (
+    !Number.isFinite(r.dosePorKg) ||
+    (r.doseMaxima !== null && !Number.isFinite(r.doseMaxima)) ||
+    !Number.isInteger(r.casasDecimais) ||
+    r.casasDecimais < 0 ||
+    r.casasDecimais > CASAS_MAXIMAS
+  )
+    return { texto: '[regra incompleta]', limitada: false }
   if (pesoKg === null || !Number.isFinite(pesoKg)) {
     const base = `${formatarNumero(r.dosePorKg)} ${r.unidade}/kg`
     const max =
@@ -20,10 +27,16 @@ export function calcularRegraDosePeso(
     return { texto: base + max, limitada: false }
   }
   const fator = 10 ** r.casasDecimais
+  const semArredondar = limpar(r.dosePorKg * pesoKg)
   const calculada = Math.round(limpar(r.dosePorKg * pesoKg * fator)) / fator
   const limitada = r.doseMaxima !== null && calculada > r.doseMaxima
-  const dose = limitada ? (r.doseMaxima as number) : calculada
+  let dose = limitada ? (r.doseMaxima as number) : calculada
   let texto = `${formatarNumero(dose)} ${r.unidade}`
+  if (!limitada && semArredondar > 0 && calculada === 0) {
+    // Dose positiva que some no arredondamento: mostra "< 0,1 mg" e o volume usa a dose sem arredondar.
+    texto = `< ${formatarNumero(1 / fator)} ${r.unidade}`
+    dose = semArredondar
+  }
   if (r.concentracao !== null && Number.isFinite(r.concentracao) && r.concentracao > 0) {
     const bruto = limpar(dose / r.concentracao)
     const casas = bruto >= 1 ? 10 : 100

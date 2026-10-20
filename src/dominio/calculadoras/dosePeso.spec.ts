@@ -71,6 +71,28 @@ describe('calcularRegraDosePeso', () => {
   it('peso não finito é tratado como sem peso', () => {
     expect(calcularRegraDosePeso(regra(), Number.NaN).texto).toBe('1 mg/kg')
   })
+  it('dose positiva que arredonda para zero vira "< 0,1 mg"', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01 }), 3)).toEqual({ texto: '< 0,1 mg', limitada: false })
+  })
+  it('"< 1" com 0 casas e "< 0,01" com 2 casas', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.1, casasDecimais: 0 }), 3).texto).toBe('< 1 mg')
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.001, casasDecimais: 2 }), 3).texto).toBe('< 0,01 mg')
+  })
+  it('dose que arredonda para zero calcula o volume pela dose sem arredondar', () => {
+    // 0,03 mg ÷ 0,1 mg/mL = 0,3 mL (com a dose arredondada daria 0)
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01, concentracao: 0.1 }), 3).texto).toBe('< 0,1 mg (0,3 mL)')
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0.01, concentracao: 10 }), 3).texto).toBe('< 0,1 mg (< 0,01 mL)')
+  })
+  it('dose zero continua "0 mg"', () => {
+    expect(calcularRegraDosePeso(regra({ dosePorKg: 0 }), 3).texto).toBe('0 mg')
+  })
+  it('casas decimais inválidas marcam regra incompleta', () => {
+    const esperado = { texto: '[regra incompleta]', limitada: false }
+    for (const casasDecimais of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5, 5]) {
+      expect(calcularRegraDosePeso(regra({ casasDecimais }), 70)).toEqual(esperado)
+      expect(calcularRegraDosePeso(regra({ casasDecimais }), null)).toEqual(esperado)
+    }
+  })
   it('concentração inválida omite volume', () => {
     expect(calcularRegraDosePeso(regra({ concentracao: Number.NaN }), 70).texto).toBe('70 mg')
   })

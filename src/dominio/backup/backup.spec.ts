@@ -397,4 +397,42 @@ describe('esquema das calculadoras v2', () => {
     expect(lido.backup.calculadoras[1]).toMatchObject({ id: 'f1', area: 'calculadora', tipo: 'formula' })
     expect(lerBackup(JSON.stringify(lido.backup)).ok).toBe(true)
   })
+
+  it('formato 2 com calculadoras e grupos ainda no formato da v1 (Fase 2) é convertido', () => {
+    const grupo = { id: 'g1', nome: 'Grupo Teste', escopo: 'calculadora', ordem: 0, icone: null, criadoEm: T1, atualizadoEm: T1, excluidoEm: null }
+    const v1Pontos = { ...base, id: 'p1', categoriaId: 'g1', tipo: 'pontos', nome: 'Escore Teste', faixas: [], campos: [] }
+    const v1Formula = {
+      ...base, id: 'f1', categoriaId: 'g1', tipo: 'formula', nome: 'Fórmula Teste', faixas: [],
+      entradas: [{ id: 'e1', variavel: 'a', rotulo: 'A', unidade: 'u', min: 0, max: 10 }],
+      expressao: 'a * 2', unidadeResultado: 'u', casasDecimais: 1, teto: null, piso: null,
+    }
+    const texto = JSON.stringify({
+      formato: 'plantao-facil-backup', versaoFormato: 2, exportadoEm: T2, versaoApp: '1.0.0',
+      prescricoes: [], categorias: [grupo], calculadoras: [v1Pontos, v1Formula, dosePeso],
+    })
+    const lido = lerBackup(texto)
+    expect(lido.ok).toBe(true)
+    if (!lido.ok) return
+    expect(lido.backup.calculadoras[0]).toMatchObject({ id: 'p1', area: 'escala', tipo: 'pontos', categoriaId: 'g1-escala' })
+    expect(lido.backup.calculadoras[1]).toMatchObject({ id: 'f1', area: 'calculadora', tipo: 'formula', categoriaId: 'g1' })
+    expect(lido.backup.calculadoras[1]).toMatchObject({ saidas: [{ id: 'f1-saida', expressao: 'a * 2' }] })
+    expect(lido.backup.calculadoras[2]).toEqual(dosePeso)
+    expect(lido.backup.categorias.map((g) => [g.id, g.escopo])).toEqual([['g1', 'calculadora'], ['g1-escala', 'escala']])
+  })
+
+  it('formato 2 já no modelo atual passa sem mudança', () => {
+    const grupos = [
+      { id: 'g1', nome: 'Grupo Teste', escopo: 'calculadora', ordem: 0, icone: null, criadoEm: T1, atualizadoEm: T1, excluidoEm: null },
+      { id: 'g2', nome: 'Grupo Teste', escopo: 'escala', ordem: 1, icone: null, criadoEm: T1, atualizadoEm: T1, excluidoEm: null },
+    ]
+    const calcs = [{ ...dosePeso, categoriaId: 'g1' }, { ...formula, categoriaId: 'g1' }, { ...pontos, categoriaId: 'g2' }]
+    const bruto = { formato: 'plantao-facil-backup', versaoFormato: 2, exportadoEm: T2, versaoApp: '1.0.0', prescricoes: [], categorias: grupos, calculadoras: calcs }
+    const lido = lerBackup(JSON.stringify(bruto))
+    expect(lido.ok).toBe(true)
+    if (lido.ok) expect(lido.backup).toEqual(bruto)
+  })
+
+  it('formato 2 com calculadoras que não são objetos é recusado sem erro', () => {
+    expect(lerBackup(arquivo([1, null])).ok).toBe(false)
+  })
 })

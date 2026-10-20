@@ -3,6 +3,8 @@ import { descreverProblemas } from '@/dominio/texto/validacao'
 import type { ArquivoBackup, Calculadora, Categoria, Entidade, ISODate, Prescricao, UUID } from '@/dominio/tipos'
 import { normalizarTexto } from '@/dominio/texto/normalizar'
 import { migrarBibliotecaV1 } from '@/dominio/migracao/biblioteca'
+import { migrarCalculadorasEGruposV1 } from '@/dominio/migracao/calculadora'
+import type { CalculadoraV1, CategoriaV1 } from '@/dominio/migracao/v1/tipos'
 import { esquemaArquivoBackupV1 } from '@/dominio/migracao/v1/esquema'
 import { esquemaArquivoBackup, FORMATO_BACKUP, VERSAO_FORMATO_ATUAL } from './esquema'
 
@@ -84,9 +86,27 @@ function lerConteudo(bruto: unknown, versaoFormato: unknown): LeituraBackup {
     const biblioteca = migrarBibliotecaV1(v1.output)
     return { ok: true, backup: montarBackup(biblioteca, exportadoEm, versaoApp) }
   }
-  const atual = v.safeParse(esquemaArquivoBackup, bruto)
+  const atual = v.safeParse(esquemaArquivoBackup, converterCalculadorasDaFase2(bruto))
   if (!atual.success) return invalido(atual.issues)
   return { ok: true, backup: atual.output }
+}
+
+/**
+ * Backups do formato 2 feitos durante a Fase 2 ainda têm calculadoras e grupos no formato da v1
+ * (sem `area`). Passam por `migrarCalculadorasEGruposV1` antes da validação; registros que já têm
+ * `area` passam sem mudança. Listas ausentes ou com itens que não são objetos ficam como estão
+ * (a validação recusa).
+ */
+function converterCalculadorasDaFase2(bruto: unknown): unknown {
+  const b = bruto as { calculadoras?: unknown; categorias?: unknown }
+  const objetos = (x: unknown): x is object[] => Array.isArray(x) && x.every((i) => typeof i === 'object' && i !== null)
+  if (!objetos(b.calculadoras) || !objetos(b.categorias)) return bruto
+  if (b.calculadoras.every((c) => 'area' in c)) return bruto
+  const { calculadoras, categorias } = migrarCalculadorasEGruposV1(
+    b.calculadoras as CalculadoraV1[],
+    b.categorias as CategoriaV1[],
+  )
+  return { ...b, calculadoras, categorias }
 }
 
 // ===== Comparar =====
