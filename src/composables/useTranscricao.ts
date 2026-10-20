@@ -74,6 +74,10 @@ export function useTranscricao() {
     erro.value = null
     worker ??= new Worker(new URL('../workers/transcricao.worker.ts', import.meta.url), { type: 'module' })
     worker.onmessage = aoMensagem
+    worker.onerror = (evento) => {
+      erro.value = evento.message || 'O transcritor parou ao carregar. Feche e abra a página.'
+      status.value = 'erro'
+    }
     const dispositivoEscolhido = 'gpu' in navigator ? 'webgpu' : 'wasm'
     const mensagem: MensagemParaWorker = { tipo: 'carregar', modelo, dispositivo: dispositivoEscolhido }
     worker.postMessage(mensagem)

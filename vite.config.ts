@@ -86,14 +86,6 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [vue(), tailwindcss(), ...(penDrive ? [modoPenDrive(), viteSingleFile()] : [pwa])],
     build: penDrive ? { outDir: 'dist-pendrive', emptyOutDir: true } : undefined,
-    // Isolamento de origem (dev): permite o WASM usar várias threads na transcrição.
-    // "credentialless" deixa o download do modelo funcionar sem exigir cabeçalhos do servidor de origem.
-    server: {
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'credentialless',
-      },
-    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
