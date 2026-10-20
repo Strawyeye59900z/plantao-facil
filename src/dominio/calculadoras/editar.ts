@@ -49,6 +49,45 @@ export function regraDosePesoVazia(marcador: string, gerarId: GerarId = idPadrao
   return { id: gerarId(), marcador, dosePorKg: Number.NaN, unidade: '', concentracao: null, doseMaxima: null, casasDecimais: 1 }
 }
 
+/** Marcadores que o motor substitui (`{nome}` só com letras sem acento, números e _), sem repetir, na ordem do texto. */
+export function marcadoresCalculaveis(texto: string): string[] {
+  return [...new Set([...texto.matchAll(/\{([A-Za-z0-9_]+)\}/g)].map((m) => m[1]!))]
+}
+
+/** Regra ainda como nasceu (nada preenchido): pode sumir junto com o marcador sem perder trabalho do usuário. */
+function regraIntocada(r: RegraDosePeso): boolean {
+  const vazia = regraDosePesoVazia(r.marcador, () => r.id)
+  return (Object.keys(vazia) as (keyof RegraDosePeso)[]).every((k) => Object.is(r[k], vazia[k]))
+}
+
+/**
+ * Regras de uma linha depois de o texto mudar de `textoAnterior` para `texto`:
+ * - marcador novo ganha regra vazia (no fim da lista);
+ * - numa mesma edição em que sai um marcador e entra outro (renomear, ex.: {inducao} → {inducao2}),
+ *   a regra acompanha o nome novo;
+ * - marcador que sumiu: a regra preenchida fica (a validação acusa); a intocada é descartada.
+ */
+export function sincronizarRegras(
+  texto: string,
+  textoAnterior: string,
+  regras: RegraDosePeso[],
+  gerarId: GerarId = idPadrao,
+): RegraDosePeso[] {
+  const atuais = marcadoresCalculaveis(texto)
+  const anteriores = marcadoresCalculaveis(textoAnterior)
+  const saiu = anteriores.filter((m) => !atuais.includes(m))
+  const entrou = atuais.filter((m) => !anteriores.includes(m))
+  const temRegra = (m: string, lista: RegraDosePeso[]) => lista.some((r) => r.marcador === m)
+
+  let resultado = regras
+  if (saiu.length === 1 && entrou.length === 1 && temRegra(saiu[0]!, regras) && !temRegra(entrou[0]!, regras)) {
+    resultado = regras.map((r) => (r.marcador === saiu[0] ? { ...r, marcador: entrou[0]! } : r))
+  }
+  resultado = resultado.filter((r) => atuais.includes(r.marcador) || !regraIntocada(r))
+  for (const m of atuais) if (!temRegra(m, resultado)) resultado = [...resultado, regraDosePesoVazia(m, gerarId)]
+  return resultado
+}
+
 export function campoFormulaVazio(tipo: CampoFormula['tipo'], gerarId: GerarId = idPadrao): CampoFormula {
   return tipo === 'numero'
     ? { id: gerarId(), tipo, variavel: '', rotulo: '', unidade: '', min: null, max: null }

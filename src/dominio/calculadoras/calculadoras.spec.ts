@@ -2,7 +2,15 @@
 import { describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
 import type { CalculadoraDosePeso, CalculadoraFormula, CalculadoraPontos } from '@/dominio/tipos'
-import { avisosCalculadora, calculadoraVazia, duplicarCalculadora, validarCalculadora } from './editar'
+import {
+  avisosCalculadora,
+  calculadoraVazia,
+  duplicarCalculadora,
+  marcadoresCalculaveis,
+  regraDosePesoVazia,
+  sincronizarRegras,
+  validarCalculadora,
+} from './editar'
 import { analisarExpressao, calcularSaidas, type ValoresFormula } from './formula'
 import { analisarFaixas, interpretar } from './interpretacao'
 import { calcularPontos, intervaloPossivel } from './pontos'
@@ -312,5 +320,59 @@ describe('editor de calculadoras', () => {
     expect(copia.campos.map((c) => c.variavel)).toEqual(['a', 'b'])
     expect(copia.saidas[0]!.expressao).toBe(original.saidas[0]!.expressao)
     expect({ ...copia.saidas[0]!.faixas[0]!, id: 'fx' }).toEqual(original.saidas[0]!.faixas[0])
+  })
+})
+
+describe('regras de dose por peso acompanham os marcadores do texto', () => {
+  let n = 0
+  const gerar = () => `r${++n}`
+  const preenchida = (marcador: string, id = `p-${marcador}`) => ({
+    ...regraDosePesoVazia(marcador, () => id),
+    dosePorKg: 1,
+    unidade: 'mg',
+  })
+
+  it('só conta marcadores que o motor substitui, sem repetir', () => {
+    expect(marcadoresCalculaveis('A {a} e {b_2} e {a} e {com espaço} e {}')).toEqual(['a', 'b_2'])
+  })
+
+  it('marcador novo ganha regra vazia', () => {
+    const regras = sincronizarRegras('Medicamento Teste A {inducao}', 'Medicamento Teste A {inducao', [], gerar)
+    expect(regras.map((r) => r.marcador)).toEqual(['inducao'])
+    expect(Number.isNaN(regras[0]!.dosePorKg)).toBe(true)
+  })
+
+  it('renomear o marcador leva a regra preenchida junto', () => {
+    const r = preenchida('inducao')
+    const regras = sincronizarRegras('X {induca}', 'X {inducao}', [r], gerar)
+    expect(regras).toEqual([{ ...r, marcador: 'induca' }])
+  })
+
+  it('marcador apagado: regra preenchida fica; regra intocada sai', () => {
+    const cheia = preenchida('inducao')
+    const vazia = regraDosePesoVazia('manutencao', () => 'v')
+    const regras = sincronizarRegras('X', 'X {inducao} {manutencao}', [cheia, vazia], gerar)
+    expect(regras).toEqual([cheia])
+  })
+
+  it('apagar e depois digitar outro marcador não reaproveita a regra órfã', () => {
+    const cheia = preenchida('inducao')
+    const depoisDeApagar = sincronizarRegras('X {', 'X {inducao}', [cheia], gerar)
+    expect(depoisDeApagar).toEqual([cheia])
+    const regras = sincronizarRegras('X {outra}', 'X {outra', depoisDeApagar, gerar)
+    expect(regras.map((r) => r.marcador)).toEqual(['inducao', 'outra'])
+    expect(regras[0]).toBe(cheia)
+  })
+
+  it('não renomeia por cima de uma regra que já existe', () => {
+    const a = preenchida('a')
+    const b = preenchida('b')
+    const regras = sincronizarRegras('X {b}', 'X {a}', [a, b], gerar)
+    expect(regras).toEqual([a, b])
+  })
+
+  it('texto sem mudança de marcadores mantém as regras', () => {
+    const a = preenchida('a')
+    expect(sincronizarRegras('Y {a} mais texto', 'Y {a}', [a], gerar)).toEqual([a])
   })
 })
