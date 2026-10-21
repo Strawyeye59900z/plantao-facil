@@ -36,3 +36,45 @@ describe('numerosNaoEncontrados', () => {
     expect(numerosNaoEncontrados('2,5 mL', '2.5 mL')).toEqual([])
   })
 })
+
+import { destacar } from './textoRevisado'
+
+describe('destacar', () => {
+  const marcados = (t: string) => destacar(t).filter((x) => x.tipo !== 'texto').map((x) => [x.tipo, x.texto])
+
+  it('marca incompreensível e (?)', () => {
+    expect(marcados('Toma lozartana (?) e [incompreensível].')).toEqual([
+      ['incompreensivel', '(?)'],
+      ['incompreensivel', '[incompreensível]'],
+    ])
+  })
+
+  it('marca doses', () => {
+    expect(marcados('Losartana 50 mg, dipirona 500mg, insulina 10 UI, 2,5 ml/h')).toEqual([
+      ['importante', '50 mg'],
+      ['importante', '500mg'],
+      ['importante', '10 UI'],
+      ['importante', '2,5 ml/h'],
+    ])
+  })
+
+  it('marca durações e início dos sintomas', () => {
+    expect(marcados('Dor há 3 dias, febre desde ontem à noite, tosse por duas semanas.')).toEqual([
+      ['importante', 'há 3 dias'],
+      ['importante', 'desde ontem à noite'],
+      ['importante', 'por duas semanas'],
+    ])
+  })
+
+  it('marca datas', () => {
+    expect(marcados('DUM 12/03/2026, retorno 05/11')).toEqual([
+      ['importante', '12/03/2026'],
+      ['importante', '05/11'],
+    ])
+  })
+
+  it('não perde texto: junta tudo de volta igual', () => {
+    const t = 'HDA: dor há 3 dias (?), usa 50 mg.\nNega febre.'
+    expect(destacar(t).map((x) => x.texto).join('')).toBe(t)
+  })
+})

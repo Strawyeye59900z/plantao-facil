@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { adicionarConsulta } from '@/dominio/anamnese/bloco'
-import { numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
+import { destacar, numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
 import { separarProntuario } from '@/dominio/anamnese/separarProntuario'
 import { celular, evolucoes, pc } from '@/lib/anamnese/estado'
 
@@ -33,6 +33,7 @@ function guardarConsulta() {
 const consultaId = ref<string | null>(null)
 const consulta = computed(() => pc.bloco.value?.consultas.find((c) => c.id === consultaId.value) ?? null)
 const evolucao = computed(() => (consultaId.value ? (evolucoes[consultaId.value] ?? null) : null))
+const trechos = computed(() => destacar(evolucao.value?.prontuario ?? ''))
 const modalAberto = ref(false)
 const copiado = ref(false)
 const aviso = ref<string | null>(null)
@@ -170,12 +171,28 @@ async function copiarProntuario() {
           Confira estes números, que não estavam na transcrição: {{ evolucao.alertaNumeros.join(', ') }}
         </p>
 
-        <textarea
-          v-model="evolucao.prontuario"
-          spellcheck="false"
-          class="border-input min-h-[40vh] w-full flex-1 rounded-xl border p-4 text-base leading-relaxed"
-          aria-label="Prontuário editável"
-        />
+        <p class="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span><mark class="bg-critico-suave text-critico-suave-foreground rounded px-1">incompreensível</mark> conferir com o paciente</span>
+          <span><mark class="bg-atencao-suave text-atencao-suave-foreground rounded px-1">datas, doses e durações</mark> conferir</span>
+        </p>
+
+        <!-- O texto é editável; o destaque é desenhado por trás e acompanha o que você digita. -->
+        <div class="relative min-h-[40vh] flex-1">
+          <div
+            class="border-input pointer-events-none min-h-[40vh] rounded-xl border p-4 text-base leading-relaxed break-words whitespace-pre-wrap"
+            aria-hidden="true"
+          ><template v-for="(t, i) in trechos" :key="i"><mark
+                v-if="t.tipo !== 'texto'"
+                class="rounded-sm"
+                :class="t.tipo === 'incompreensivel' ? 'bg-critico-suave text-critico-suave-foreground' : 'bg-atencao-suave text-atencao-suave-foreground'"
+              >{{ t.texto }}</mark><template v-else>{{ t.texto }}</template></template>{{ '\n' }}</div>
+          <textarea
+            v-model="evolucao.prontuario"
+            spellcheck="false"
+            class="caret-foreground absolute inset-0 size-full resize-none overflow-hidden rounded-xl border border-transparent bg-transparent p-4 text-base leading-relaxed text-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-label="Prontuário editável"
+          />
+        </div>
 
         <section v-if="evolucao.fora" class="rounded-2xl border border-dashed p-4">
           <h3 class="mb-2 text-sm font-semibold">Fora do prontuário (não copiar)</h3>
