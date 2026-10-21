@@ -21,6 +21,7 @@ const aviso = ref<string | null>(null)
 const erro = ref<string | null>(null)
 const enviado = ref(false)
 const enviando = ref(false)
+const enviadas = ref(0)
 
 const alertasNumeros = computed(() => numerosNaoEncontrados(transcricao.value, resposta.value))
 
@@ -54,6 +55,10 @@ async function enviarAoPc() {
     const envelope = await cifrar(resposta.value.trim(), chave)
     await enviarResultado(sessaoId, envelope)
     enviado.value = true
+    enviadas.value += 1
+    transcricao.value = ''
+    resposta.value = ''
+    aviso.value = 'Enviado ao PC. A sessão continua aberta: pode ditar a próxima consulta.'
   } catch (falha) {
     erro.value = falha instanceof Error ? falha.message : String(falha)
   } finally {
@@ -122,10 +127,10 @@ async function copiarLimpo() {
         <Button
           v-if="podeEnviarAoPc"
           size="touch"
-          :disabled="!resposta.trim() || enviando || enviado"
+          :disabled="!resposta.trim() || enviando"
           @click="enviarAoPc"
         >
-          {{ enviado ? 'Enviado ao PC' : enviando ? 'Enviando…' : 'Enviar ao PC' }}
+          {{ enviando ? 'Enviando…' : 'Enviar ao PC' }}
         </Button>
       </div>
       <p v-if="aviso" class="text-muted-foreground mt-2 text-sm" role="status">{{ aviso }}</p>

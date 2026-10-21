@@ -8,8 +8,13 @@ export async function criarSessao(): Promise<{ id: string; expiraEmSegundos: num
 }
 
 /** Devolve o envelope quando o celular já enviou; null enquanto espera; lança erro se expirou. */
-export async function buscarResultado(id: string): Promise<Envelope | null> {
-  const resposta = await fetch(`/api/sessoes/${id}`)
+export interface ResultadoRecebido extends Envelope {
+  versao: number
+}
+
+/** Devolve a consulta mais nova que a versão `depois`; null quando não há nada novo. */
+export async function buscarResultado(id: string, depois = 0): Promise<ResultadoRecebido | null> {
+  const resposta = await fetch(`/api/sessoes/${id}?depois=${depois}`)
   if (resposta.status === 204) return null
   if (resposta.status === 404) throw new Error('Esta sessão expirou. Gere um novo QR code.')
   if (!resposta.ok) throw new Error('Falha ao consultar a sessão.')
@@ -23,7 +28,6 @@ export async function enviarResultado(id: string, envelope: Envelope): Promise<v
     body: JSON.stringify(envelope),
   })
   if (resposta.status === 404) throw new Error('Esta sessão expirou. Peça um novo QR code no PC.')
-  if (resposta.status === 409) throw new Error('Esta sessão já recebeu um resultado.')
   if (resposta.status === 413) throw new Error('O texto é grande demais para enviar.')
   if (!resposta.ok) throw new Error('Não consegui enviar. Verifique a conexão e tente de novo.')
 }

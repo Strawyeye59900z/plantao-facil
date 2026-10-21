@@ -29,7 +29,7 @@ describe('sessões de pareamento', () => {
     assert.equal(r.status, 201)
     const { id, expiraEmSegundos } = await r.json()
     assert.match(id, /^[0-9a-f]{32}$/)
-    assert.equal(expiraEmSegundos, 600)
+    assert.equal(expiraEmSegundos, 7200)
     assert.ok(kv.dados.has(`sessao:${id}`))
   })
 
@@ -47,15 +47,29 @@ describe('sessões de pareamento', () => {
     assert.equal(envio.status, 201)
     const r = await tratar(req('GET', `/api/sessoes/${id}`))
     assert.equal(r.status, 200)
-    assert.deepEqual(await r.json(), { iv: 'IV123', ciphertext: 'CIFRADO' })
+    assert.deepEqual(await r.json(), { iv: 'IV123', ciphertext: 'CIFRADO', versao: 1 })
   })
 
-  it('aceita só um envio por sessão', async () => {
+  it('aceita novas consultas na mesma sessão e o PC recebe a mais nova', async () => {
     const tratar = criarRotasSessoes(kvMemoria())
     const { id } = await (await tratar(req('POST', '/api/sessoes'))).json()
     await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'a', ciphertext: 'b' }))
     const segundo = await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'c', ciphertext: 'd' }))
-    assert.equal(segundo.status, 409)
+    assert.equal(segundo.status, 201)
+    const r = await tratar(req('GET', `/api/sessoes/${id}`))
+    assert.equal((await r.json()).ciphertext, 'd')
+  })
+
+  it('o PC pede só consultas mais novas que a versão que já recebeu', async () => {
+    const tratar = criarRotasSessoes(kvMemoria())
+    const { id } = await (await tratar(req('POST', '/api/sessoes'))).json()
+    await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'a', ciphertext: 'b' }))
+    const r1 = await tratar(req('GET', `/api/sessoes/${id}?depois=1`))
+    assert.equal(r1.status, 204)
+    await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'c', ciphertext: 'd' }))
+    const r2 = await tratar(req('GET', `/api/sessoes/${id}?depois=1`))
+    assert.equal(r2.status, 200)
+    assert.equal((await r2.json()).versao, 2)
   })
 
   it('recusa corpo sem iv e ciphertext', async () => {

@@ -3,7 +3,7 @@
  * O servidor só guarda o texto cifrado (iv + ciphertext). A chave fica no QR code, nunca aqui.
  * Sessões expiram sozinhas (KV com TTL) e nada é registrado em log.
  */
-export const TTL_SEGUNDOS = 600
+export const TTL_SEGUNDOS = 7200 // 2 h sem uso; cada acesso renova o prazo
 export const LIMITE_CORPO_BYTES = 256 * 1024
 
 const json = (corpo, status = 200) =>
@@ -39,6 +39,13 @@ export function criarRotasSessoes(kv) {
       if (!guardado) return json({ erro: 'Sessão não encontrada ou expirada.' }, 404)
       const { payload } = JSON.parse(guardado)
       if (!payload) return new Response(null, { status: 204 })
+      // ?depois=N: o PC pede só o que é mais novo que a versão N que já recebeu.
+      const depois = Number(url.searchParams.get('depois') ?? 0)
+      if (payload.versao <= depois) {
+        await kv.put(chave(id), guardado, { expirationTtl: TTL_SEGUNDOS })
+        return new Response(null, { status: 204 })
+      }
+      await kv.put(chave(id), guardado, { expirationTtl: TTL_SEGUNDOS })
       return json(payload)
     }
 
@@ -47,12 +54,13 @@ export function criarRotasSessoes(kv) {
       if (tamanho > LIMITE_CORPO_BYTES) return json({ erro: 'Conteúdo grande demais.' }, 413)
       const guardado = await kv.get(chave(id))
       if (!guardado) return json({ erro: 'Sessão não encontrada ou expirada.' }, 404)
-      if (JSON.parse(guardado).payload) return json({ erro: 'Esta sessão já recebeu um resultado.' }, 409)
+      const anterior = JSON.parse(guardado).payload
       const corpo = await req.json().catch(() => null)
       if (!corpo || typeof corpo.iv !== 'string' || typeof corpo.ciphertext !== 'string') {
         return json({ erro: 'Envie { iv, ciphertext }.' }, 400)
       }
-      await kv.put(chave(id), JSON.stringify({ payload: { iv: corpo.iv, ciphertext: corpo.ciphertext } }), {
+      const versao = (anterior?.versao ?? 0) + 1
+      await kv.put(chave(id), JSON.stringify({ payload: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao } }), {
         expirationTtl: TTL_SEGUNDOS,
       })
       return json({ ok: true }, 201)

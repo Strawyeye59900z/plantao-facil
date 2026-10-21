@@ -20,44 +20,49 @@ const erro = ref<string | null>(null)
 const copiado = ref(false)
 let sessaoId: string | null = null
 let relogio: number | undefined
+let ultimaVersao = 0
+let chaveAtual: CryptoKey | null = null
 
 async function iniciarSessao() {
   clearInterval(relogio)
   texto.value = null
   erro.value = null
+  ultimaVersao = 0
   status.value = 'Gerando QR code…'
   try {
     const chave = await gerarChave()
+    chaveAtual = chave
     const chaveTexto = await exportarChave(chave)
     const sessao = await criarSessao()
     sessaoId = sessao.id
     const endereco = `${location.origin}/#/anamnese/consulta?s=${sessao.id}&k=${chaveTexto}`
     qr.value = await QRCode.toDataURL(endereco, { width: 280, margin: 2 })
     status.value = 'Aguardando o celular. Leia o QR code com o celular.'
-    relogio = window.setInterval(() => verificar(chave), 3000)
+    relogio = window.setInterval(verificar, 3000)
   } catch (falha) {
     erro.value = falha instanceof Error ? falha.message : String(falha)
   }
 }
 
-async function verificar(chave: CryptoKey) {
-  if (!sessaoId) return
+/** Fica consultando enquanto a página estiver aberta: cada consulta nova do celular aparece aqui. */
+async function verificar() {
+  if (!sessaoId || !chaveAtual) return
   try {
-    const envelope = await buscarResultado(sessaoId)
+    const envelope = await buscarResultado(sessaoId, ultimaVersao)
     if (!envelope) return
-    clearInterval(relogio)
-    const claro = await decifrar(envelope, chave)
+    const claro = await decifrar(envelope, chaveAtual)
     if (claro === null) {
-      erro.value = 'Não consegui decifrar o texto recebido. Gere um novo QR code.'
+      erro.value = 'Não consegui decifrar um texto recebido. Peça para enviar de novo.'
       return
     }
+    ultimaVersao = envelope.versao
+    erro.value = null
     texto.value = claro
     const partes = separarProntuario(textoLimpo(claro))
     prontuario.value = partes.prontuario
     fora.value = partes.fora
-    status.value = 'Texto recebido. Confira e edite antes de copiar.'
+    status.value = `Consulta recebida às ${new Date().toLocaleTimeString('pt-BR')}. Confira e edite antes de copiar.`
   } catch (falha) {
-    clearInterval(relogio)
     erro.value = falha instanceof Error ? falha.message : String(falha)
   }
 }
@@ -70,10 +75,13 @@ async function copiarTexto() {
 }
 
 onMounted(iniciarSessao)
-onBeforeUnmount(() => {
+async function encerrar() {
   clearInterval(relogio)
-  if (sessaoId) void encerrarSessao(sessaoId)
-})
+  if (sessaoId) await encerrarSessao(sessaoId)
+  await iniciarSessao()
+}
+
+onBeforeUnmount(() => clearInterval(relogio))
 </script>
 
 <template>
@@ -103,7 +111,7 @@ onBeforeUnmount(() => {
         <Button size="touch" :disabled="!prontuario.trim()" @click="copiarTexto">
           {{ copiado ? 'Copiado' : 'Copiar prontuário' }}
         </Button>
-        <Button size="touch" variant="outline" @click="iniciarSessao">Nova consulta</Button>
+        <Button size="touch" variant="outline" @click="encerrar">Encerrar sessão e gerar novo QR</Button>
       </div>
     </section>
 
