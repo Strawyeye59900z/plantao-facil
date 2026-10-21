@@ -2,7 +2,7 @@
  * Estado da sincronização entre celular e PC. Vive só na memória da aba: trocar de aba mantém os dados,
  * mas fechar ou recarregar o app apaga tudo. Nada é guardado em disco.
  */
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { blocoVazio, lerBloco, type Bloco } from '@/dominio/anamnese/bloco'
 import { cifrar, decifrar, derivarChave } from '@/dominio/anamnese/cifra'
 import { buscarResultado, criarSessao, encerrarSessao, enviarResultado, entrarSessao, SessaoEncerradaError } from './sessao'
@@ -81,6 +81,16 @@ export const pc = {
   status: ref('Gerando código…'),
 }
 
+/** Revisão de cada consulta no PC (resposta do Gemini e prontuário editado). Só em memória, até encerrar a sessão. */
+export interface Evolucao {
+  resposta: string
+  prontuario: string
+  fora: string
+  alertaNumeros: string[]
+}
+export const evolucoes = reactive<Record<string, Evolucao>>({})
+const limparEvolucoes = () => Object.keys(evolucoes).forEach((id) => delete evolucoes[id])
+
 let relogioPc: number | undefined
 let ultimaVersao = 0
 
@@ -90,6 +100,7 @@ function esquecerSessaoPc(mensagem: string): void {
   pc.sessao.value = null
   pc.codigo.value = null
   pc.bloco.value = null
+  limparEvolucoes()
   pc.erro.value = null
   pc.status.value = mensagem
 }
@@ -125,6 +136,7 @@ export async function gerarCodigoPc(): Promise<void> {
   if (pc.sessao.value) await encerrarSessao(pc.sessao.value.id)
   pc.erro.value = null
   pc.bloco.value = null
+  limparEvolucoes()
   pc.status.value = 'Gerando código…'
   try {
     const criada = await criarSessao()
