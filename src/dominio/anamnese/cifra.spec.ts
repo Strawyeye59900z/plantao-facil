@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cifrar, decifrar, exportarChave, gerarChave, importarChave } from './cifra'
+import { cifrar, decifrar, derivarChave, exportarChave, gerarChave, importarChave } from './cifra'
 
 describe('cifra do pareamento', () => {
   it('decifra com a mesma chave importada do QR code', async () => {
@@ -34,5 +34,21 @@ describe('cifra do pareamento', () => {
     const b = await cifrar('igual', chave)
     expect(a.iv).not.toBe(b.iv)
     expect(a.ciphertext).not.toBe(b.ciphertext)
+  })
+})
+
+describe('derivação a partir do código', () => {
+  it('o mesmo código e salt dão a mesma chave (PC e celular)', async () => {
+    const salt = btoa('0123456789abcdef')
+    const pc = await derivarChave('ABCD2345', salt)
+    const celular = await derivarChave('ABCD2345', salt)
+    const envelope = await cifrar('consulta', pc)
+    expect(await decifrar(envelope, celular)).toBe('consulta')
+  })
+
+  it('código diferente não decifra', async () => {
+    const salt = btoa('0123456789abcdef')
+    const envelope = await cifrar('consulta', await derivarChave('ABCD2345', salt))
+    expect(await decifrar(envelope, await derivarChave('ABCD2346', salt))).toBeNull()
   })
 })

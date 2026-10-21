@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, Settings, Tags, Trash2 } from '@lucide/vue'
+import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, Mic, NotebookPen, Settings, Tags, Trash2 } from '@lucide/vue'
 
 export interface ItemNavegacao {
   rota: string
@@ -16,6 +16,8 @@ export const AREAS: ItemNavegacao[] = [
 
 /** Itens do menu redondo do topo (no pen drive some o que a rota bloqueia). */
 export const MENU: ItemNavegacao[] = [
+  { rota: '/anamnese/bloco', rotulo: 'Bloco de notas', icone: NotebookPen },
+  { rota: '/anamnese/transcricao', rotulo: 'Transcrição', icone: Mic },
   { rota: '/categorias', rotulo: 'Grupos', icone: Tags },
   { rota: '/importar', rotulo: 'Importar PDF', icone: FileUp },
   { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },

@@ -83,6 +83,12 @@ export function adicionarAnotacao(bloco: Bloco, leitoId: string, texto: string, 
   return atualizarLeito(bloco, leitoId, (l) => ({ ...l, anotacoes: [...l.anotacoes, { id: gerarId(), hora, texto: t }] }))
 }
 
+export function adicionarConsulta(bloco: Bloco, texto: string, hora: string, gerarId: GerarId): Bloco {
+  const t = texto.trim()
+  if (!t) return bloco
+  return { ...bloco, consultas: [...bloco.consultas, { id: gerarId(), hora, texto: t }] }
+}
+
 /** Lê um bloco vindo do celular/PC, validando a forma. Devolve null se não for um bloco válido. */
 export function lerBloco(bruto: unknown): Bloco | null {
   const b = bruto as Partial<Bloco> | null

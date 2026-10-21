@@ -1,23 +1,43 @@
 /** Comunicação com a API de sessões (Cloudflare Workers). Só envia e recebe texto cifrado. */
 import type { Envelope } from '@/dominio/anamnese/cifra'
 
-export async function criarSessao(): Promise<{ id: string; expiraEmSegundos: number }> {
-  const resposta = await fetch('/api/sessoes', { method: 'POST' })
-  if (!resposta.ok) throw new Error('Não consegui criar a sessão. Verifique a conexão.')
-  return resposta.json()
+export interface SessaoCriada {
+  id: string
+  codigo: string
+  salt: string
+  expiraEmSegundos: number
 }
 
-/** Devolve o envelope quando o celular já enviou; null enquanto espera; lança erro se expirou. */
 export interface ResultadoRecebido extends Envelope {
   versao: number
 }
 
-/** Devolve a consulta mais nova que a versão `depois`; null quando não há nada novo. */
+export async function criarSessao(): Promise<SessaoCriada> {
+  const resposta = await fetch('/api/sessoes', { method: 'POST' })
+  if (!resposta.ok) throw new Error('Não consegui criar a sincronização. Verifique a conexão.')
+  return resposta.json()
+}
+
+/** Celular: troca o código digitado pelo id da sessão e pelo salt. */
+export async function entrarSessao(codigo: string): Promise<{ id: string; salt: string }> {
+  const resposta = await fetch('/api/sessoes/entrar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codigo }),
+  })
+  if (resposta.status === 404) throw new Error('Código não encontrado ou expirado. Confira no PC.')
+  if (resposta.status === 429) throw new Error('Muitas tentativas. Aguarde um minuto.')
+  if (resposta.status === 400) throw new Error('O código tem 8 caracteres.')
+  if (!resposta.ok) throw new Error('Não consegui conectar. Verifique a conexão.')
+  return resposta.json()
+}
+
+/** Devolve o envelope mais novo que `depois`; null quando não há nada novo. */
 export async function buscarResultado(id: string, depois = 0): Promise<ResultadoRecebido | null> {
   const resposta = await fetch(`/api/sessoes/${id}?depois=${depois}`)
   if (resposta.status === 204) return null
-  if (resposta.status === 404) throw new Error('Esta sessão expirou. Gere um novo QR code.')
-  if (!resposta.ok) throw new Error('Falha ao consultar a sessão.')
+  if (resposta.status === 404) throw new Error('A sincronização expirou. Gere um novo código no PC.')
+  if (!resposta.ok) throw new Error('Falha ao consultar a sincronização.')
   return resposta.json()
 }
 
@@ -27,8 +47,8 @@ export async function enviarResultado(id: string, envelope: Envelope): Promise<v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(envelope),
   })
-  if (resposta.status === 404) throw new Error('Esta sessão expirou. Peça um novo QR code no PC.')
-  if (resposta.status === 413) throw new Error('O texto é grande demais para enviar.')
+  if (resposta.status === 404) throw new Error('A sincronização expirou. Conecte de novo com o código do PC.')
+  if (resposta.status === 413) throw new Error('O bloco está grande demais para enviar.')
   if (!resposta.ok) throw new Error('Não consegui enviar. Verifique a conexão e tente de novo.')
 }
 

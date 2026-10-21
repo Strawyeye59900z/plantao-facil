@@ -54,3 +54,21 @@ export async function decifrar(envelope: Envelope, chave: CryptoKey): Promise<st
     return null
   }
 }
+
+/** Iterações PBKDF2-SHA256 (recomendação OWASP): tornam cada tentativa de adivinhar o código lenta. */
+export const ITERACOES_DERIVACAO = 310_000
+
+/**
+ * Deriva a chave AES-GCM a partir do código digitado e do salt da sessão.
+ * PC e celular chegam à mesma chave sem que ela passe pelo servidor.
+ */
+export async function derivarChave(codigo: string, saltBase64: string): Promise<CryptoKey> {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(codigo), 'PBKDF2', false, ['deriveKey'])
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: bytesDeBase64url(saltBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')), iterations: ITERACOES_DERIVACAO, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  )
+}
