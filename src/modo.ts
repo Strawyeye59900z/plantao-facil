@@ -12,6 +12,6 @@ export function rotaBloqueadaNoPenDrive(caminho: string): boolean {
   return (
     /^\/(prescricoes|calculadoras|escalas)\/nova$/.test(caminho) ||
     /^\/(prescricoes|calculadoras|escalas)\/[^/]+\/editar$/.test(caminho) ||
-    ['/categorias', '/lixeira', '/backup', '/importar'].includes(caminho) || caminho.startsWith('/anamnese')
+    ['/categorias', '/lixeira', '/backup', '/importar'].includes(caminho)
   )
 }

@@ -83,18 +83,6 @@ export const router = createRouter({
       meta: { titulo: 'Escala' },
     },
     {
-      path: '/anamnese/transcricao',
-      name: 'anamnese-transcricao',
-      component: () => import('@/views/AnamneseTranscricaoView.vue'),
-      meta: { titulo: 'Transcrição (teste)', telaCheia: true },
-    },
-    {
-      path: '/anamnese/demo',
-      name: 'anamnese-demo',
-      component: () => import('@/views/AnamneseDemoView.vue'),
-      meta: { titulo: 'Modo consulta (demonstração)', telaCheia: true },
-    },
-    {
       path: '/ajustes',
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),
@@ -154,6 +142,5 @@ if (MODO_PENDRIVE) {
 declare module 'vue-router' {
   interface RouteMeta {
     titulo?: string
-    telaCheia?: boolean
   }
 }
