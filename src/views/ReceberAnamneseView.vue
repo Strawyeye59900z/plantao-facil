@@ -192,19 +192,6 @@ onBeforeUnmount(() => clearInterval(relogio))
         </div>
 
         <div class="grid gap-4 md:grid-cols-2">
-          <section aria-labelledby="titulo-problemas" class="rounded-2xl border bg-card p-4">
-            <h3 id="titulo-problemas" class="mb-2 text-sm font-semibold">Problemas e suspeitas</h3>
-            <p v-if="!leito.problemas.length" class="text-muted-foreground text-sm">Nenhum problema cadastrado.</p>
-            <ul class="flex flex-col gap-3">
-              <li v-for="p in leito.problemas" :key="p.id">
-                <p class="font-semibold">{{ p.titulo }}</p>
-                <ul class="pl-3 text-sm">
-                  <li v-for="s in p.suspeitas" :key="s.id">• {{ s.texto }}</li>
-                </ul>
-              </li>
-            </ul>
-          </section>
-
           <section aria-labelledby="titulo-anotacoes" class="rounded-2xl border bg-card p-4">
             <h3 id="titulo-anotacoes" class="mb-2 text-sm font-semibold">Anotações</h3>
             <p v-if="!leito.anotacoes.length" class="text-muted-foreground text-sm">Nenhuma anotação.</p>
@@ -214,20 +201,26 @@ onBeforeUnmount(() => clearInterval(relogio))
               </li>
             </ul>
           </section>
+
+          <section aria-labelledby="titulo-problemas" class="rounded-2xl border bg-card p-4">
+            <h3 id="titulo-problemas" class="mb-2 text-sm font-semibold">Problemas e suspeitas</h3>
+            <p v-if="!leito.problemas.length" class="text-muted-foreground text-sm">Nenhum problema cadastrado.</p>
+            <ol class="flex list-decimal flex-col gap-3 pl-5">
+              <li v-for="p in leito.problemas" :key="p.id">
+                <span class="font-semibold">{{ p.titulo }}</span>
+                <ol v-if="p.suspeitas.length" class="mt-1 list-[lower-alpha] pl-5 text-sm">
+                  <li v-for="s in p.suspeitas" :key="s.id">{{ s.texto }}</li>
+                </ol>
+              </li>
+            </ol>
+          </section>
         </div>
       </section>
 
       <section v-else-if="consulta" aria-labelledby="titulo-consulta" class="flex flex-col gap-4">
-        <section class="rounded-2xl border bg-card p-4">
-          <h2 id="titulo-consulta" class="mb-2 text-sm font-semibold">Transcrição da consulta às {{ consulta.hora }}</h2>
-          <p class="whitespace-pre-wrap text-base leading-relaxed">{{ consulta.texto }}</p>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <Button size="touch" variant="outline" @click="copiar(consulta.texto, 'transcricao')">
-              {{ copiado === 'transcricao' ? 'Copiado' : 'Copiar transcrição' }}
-            </Button>
-            <Button size="touch" @click="enviarParaGemini">Revisar no Gemini (@nova-consulta)</Button>
-          </div>
-        </section>
+        <div class="flex flex-wrap gap-2">
+          <Button size="touch" @click="enviarParaGemini">Revisar no Gemini (@nova-consulta)</Button>
+        </div>
 
         <section aria-labelledby="titulo-resposta" class="rounded-2xl border bg-card p-4">
           <h2 id="titulo-resposta" class="mb-2 text-sm font-semibold">Resposta do Gemini</h2>
