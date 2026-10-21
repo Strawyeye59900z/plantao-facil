@@ -82,6 +82,7 @@ async function copiarLimpo() {
       <textarea
         v-model="transcricao"
         rows="6"
+        spellcheck="false"
         class="border-input w-full rounded-xl border p-3 text-base"
         aria-label="Transcrição da consulta"
         placeholder="Dite com o Wispr Flow aqui"
@@ -97,6 +98,7 @@ async function copiarLimpo() {
       <textarea
         v-model="resposta"
         rows="8"
+        spellcheck="false"
         class="border-input w-full rounded-xl border p-3 text-base"
         aria-label="Resposta do Gemini"
         placeholder="Cole aqui a resposta copiada do Gemini"

@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="mx-auto flex max-w-xl flex-col gap-4 p-4">
+  <main class="mx-auto flex max-w-4xl flex-col gap-4 p-4">
     <header>
       <h1 class="text-2xl font-bold">Receber do celular</h1>
       <p class="text-muted-foreground text-sm">{{ status }}</p>
@@ -94,7 +94,8 @@ onBeforeUnmount(() => {
       <h2 id="titulo-texto" class="mb-2 text-sm font-semibold">Prontuário (editável)</h2>
       <textarea
         v-model="prontuario"
-        rows="16"
+        rows="20"
+        spellcheck="false"
         class="border-input w-full rounded-xl border p-3 text-base leading-relaxed"
         aria-label="Prontuário editável"
       />
