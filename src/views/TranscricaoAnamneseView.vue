@@ -151,7 +151,12 @@ async function copiarProntuario() {
       <!-- Resultado em tela cheia: editável e pronto para copiar -->
       <div
         v-if="modalAberto && evolucao && consulta"
-        class="bg-background fixed inset-0 z-50 flex flex-col gap-3 overflow-y-auto p-4 md:p-8"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        @click.self="modalAberto = false"
+        @keydown.esc="modalAberto = false"
+      >
+      <div
+        class="bg-background flex max-h-[85vh] w-full max-w-3xl flex-col gap-3 overflow-y-auto rounded-2xl border p-4 shadow-xl md:p-6"
         role="dialog"
         aria-modal="true"
         aria-label="Resultado da consulta"
@@ -168,7 +173,7 @@ async function copiarProntuario() {
         <textarea
           v-model="evolucao.prontuario"
           spellcheck="false"
-          class="border-input min-h-[50vh] w-full flex-1 rounded-xl border p-4 text-base leading-relaxed"
+          class="border-input min-h-[40vh] w-full flex-1 rounded-xl border p-4 text-base leading-relaxed"
           aria-label="Prontuário editável"
         />
 
@@ -181,6 +186,7 @@ async function copiarProntuario() {
           <Button size="touch" @click="copiarProntuario">{{ copiado ? 'Copiado' : 'Copiar prontuário' }}</Button>
           <Button size="touch" variant="outline" @click="modalAberto = false">Fechar</Button>
         </div>
+      </div>
       </div>
     </template>
   </main>
