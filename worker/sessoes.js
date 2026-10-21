@@ -3,8 +3,8 @@
  * O servidor só guarda o texto cifrado (iv + ciphertext). A chave fica no QR code, nunca aqui.
  * Sessões expiram sozinhas (KV com TTL) e nada é registrado em log.
  */
-export const TTL_SEGUNDOS = 7200 // 2 h sem uso; cada acesso renova o prazo
-export const LIMITE_CORPO_BYTES = 256 * 1024
+export const TTL_SEGUNDOS = 43200 // 12 h sem uso; cada acesso renova o prazo
+export const LIMITE_CORPO_BYTES = 1024 * 1024 // bloco de notas com vários leitos
 
 const json = (corpo, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })

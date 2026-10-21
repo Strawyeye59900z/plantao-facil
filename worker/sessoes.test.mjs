@@ -29,7 +29,7 @@ describe('sessões de pareamento', () => {
     assert.equal(r.status, 201)
     const { id, expiraEmSegundos } = await r.json()
     assert.match(id, /^[0-9a-f]{32}$/)
-    assert.equal(expiraEmSegundos, 7200)
+    assert.equal(expiraEmSegundos, 43200)
     assert.ok(kv.dados.has(`sessao:${id}`))
   })
 
