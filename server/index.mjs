@@ -1,8 +1,9 @@
 import { criarApp } from './app.mjs'
 import { criarTranscritorGroq } from './groq.mjs'
+import { criarRevisor } from './revisao.mjs'
 
 // Variáveis de ambiente (arquivo .env fora do repositório, veja .env.example).
-const { PORT = '3100', HOST = '127.0.0.1', GROQ_API_KEY, GROQ_MODEL, ANAMNESE_TOKEN } = process.env
+const { PORT = '3100', HOST = '127.0.0.1', GROQ_API_KEY, GROQ_MODEL, GROQ_MODEL_TEXTO, ANAMNESE_TOKEN } = process.env
 
 if (!GROQ_API_KEY) throw new Error('Defina GROQ_API_KEY no arquivo .env.')
 if (!ANAMNESE_TOKEN || ANAMNESE_TOKEN.length < 32) {
@@ -12,6 +13,7 @@ if (!ANAMNESE_TOKEN || ANAMNESE_TOKEN.length < 32) {
 const app = criarApp({
   token: ANAMNESE_TOKEN,
   transcrever: criarTranscritorGroq({ chave: GROQ_API_KEY, modelo: GROQ_MODEL }),
+  revisar: criarRevisor({ chave: GROQ_API_KEY, modelo: GROQ_MODEL_TEXTO }),
 })
 
 await app.listen({ port: Number(PORT), host: HOST })

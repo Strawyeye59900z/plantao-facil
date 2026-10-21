@@ -3,7 +3,7 @@ import { onBeforeUnmount, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { MODELOS, type ModeloTranscricao, useTranscricao } from '@/composables/useTranscricao'
 import { useDitadoLocal } from '@/composables/useDitadoLocal'
-import { lerToken, salvarToken } from '@/lib/anamnese/servidor'
+import { lerToken, revisarNoServidor, salvarToken, type RevisaoTranscricao } from '@/lib/anamnese/servidor'
 
 /**
  * Página de teste: transcrição pela API do servidor (Groq), ou no próprio aparelho (modo local).
@@ -16,6 +16,23 @@ void d.verificar()
 const token = ref(lerToken())
 t.definirToken(token.value)
 t.prepararServidor()
+
+const revisando = ref(false)
+const revisao = ref<RevisaoTranscricao | null>(null)
+const erroRevisao = ref<string | null>(null)
+
+async function revisar() {
+  revisando.value = true
+  erroRevisao.value = null
+  try {
+    revisao.value = await revisarNoServidor(t.texto.value, token.value.trim())
+  } catch (falha) {
+    revisao.value = null
+    erroRevisao.value = falha instanceof Error ? falha.message : String(falha)
+  } finally {
+    revisando.value = false
+  }
+}
 
 function salvarTokenDigitado() {
   salvarToken(token.value)
@@ -95,6 +112,36 @@ const rotulosStatus: Record<string, string> = {
     <section aria-labelledby="titulo-texto" class="rounded-2xl border bg-card p-4">
       <h2 id="titulo-texto" class="mb-2 text-sm font-semibold">Texto transcrito</h2>
       <p class="min-h-24 whitespace-pre-wrap text-base leading-relaxed">{{ t.texto.value || 'Nada transcrito ainda.' }}</p>
+      <Button
+        size="touch"
+        class="mt-3"
+        :disabled="!t.texto.value || revisando"
+        @click="revisar()"
+      >
+        {{ revisando ? 'Revisando…' : 'Revisar com IA' }}
+      </Button>
+      <p v-if="erroRevisao" class="text-critico mt-2 text-sm" role="alert">{{ erroRevisao }}</p>
+    </section>
+
+    <section v-if="revisao" aria-labelledby="titulo-revisao" class="rounded-2xl border bg-card p-4">
+      <h2 id="titulo-revisao" class="mb-2 text-sm font-semibold">Texto revisado</h2>
+      <p class="text-muted-foreground mb-3 text-sm">
+        <strong>Negrito:</strong> doses, durações e datas para conferir.
+        <mark class="rounded bg-yellow-200 px-1 text-slate-900">Amarelo</mark>: trechos duvidosos.
+      </p>
+      <p class="whitespace-pre-wrap text-base leading-relaxed">
+        <template v-for="(s, i) in revisao.segmentos" :key="i">
+          <strong v-if="s.tipo === 'destaque'">{{ s.texto }}</strong>
+          <mark v-else-if="s.tipo === 'duvida'" class="rounded bg-yellow-200 px-0.5 text-slate-900">{{ s.texto }}</mark>
+          <span v-else>{{ s.texto }}</span>
+        </template>
+      </p>
+      <div v-if="revisao.mudancas.length" class="mt-4">
+        <h3 class="mb-1 text-sm font-semibold">Correções feitas pela IA</h3>
+        <ul class="text-sm">
+          <li v-for="(m, i) in revisao.mudancas" :key="i">{{ m.original }} → <strong>{{ m.corrigido }}</strong></li>
+        </ul>
+      </div>
     </section>
 
     <section aria-labelledby="titulo-ditado" class="rounded-2xl border bg-card p-4">

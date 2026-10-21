@@ -12,7 +12,7 @@
     "typecheck": "vue-tsc -b",
     "build:pendrive": "vue-tsc -b && vite build --mode pendrive",
     "api": "node --env-file-if-exists=.env server/index.mjs",
-    "test:api": "node --test server/app.test.mjs"
+    "test:api": "node --test server/app.test.mjs server/app-revisar.test.mjs server/revisao.test.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
