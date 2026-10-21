@@ -5,7 +5,7 @@
 import { computed, ref, watch } from 'vue'
 import { blocoVazio, lerBloco, type Bloco } from '@/dominio/anamnese/bloco'
 import { cifrar, decifrar, derivarChave } from '@/dominio/anamnese/cifra'
-import { buscarResultado, criarSessao, encerrarSessao, enviarResultado, entrarSessao } from './sessao'
+import { buscarResultado, criarSessao, encerrarSessao, enviarResultado, entrarSessao, SessaoEncerradaError } from './sessao'
 
 interface SessaoAtiva {
   id: string
@@ -13,6 +13,7 @@ interface SessaoAtiva {
 }
 
 const normalizar = (codigo: string) => codigo.toUpperCase().replace(/[^A-Z0-9]/g, '')
+const horaAgora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 // ----- Celular -----
 const sessaoCelular = ref<SessaoAtiva | null>(null)
@@ -24,6 +25,7 @@ export const celular = {
   conectado: computed(() => sessaoCelular.value !== null),
 }
 
+/** Digita o código do PC: entra na sessão e envia o bloco na hora, para o PC mostrar "Sincronizado". */
 export async function conectarCelular(codigoDigitado: string): Promise<void> {
   celular.erro.value = null
   const codigo = normalizar(codigoDigitado)
@@ -31,15 +33,19 @@ export async function conectarCelular(codigoDigitado: string): Promise<void> {
     const sessao = await entrarSessao(codigo)
     const chave = await derivarChave(codigo, sessao.salt)
     celular.sessao.value = { id: sessao.id, chave }
-    celular.aviso.value = 'Conectado ao PC.'
+    await sincronizarCelular()
   } catch (falha) {
     celular.erro.value = falha instanceof Error ? falha.message : String(falha)
   }
 }
 
-export function desconectarCelular(): void {
+/** Encerra a sessão nos dois lados: apaga no servidor e desconecta o celular. As anotações ficam nesta aba. */
+export async function encerrarCelular(): Promise<void> {
+  const sessao = celular.sessao.value
+  if (sessao) await encerrarSessao(sessao.id)
   celular.sessao.value = null
-  celular.aviso.value = null
+  celular.erro.value = null
+  celular.aviso.value = 'Sessão encerrada. As anotações continuam nesta aba até recarregar.'
 }
 
 /** Envia o bloco inteiro cifrado. O PC sempre recebe a versão mais recente. */
@@ -50,13 +56,18 @@ export async function sincronizarCelular(): Promise<void> {
   try {
     const envelope = await cifrar(JSON.stringify(celular.bloco.value), sessao.chave)
     await enviarResultado(sessao.id, envelope)
-    celular.aviso.value = `Sincronizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`
+    celular.aviso.value = `Sincronizado às ${horaAgora()}.`
   } catch (falha) {
+    if (falha instanceof SessaoEncerradaError) {
+      celular.sessao.value = null
+      celular.erro.value = 'A sessão foi encerrada no PC. Gere um novo código lá e conecte de novo.'
+      return
+    }
     celular.erro.value = falha instanceof Error ? falha.message : String(falha)
   }
 }
 
-// Toda alteração no bloco vai para o PC na hora, sem depender do botão "Sincronizar".
+// Toda alteração no bloco vai para o PC na hora, sem depender de botão.
 watch(celular.bloco, () => {
   if (celular.conectado.value) void sincronizarCelular()
 }, { deep: true })
@@ -73,6 +84,16 @@ export const pc = {
 let relogioPc: number | undefined
 let ultimaVersao = 0
 
+/** Zera o PC sem apagar nada no servidor (quem encerrou foi o celular). */
+function esquecerSessaoPc(mensagem: string): void {
+  clearInterval(relogioPc)
+  pc.sessao.value = null
+  pc.codigo.value = null
+  pc.bloco.value = null
+  pc.erro.value = null
+  pc.status.value = mensagem
+}
+
 async function verificarPc(): Promise<void> {
   const sessao = pc.sessao.value
   if (!sessao) return
@@ -88,8 +109,12 @@ async function verificarPc(): Promise<void> {
     ultimaVersao = envelope.versao
     pc.bloco.value = bloco
     pc.erro.value = null
-    pc.status.value = `Bloco atualizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`
+    pc.status.value = `Sincronizado às ${horaAgora()}.`
   } catch (falha) {
+    if (falha instanceof SessaoEncerradaError) {
+      esquecerSessaoPc('A sincronização foi encerrada (pelo celular ou por falta de uso).')
+      return
+    }
     pc.erro.value = falha instanceof Error ? falha.message : String(falha)
   }
 }
@@ -107,7 +132,7 @@ export async function gerarCodigoPc(): Promise<void> {
     ultimaVersao = 0
     pc.codigo.value = criada.codigo
     pc.sessao.value = { id: criada.id, chave: await derivarChave(codigo, criada.salt) }
-    pc.status.value = 'Digite este código no celular. Ele vale por 12 horas sem uso.'
+    pc.status.value = 'Digite este código no celular, em Ajustes. Ele vale por 12 horas sem uso.'
     relogioPc = window.setInterval(verificarPc, 3000)
   } catch (falha) {
     pc.erro.value = falha instanceof Error ? falha.message : String(falha)
@@ -119,3 +144,8 @@ export async function garantirCodigoPc(): Promise<void> {
   if (!pc.sessao.value) await gerarCodigoPc()
 }
 
+/** Encerra a sessão no PC: apaga no servidor e limpa o que estava na tela. */
+export async function encerrarCodigoPc(): Promise<void> {
+  if (pc.sessao.value) await encerrarSessao(pc.sessao.value.id)
+  esquecerSessaoPc('Sincronização encerrada. Gere um novo código para sincronizar de novo.')
+}

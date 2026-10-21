@@ -66,6 +66,7 @@ const dataBiblioteca = computed(() => {
 
 // No pen drive, o menu não mostra o que a rota bloqueia.
 const menu = MODO_PENDRIVE ? MENU.filter((item) => !rotaBloqueadaNoPenDrive(item.rota)) : MENU
+const areas = MODO_PENDRIVE ? AREAS.filter((item) => !rotaBloqueadaNoPenDrive(item.rota)) : AREAS
 
 function ativo(rota: string) {
   return route.path === rota || route.path.startsWith(`${rota}/`)
@@ -127,7 +128,7 @@ function voltar() {
           <!-- Celular: 3 pílulas iguais na largura toda, ícone sobre o rótulo (cabe em 320 px). sm+: ícone ao lado. -->
           <nav class="order-last flex w-full gap-1.5 md:order-none md:w-auto" aria-label="Áreas">
             <RouterLink
-              v-for="area in AREAS"
+              v-for="area in areas"
               :key="area.rota"
               :to="area.rota"
               :aria-current="ativo(area.rota) ? 'page' : undefined"

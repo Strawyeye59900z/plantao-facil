@@ -12,6 +12,9 @@ export interface ResultadoRecebido extends Envelope {
   versao: number
 }
 
+/** A sessão foi encerrada por um dos lados ou expirou (sem uso por 12 h). */
+export class SessaoEncerradaError extends Error {}
+
 export async function criarSessao(): Promise<SessaoCriada> {
   const resposta = await fetch('/api/sessoes', { method: 'POST' })
   if (!resposta.ok) throw new Error('Não consegui criar a sincronização. Verifique a conexão.')
@@ -36,7 +39,7 @@ export async function entrarSessao(codigo: string): Promise<{ id: string; salt: 
 export async function buscarResultado(id: string, depois = 0): Promise<ResultadoRecebido | null> {
   const resposta = await fetch(`/api/sessoes/${id}?depois=${depois}`)
   if (resposta.status === 204) return null
-  if (resposta.status === 404) throw new Error('A sincronização expirou. Gere um novo código no PC.')
+  if (resposta.status === 404) throw new SessaoEncerradaError('A sincronização foi encerrada.')
   if (!resposta.ok) throw new Error('Falha ao consultar a sincronização.')
   return resposta.json()
 }
@@ -47,7 +50,7 @@ export async function enviarResultado(id: string, envelope: Envelope): Promise<v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(envelope),
   })
-  if (resposta.status === 404) throw new Error('A sincronização expirou. Conecte de novo com o código do PC.')
+  if (resposta.status === 404) throw new SessaoEncerradaError('A sincronização foi encerrada.')
   if (resposta.status === 413) throw new Error('O bloco está grande demais para enviar.')
   if (!resposta.ok) throw new Error('Não consegui enviar. Verifique a conexão e tente de novo.')
 }

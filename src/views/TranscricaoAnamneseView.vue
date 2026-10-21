@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { adicionarConsulta } from '@/dominio/anamnese/bloco'
 import { numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
 import { separarProntuario } from '@/dominio/anamnese/separarProntuario'
-import { celular, garantirCodigoPc, pc } from '@/lib/anamnese/estado'
+import { celular, pc } from '@/lib/anamnese/estado'
 
 /**
  * Transcrição de consulta. No celular: colar o texto ditado e guardar (vai para o PC sozinho).
@@ -69,9 +69,6 @@ async function copiar(conteudo: string, chave: string) {
   setTimeout(() => (copiado.value = ''), 2000)
 }
 
-onMounted(() => {
-  if (!ehCelular) void garantirCodigoPc()
-})
 </script>
 
 <template>
@@ -83,7 +80,7 @@ onMounted(() => {
     <!-- CELULAR -->
     <template v-if="ehCelular">
       <p v-if="!celular.conectado.value" class="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
-        Para enviar ao PC, conecte-se pela aba Bloco de notas, digitando o código do PC.
+        Para enviar ao PC, digite o código do PC em <RouterLink to="/ajustes" class="underline">Ajustes</RouterLink>.
       </p>
 
       <section aria-labelledby="titulo-consulta" class="rounded-2xl border bg-card p-4">

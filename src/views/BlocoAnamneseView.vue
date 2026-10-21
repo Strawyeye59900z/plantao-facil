@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { adicionarAnotacao, adicionarLeito, adicionarProblema, adicionarSuspeita, removerProblema } from '@/dominio/anamnese/bloco'
-import { celular, conectarCelular, desconectarCelular, garantirCodigoPc, pc, sincronizarCelular } from '@/lib/anamnese/estado'
+import { celular, pc } from '@/lib/anamnese/estado'
 
-/** Bloco de notas beira leito. No celular: editar e sincronizar. No PC: ver o código e o bloco recebido. */
+/** Bloco de notas beira leito. No celular: editar (vai para o PC sozinho). No PC: ver o bloco recebido. */
 const ehCelular = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
 const gerarId = () => crypto.randomUUID()
 const agora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 // ----- celular -----
-const codigoDigitado = ref('')
 const novoLeito = ref('')
 const leitoId = ref<string | null>(null)
 const novoProblema = ref('')
@@ -64,9 +63,6 @@ async function copiarLeito() {
   setTimeout(() => (copiado.value = false), 2000)
 }
 
-onMounted(() => {
-  if (!ehCelular) void garantirCodigoPc()
-})
 </script>
 
 <template>
@@ -77,26 +73,13 @@ onMounted(() => {
 
     <!-- CELULAR -->
     <template v-if="ehCelular">
-      <section aria-labelledby="titulo-conexao" class="rounded-2xl border bg-card p-4">
-        <h2 id="titulo-conexao" class="mb-2 text-sm font-semibold">Sincronização com o PC</h2>
-        <div v-if="!celular.conectado.value" class="flex gap-2">
-          <input
-            v-model="codigoDigitado"
-            class="border-input min-h-11 flex-1 rounded-xl border px-3 text-base uppercase"
-            aria-label="Código do PC"
-            placeholder="Código de 8 letras e números"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <Button size="touch" :disabled="!codigoDigitado.trim()" @click="conectarCelular(codigoDigitado)">Conectar</Button>
-        </div>
-        <div v-else class="flex flex-wrap items-center gap-2">
-          <Button size="touch" @click="sincronizarCelular">Sincronizar com o PC</Button>
-          <Button size="touch" variant="outline" @click="desconectarCelular">Desconectar</Button>
-        </div>
-        <p v-if="celular.aviso.value" class="text-muted-foreground mt-2 text-sm" role="status">{{ celular.aviso.value }}</p>
-        <p v-if="celular.erro.value" class="text-critico mt-2 text-sm" role="alert">{{ celular.erro.value }}</p>
-      </section>
+      <p v-if="celular.conectado.value" class="text-muted-foreground text-sm" role="status">
+        Sincronizado com o PC. Cada alteração é enviada na hora.
+      </p>
+      <p v-else class="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+        Não conectado. Para enviar ao PC, digite o código em <RouterLink to="/ajustes" class="underline">Ajustes</RouterLink>.
+      </p>
+      <p v-if="celular.erro.value" class="text-critico text-sm" role="alert">{{ celular.erro.value }}</p>
 
       <section aria-labelledby="titulo-leito" class="rounded-2xl border bg-card p-4">
         <h2 id="titulo-leito" class="mb-2 text-sm font-semibold">Leito</h2>
@@ -158,13 +141,9 @@ onMounted(() => {
 
     <!-- PC -->
     <template v-else>
-      <section aria-labelledby="titulo-codigo" class="rounded-2xl border bg-card p-4">
-        <h2 id="titulo-codigo" class="mb-2 text-sm font-semibold">Código para o celular</h2>
-        <p v-if="pc.codigo.value" class="font-mono text-3xl font-bold tracking-widest" aria-label="Código de sincronização">{{ pc.codigo.value }}</p>
-        <p class="text-muted-foreground mt-1 text-sm">{{ pc.status.value }}</p>
-        <Button size="touch" variant="outline" class="mt-3" @click="garantirCodigoPc">Gerar novo código</Button>
-        <p v-if="pc.erro.value" class="text-critico mt-2 text-sm" role="alert">{{ pc.erro.value }}</p>
-      </section>
+      <p v-if="!pc.bloco.value" class="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+        Nada recebido do celular ainda. Veja o código em <RouterLink to="/ajustes" class="underline">Ajustes</RouterLink> e digite-o no celular.
+      </p>
 
       <div class="grid gap-4 md:grid-cols-[14rem_1fr]">
         <aside aria-label="Leitos recebidos" class="flex flex-col gap-2">

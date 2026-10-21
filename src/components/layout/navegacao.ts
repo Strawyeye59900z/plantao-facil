@@ -12,12 +12,12 @@ export const AREAS: ItemNavegacao[] = [
   { rota: '/prescricoes', rotulo: 'Prescrições', icone: ClipboardList },
   { rota: '/calculadoras', rotulo: 'Calculadoras', icone: Calculator },
   { rota: '/escalas', rotulo: 'Escalas', icone: ListChecks },
+  { rota: '/anamnese/bloco', rotulo: 'Bloco de notas', icone: NotebookPen },
+  { rota: '/anamnese/transcricao', rotulo: 'Transcrição', icone: Mic },
 ]
 
 /** Itens do menu redondo do topo (no pen drive some o que a rota bloqueia). */
 export const MENU: ItemNavegacao[] = [
-  { rota: '/anamnese/bloco', rotulo: 'Bloco de notas', icone: NotebookPen },
-  { rota: '/anamnese/transcricao', rotulo: 'Transcrição', icone: Mic },
   { rota: '/categorias', rotulo: 'Grupos', icone: Tags },
   { rota: '/importar', rotulo: 'Importar PDF', icone: FileUp },
   { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },
