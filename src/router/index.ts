@@ -83,6 +83,12 @@ export const router = createRouter({
       meta: { titulo: 'Escala' },
     },
     {
+      path: '/anamnese/revisao',
+      name: 'anamnese-revisao',
+      component: () => import('@/views/RevisaoAnamneseView.vue'),
+      meta: { titulo: 'Revisar anamnese', telaCheia: true },
+    },
+    {
       path: '/ajustes',
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),
@@ -142,5 +148,6 @@ if (MODO_PENDRIVE) {
 declare module 'vue-router' {
   interface RouteMeta {
     titulo?: string
+    telaCheia?: boolean
   }
 }
