@@ -86,6 +86,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [vue(), tailwindcss(), ...(penDrive ? [modoPenDrive(), viteSingleFile()] : [pwa])],
     build: penDrive ? { outDir: 'dist-pendrive', emptyOutDir: true } : undefined,
+    // Desenvolvimento: a API de anamnese roda na mesma máquina (porta 3100).
+    server: {
+      proxy: { '/api': 'http://127.0.0.1:3100' },
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

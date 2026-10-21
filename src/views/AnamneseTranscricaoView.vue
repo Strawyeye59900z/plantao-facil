@@ -3,14 +3,24 @@ import { onBeforeUnmount, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { MODELOS, type ModeloTranscricao, useTranscricao } from '@/composables/useTranscricao'
 import { useDitadoLocal } from '@/composables/useDitadoLocal'
+import { lerToken, salvarToken } from '@/lib/anamnese/servidor'
 
 /**
- * Página de teste da Fase 1: grava e transcreve no aparelho, sem enviar nada para servidor.
+ * Página de teste: transcrição pela API do servidor (Groq), ou no próprio aparelho (modo local).
  */
 const t = useTranscricao()
 const modeloEscolhido = ref<ModeloTranscricao>('small')
 const d = useDitadoLocal()
 void d.verificar()
+
+const token = ref(lerToken())
+t.definirToken(token.value)
+t.prepararServidor()
+
+function salvarTokenDigitado() {
+  salvarToken(token.value)
+  t.definirToken(token.value.trim())
+}
 
 onBeforeUnmount(() => t.liberar())
 
@@ -28,9 +38,26 @@ const rotulosStatus: Record<string, string> = {
 <template>
   <main class="mx-auto flex max-w-xl flex-col gap-4 p-4">
     <header>
-      <h1 class="text-2xl font-bold">Transcrição no aparelho (teste)</h1>
-      <p class="text-muted-foreground text-sm">O áudio não sai do celular. Só o texto aparece aqui.</p>
+      <h1 class="text-2xl font-bold">Transcrição (teste)</h1>
+      <p class="text-muted-foreground text-sm">
+        Modo servidor: o áudio vai para a API da UPA e volta só o texto. Modo local: tudo no aparelho.
+      </p>
     </header>
+
+    <section aria-labelledby="titulo-token" class="rounded-2xl border bg-card p-4">
+      <h2 id="titulo-token" class="mb-2 text-sm font-semibold">Token da API (uma vez por aparelho)</h2>
+      <div class="flex gap-2">
+        <input
+          v-model="token"
+          type="password"
+          autocomplete="off"
+          class="border-input min-h-11 flex-1 rounded-xl border px-3 text-base"
+          aria-label="Token de acesso à API"
+        />
+        <Button size="touch" variant="outline" @click="salvarTokenDigitado">Salvar</Button>
+      </div>
+      <p class="text-muted-foreground mt-2 text-sm">Modo atual: <strong>{{ t.modo.value }}</strong></p>
+    </section>
 
     <p class="font-semibold" role="status" aria-live="polite">
       {{ rotulosStatus[t.status.value] }}

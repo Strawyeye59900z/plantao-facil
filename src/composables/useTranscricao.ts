@@ -1,7 +1,9 @@
 import { ref } from 'vue'
 import { AcumuladorBlocos } from '@/dominio/anamnese/blocos'
 import { juntarTrechos } from '@/dominio/anamnese/juncao'
+import { codificarWav } from '@/dominio/anamnese/wav'
 import { iniciarCaptura, type Captura } from '@/lib/audio/captura'
+import { transcreverNoServidor } from '@/lib/anamnese/servidor'
 import type { MensagemDoWorker, MensagemParaWorker } from '@/workers/transcricao.worker'
 
 /** Modelos de teste: "base" é mais rápido no celular; "small" é mais preciso e mais pesado. */
@@ -41,8 +43,39 @@ export function useTranscricao() {
   let proximoId = 1
   let travaTela: WakeLockSentinel | null = null
   const acumulador = new AcumuladorBlocos()
+  /** "servidor": Groq via API própria (padrão). "local": Whisper no próprio aparelho. */
+  const modo = ref<'servidor' | 'local'>('servidor')
+  let tokenServidor = ''
+
+  function definirToken(token: string) {
+    tokenServidor = token
+  }
+
+  /** No modo servidor não há modelo para carregar: o app já pode gravar. */
+  function prepararServidor() {
+    modo.value = 'servidor'
+    if (status.value === 'sem-modelo') status.value = 'pronto'
+  }
+
+  async function enviarAoServidor(bloco: Float32Array) {
+    filaPendente.value += 1
+    try {
+      const trecho = await transcreverNoServidor(codificarWav(bloco, 16000), tokenServidor)
+      ultimoTrecho.value = trecho
+      texto.value = juntarTrechos(texto.value, trecho)
+    } catch (falha) {
+      // Erro de um bloco não para a gravação: mostra a mensagem e segue.
+      erro.value = falha instanceof Error ? falha.message : String(falha)
+    } finally {
+      filaPendente.value = Math.max(0, filaPendente.value - 1)
+    }
+  }
 
   function enviar(bloco: Float32Array) {
+    if (modo.value === 'servidor') {
+      void enviarAoServidor(bloco)
+      return
+    }
     if (!worker) return
     filaPendente.value += 1
     const mensagem: MensagemParaWorker = { tipo: 'transcrever', id: proximoId++, audio: bloco }
@@ -97,7 +130,8 @@ export function useTranscricao() {
   }
 
   async function iniciar() {
-    if (status.value !== 'pronto' && status.value !== 'pausado') return
+    const pronto = status.value === 'pronto' || status.value === 'pausado'
+    if (!pronto) return
     try {
       captura = await iniciarCaptura((trecho) => {
         if (status.value !== 'gravando') return
@@ -163,6 +197,9 @@ export function useTranscricao() {
     progresso,
     erro,
     dispositivo,
+    modo,
+    definirToken,
+    prepararServidor,
     carregarModelo,
     iniciar,
     pausar,
