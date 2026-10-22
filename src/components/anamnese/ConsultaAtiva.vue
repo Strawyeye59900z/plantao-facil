@@ -99,10 +99,16 @@ function cancelar() {
       </div>
     </div>
 
-    <div class="relogio">
-      <span class="hoje">Hoje</span>
-      <time class="hora" :datetime="agora.toISOString()">{{ hora }}<small aria-hidden="true">:{{ segundos }}</small></time>
-      <span class="data">{{ data }}</span>
+    <div class="area" :class="{ ativo }">
+      <!-- Ondulações como pedra na água: anéis que nascem atrás do relógio, crescem e somem. -->
+      <span class="ondulacao" aria-hidden="true" />
+      <span class="ondulacao" aria-hidden="true" />
+      <span class="ondulacao" aria-hidden="true" />
+      <div class="relogio">
+        <span class="hoje">Hoje</span>
+        <time class="hora" :datetime="agora.toISOString()">{{ hora }}<small aria-hidden="true">:{{ segundos }}</small></time>
+        <span class="data">{{ data }}</span>
+      </div>
     </div>
     <p class="duracao">Duração <strong>{{ duracao }}</strong></p>
 
@@ -174,6 +180,8 @@ function cancelar() {
 .pontos i:nth-child(3) { animation-delay: 0.4s; }
 
 .ondas {
+  position: relative;
+  z-index: 2;
   --amp: 0.4;
   --dur: 2.4s;
   display: flex;
@@ -212,7 +220,32 @@ function cancelar() {
   animation: pulso 1.2s ease-out infinite;
 }
 
+.area {
+  --dur-ondulacao: 4.5s;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+.area.ativo {
+  --dur-ondulacao: 2.6s;
+}
+.ondulacao {
+  position: absolute;
+  width: min(15rem, 62vw);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 2px solid #5eead4;
+  box-shadow: 0 0 18px #2dd4bf66, inset 0 0 18px #2dd4bf33;
+  opacity: 0;
+  pointer-events: none;
+  animation: ondulacao var(--dur-ondulacao) cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+.ondulacao:nth-child(2) { animation-delay: calc(var(--dur-ondulacao) / 3); }
+.ondulacao:nth-child(3) { animation-delay: calc(var(--dur-ondulacao) * 2 / 3); }
 .relogio {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -234,10 +267,12 @@ function cancelar() {
 }
 .hora small { font-size: 0.45em; opacity: 0.7; }
 .data { color: #99f6e4; font-size: 0.8rem; }
-.duracao { color: #9fb0d0; font-size: 0.85rem; }
+.duracao { position: relative; z-index: 2; color: #9fb0d0; font-size: 0.85rem; }
 .duracao strong { color: #e8eefb; font-variant-numeric: tabular-nums; }
 
 .rodape {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -286,6 +321,10 @@ function cancelar() {
   0%, 100% { transform: scaleY(0.2); }
   50% { transform: scaleY(var(--amp)); }
 }
+@keyframes ondulacao {
+  0% { transform: scale(1); opacity: 0.65; }
+  100% { transform: scale(2.1); opacity: 0; border-width: 1px; }
+}
 @keyframes pisca {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 1; }
@@ -295,7 +334,10 @@ function cancelar() {
   100% { box-shadow: 0 0 0 1px #2dd4bf55, 0 0 0 14px #2dd4bf00; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .barra, .pontos i, .ativo .microfone { animation: none; }
+  .barra, .pontos i, .ativo .microfone, .ondulacao { animation: none; }
+  .ondulacao:nth-child(1) { opacity: 0.3; transform: scale(1.25); }
+  .ondulacao:nth-child(2) { opacity: 0.18; transform: scale(1.5); }
+  .ondulacao:nth-child(3) { opacity: 0.1; transform: scale(1.75); }
   .barra { transform: scaleY(0.5); }
 }
 </style>
