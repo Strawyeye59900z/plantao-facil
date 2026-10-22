@@ -1,10 +1,12 @@
 /**
- * Estado da sincronização entre celular e PC. Vive só na memória da aba: trocar de aba mantém os dados,
- * mas fechar ou recarregar o app apaga tudo. Nada é guardado em disco.
+ * Estado da sincronização entre celular e PC. Os dados de pacientes vivem só na memória da aba: fechar
+ * ou recarregar apaga o que está na tela. Para a sessão sobreviver ao refresh, guarda-se apenas a conexão
+ * (id, código e salt, ver persistencia.ts); o bloco volta do servidor, cifrado, e é decifrado com o código.
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { blocoVazio, lerBloco, type Bloco } from '@/dominio/anamnese/bloco'
 import { cifrar, decifrar, derivarChave } from '@/dominio/anamnese/cifra'
+import { esquecerConexao, guardarConexao, lerConexaoGuardada, papelAtual } from './persistencia'
 import { buscarResultado, criarSessao, encerrarSessao, enviarResultado, entrarSessao, SessaoEncerradaError } from './sessao'
 
 interface SessaoAtiva {
@@ -33,6 +35,7 @@ export async function conectarCelular(codigoDigitado: string): Promise<void> {
     const sessao = await entrarSessao(codigo)
     const chave = await derivarChave(codigo, sessao.salt)
     celular.sessao.value = { id: sessao.id, chave }
+    guardarConexao('celular', { id: sessao.id, codigo, salt: sessao.salt })
     await sincronizarCelular()
   } catch (falha) {
     celular.erro.value = falha instanceof Error ? falha.message : String(falha)
@@ -44,6 +47,7 @@ export async function encerrarCelular(): Promise<void> {
   const sessao = celular.sessao.value
   if (sessao) await encerrarSessao(sessao.id)
   celular.sessao.value = null
+  esquecerConexao('celular')
   celular.erro.value = null
   celular.aviso.value = 'Sessão encerrada. As anotações continuam nesta aba até recarregar.'
 }
@@ -60,6 +64,7 @@ export async function sincronizarCelular(): Promise<void> {
   } catch (falha) {
     if (falha instanceof SessaoEncerradaError) {
       celular.sessao.value = null
+      esquecerConexao('celular')
       celular.erro.value = 'A sessão foi encerrada no PC. Gere um novo código lá e conecte de novo.'
       return
     }
@@ -100,6 +105,7 @@ function esquecerSessaoPc(mensagem: string): void {
   pc.sessao.value = null
   pc.codigo.value = null
   pc.bloco.value = null
+  esquecerConexao('pc')
   limparEvolucoes()
   pc.erro.value = null
   pc.status.value = mensagem
@@ -134,6 +140,7 @@ async function verificarPc(): Promise<void> {
 export async function gerarCodigoPc(): Promise<void> {
   clearInterval(relogioPc)
   if (pc.sessao.value) await encerrarSessao(pc.sessao.value.id)
+  esquecerConexao('pc')
   pc.erro.value = null
   pc.bloco.value = null
   limparEvolucoes()
@@ -144,6 +151,7 @@ export async function gerarCodigoPc(): Promise<void> {
     ultimaVersao = 0
     pc.codigo.value = criada.codigo
     pc.sessao.value = { id: criada.id, chave: await derivarChave(codigo, criada.salt) }
+    guardarConexao('pc', { id: criada.id, codigo: criada.codigo, salt: criada.salt })
     pc.status.value = 'Digite este código no celular, em Ajustes. Ele vale por 12 horas sem uso.'
     relogioPc = window.setInterval(verificarPc, 3000)
   } catch (falha) {
@@ -151,13 +159,51 @@ export async function gerarCodigoPc(): Promise<void> {
   }
 }
 
-/** Mantém a sincronização ativa: só cria um código se ainda não houver um. */
-export async function garantirCodigoPc(): Promise<void> {
-  if (!pc.sessao.value) await gerarCodigoPc()
-}
-
 /** Encerra a sessão no PC: apaga no servidor e limpa o que estava na tela. */
 export async function encerrarCodigoPc(): Promise<void> {
   if (pc.sessao.value) await encerrarSessao(pc.sessao.value.id)
   esquecerSessaoPc('Sincronização encerrada. Gere um novo código para sincronizar de novo.')
+}
+
+// ----- Restaurar depois de recarregar a página -----
+/** Reconecta com a conexão guardada. O bloco volta do servidor (cifrado) e é decifrado de novo com o código. */
+async function restaurar(): Promise<void> {
+  const guardada = lerConexaoGuardada(papelAtual)
+  if (!guardada) return
+  try {
+    const chave = await derivarChave(normalizar(guardada.codigo), guardada.salt)
+    if (papelAtual === 'celular') {
+      const envelope = await buscarResultado(guardada.id, 0)
+      const claro = envelope ? await decifrar(envelope, chave) : null
+      const bloco = claro === null ? null : lerBloco(JSON.parse(claro))
+      if (bloco) celular.bloco.value = bloco
+      celular.sessao.value = { id: guardada.id, chave }
+      celular.aviso.value = 'Sessão restaurada.'
+    } else {
+      ultimaVersao = 0
+      pc.codigo.value = guardada.codigo
+      pc.sessao.value = { id: guardada.id, chave }
+      pc.status.value = 'Sessão restaurada. Digite o código no celular, em Ajustes, se ainda não conectou.'
+      relogioPc = window.setInterval(verificarPc, 3000)
+      await verificarPc()
+    }
+  } catch (falha) {
+    if (falha instanceof SessaoEncerradaError) {
+      esquecerConexao(papelAtual)
+      if (papelAtual === 'pc') esquecerSessaoPc('A sincronização anterior expirou. Gere um novo código.')
+      return
+    }
+    // Sem rede agora: mantém a conexão guardada para tentar de novo no próximo refresh.
+    const mensagem = falha instanceof Error ? falha.message : String(falha)
+    if (papelAtual === 'celular') celular.erro.value = mensagem
+    else pc.erro.value = mensagem
+  }
+}
+
+const restauracao = restaurar()
+
+/** Mantém a sincronização ativa: espera a restauração e só cria um código se ainda não houver sessão. */
+export async function garantirCodigoPc(): Promise<void> {
+  await restauracao
+  if (!pc.sessao.value) await gerarCodigoPc()
 }
