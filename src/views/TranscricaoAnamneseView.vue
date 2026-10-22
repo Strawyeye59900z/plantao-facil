@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ClipboardPaste, Copy, Sparkles, X } from '@lucide/vue'
+import { ClipboardPaste, Copy, Mic, Sparkles, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import ConsultaAtiva from '@/components/anamnese/ConsultaAtiva.vue'
 import { adicionarConsulta } from '@/dominio/anamnese/bloco'
 import { montarMensagemGemini } from '@/dominio/anamnese/mensagemGemini'
 import { destacar, numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
@@ -20,15 +21,29 @@ const agora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', mi
 
 // ----- celular -----
 const texto = ref('')
+const emAndamento = ref(false)
 const guardada = ref<string | null>(null)
 
-function guardarConsulta() {
+function iniciarConsulta() {
+  texto.value = ''
+  guardada.value = null
+  emAndamento.value = true
+}
+
+/** Guarda a consulta no bloco (que vai para o PC sozinho) e fecha a tela da consulta. */
+function finalizarConsulta() {
   const antes = celular.bloco.value.consultas.length
   celular.bloco.value = adicionarConsulta(celular.bloco.value, texto.value, agora(), gerarId)
   if (celular.bloco.value.consultas.length > antes) {
     guardada.value = `Consulta guardada às ${agora()}.`
     texto.value = ''
   }
+  emAndamento.value = false
+}
+
+function cancelarConsulta() {
+  texto.value = ''
+  emAndamento.value = false
 }
 
 // ----- PC -----
@@ -97,20 +112,20 @@ async function copiarProntuario() {
         Para enviar ao PC, digite o código do PC em <RouterLink to="/ajustes" class="underline">Ajustes</RouterLink>.
       </p>
 
-      <section aria-labelledby="titulo-consulta" class="rounded-2xl border bg-card p-4">
-        <h2 id="titulo-consulta" class="mb-2 text-sm font-semibold">Texto da consulta</h2>
-        <textarea
-          v-model="texto"
-          rows="10"
-          class="border-input w-full rounded-xl border p-3 text-base"
-          aria-label="Texto da consulta"
-          placeholder="Cole aqui a transcrição da consulta"
-          spellcheck="false"
-        />
-        <Button size="touch" class="mt-2" :disabled="!texto.trim()" @click="guardarConsulta">Guardar consulta</Button>
-        <p v-if="guardada" class="text-muted-foreground mt-2 text-sm" role="status">{{ guardada }}</p>
-        <p v-if="celular.erro.value" class="text-critico mt-2 text-sm" role="alert">{{ celular.erro.value }}</p>
+      <section aria-labelledby="titulo-consulta" class="flex flex-col gap-3 rounded-2xl border bg-card p-4">
+        <h2 id="titulo-consulta" class="text-sm font-semibold">Nova consulta</h2>
+        <p class="text-muted-foreground text-sm">
+          Abra a tela da consulta, dite com o teclado de voz e toque em Finalizar para enviar ao PC.
+        </p>
+        <Button size="touch" @click="iniciarConsulta"><Mic /> Iniciar consulta</Button>
+        <p v-if="guardada" class="text-muted-foreground text-sm" role="status">{{ guardada }}</p>
+        <p v-if="celular.erro.value" class="text-critico text-sm" role="alert">{{ celular.erro.value }}</p>
+        <ul v-if="celular.bloco.value.consultas.length" class="text-muted-foreground flex flex-col gap-1 text-sm" aria-label="Consultas guardadas">
+          <li v-for="c in celular.bloco.value.consultas" :key="c.id">Consulta das {{ c.hora }} guardada</li>
+        </ul>
       </section>
+
+      <ConsultaAtiva v-if="emAndamento" v-model="texto" @finalizar="finalizarConsulta" @cancelar="cancelarConsulta" />
     </template>
 
     <!-- PC -->
