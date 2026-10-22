@@ -7,6 +7,7 @@ import { montarMensagemGemini } from '@/dominio/anamnese/mensagemGemini'
 import { destacar, numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
 import { separarProntuario } from '@/dominio/anamnese/separarProntuario'
 import { celular, evolucoes, pc } from '@/lib/anamnese/estado'
+import { abrirGemini } from '@/lib/anamnese/gemini'
 
 /**
  * Transcrição de consulta. No celular: colar o texto ditado e guardar (vai para o PC sozinho).
@@ -61,7 +62,7 @@ watch(
 async function enviarParaGemini() {
   if (!consulta.value) return
   await navigator.clipboard.writeText(montarMensagemGemini(consulta.value.texto))
-  window.open('https://gemini.google.com/app', '_blank', 'noopener')
+  abrirGemini()
   aviso.value = 'Mensagem copiada. Cole no Gemini, envie e copie a resposta de volta aqui.'
 }
 
@@ -190,6 +191,9 @@ async function copiarProntuario() {
 
           <div>
             <Button size="touch" variant="outline" class="w-full" @click="enviarParaGemini"><Sparkles /> Copiar para o Gemini</Button>
+            <p class="text-muted-foreground mt-2 text-xs">
+              Dica: no Gemini, abra um <strong>chat temporário</strong> e cole a mensagem com Ctrl+V.
+            </p>
             <p v-if="aviso" class="text-muted-foreground mt-2 text-xs" role="status">{{ aviso }}</p>
           </div>
 
