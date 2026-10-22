@@ -1,7 +1,6 @@
 {
   // Plantão Fácil: app (arquivos estáticos de dist/) + API de sessões em /api/sessoes.
-  // Antes de publicar: criar o namespace KV (npx wrangler kv namespace create SESSOES)
-  // e colar o id abaixo. Não há segredos neste arquivo.
+  // A API usa Durable Objects com SQLite (disponíveis no plano grátis); não há KV nem segredos aqui.
   "name": "prescricao",
   "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
@@ -11,8 +10,15 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "kv_namespaces": [
-    { "binding": "SESSOES", "id": "fd86d0b0252546dcb533130ce05782e8" }
+  "durable_objects": {
+    "bindings": [
+      { "name": "SESSAO", "class_name": "Sessao" },
+      { "name": "ENTRADA", "class_name": "Entrada" },
+      { "name": "LIMITADOR", "class_name": "Limitador" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Sessao", "Entrada", "Limitador"] }
   ],
   "routes": [
     { "pattern": "prescricao.mhvl.com.br", "custom_domain": true }

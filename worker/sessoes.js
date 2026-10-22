@@ -1,7 +1,7 @@
 /**
- * Sessões de sincronização entre PC e celular (Cloudflare Workers).
+ * Sessões de sincronização entre PC e celular (Cloudflare Workers + Durable Objects).
  * O PC gera um código de 8 caracteres. O celular digita o código e recebe um "salt" para derivar a
- * chave de cifragem. O servidor só guarda o resumo do código e o texto cifrado. Nada é registrado em log.
+ * chave de cifragem. O servidor só guarda o resumo do código e o texto cifrado (ver objetos.js). Nada é registrado em log.
  */
 export const TTL_SEGUNDOS = 43200 // 12 h sem uso; cada acesso renova o prazo
 export const LIMITE_CORPO_BYTES = 1024 * 1024 // bloco de notas com vários leitos
@@ -42,18 +42,19 @@ export async function resumoCodigo(codigo) {
   return hex(new Uint8Array(digest))
 }
 
-/** Recebe um objeto KV-like ({get, put, delete}). Testável sem a Cloudflare. */
-export function criarRotasSessoes(kv, { ipDe = () => 'local' } = {}) {
-  const chave = (id) => `sessao:${id}`
-  const chaveCodigo = (resumo) => `codigo:${resumo}`
-
-  async function limitarTentativas(req) {
-    const minuto = Math.floor(Date.now() / 60000)
-    const k = `tentativas:${ipDe(req)}:${minuto}`
-    const usadas = Number((await kv.get(k)) ?? 0) + 1
-    await kv.put(k, String(usadas), { expirationTtl: 120 })
-    return usadas > LIMITE_TENTATIVAS_POR_MINUTO
-  }
+/**
+ * Rotas da API. `ns` fornece os Durable Objects: { sessao(id), entrada(resumo), limitador(ip) },
+ * cada um devolvendo algo com `fetch(Request)`. Testável sem a Cloudflare.
+ */
+export function criarRotasSessoes(ns, { ipDe = () => 'local' } = {}) {
+  const chamar = (alvo, metodo, caminho, corpo) =>
+    alvo.fetch(
+      new Request(`https://objeto${caminho}`, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: corpo === undefined ? undefined : typeof corpo === 'string' ? corpo : JSON.stringify(corpo),
+      }),
+    )
 
   return async function tratar(req) {
     const url = new URL(req.url)
@@ -63,24 +64,31 @@ export function criarRotasSessoes(kv, { ipDe = () => 'local' } = {}) {
     // Criar sessão (PC): devolve o código para mostrar e o salt para derivar a chave.
     if (partes.length === 2 && req.method === 'POST') {
       const id = gerarId()
-      const codigo = gerarCodigo()
       const salt = base64(crypto.getRandomValues(new Uint8Array(16)))
-      await kv.put(chave(id), JSON.stringify({ salt, payload: null }), { expirationTtl: TTL_SEGUNDOS })
-      await kv.put(chaveCodigo(await resumoCodigo(codigo)), id, { expirationTtl: TTL_SEGUNDOS })
-      return json({ id, codigo: `${codigo.slice(0, 4)}-${codigo.slice(4)}`, salt, expiraEmSegundos: TTL_SEGUNDOS }, 201)
+      for (let tentativa = 0; tentativa < 5; tentativa++) {
+        const codigo = gerarCodigo()
+        const resumo = await resumoCodigo(codigo)
+        const entrada = await chamar(ns.entrada(resumo), 'POST', '/', { id })
+        if (entrada.status === 409) continue // código já em uso: sorteia outro
+        await chamar(ns.sessao(id), 'POST', '/iniciar', { salt, codigoResumo: resumo })
+        return json({ id, codigo: `${codigo.slice(0, 4)}-${codigo.slice(4)}`, salt, expiraEmSegundos: TTL_SEGUNDOS }, 201)
+      }
+      return json({ erro: 'Não consegui gerar um código. Tente de novo.' }, 503)
     }
 
     // Entrar com o código (celular): devolve id e salt. Limite de tentativas por IP.
     if (partes.length === 3 && partes[2] === 'entrar' && req.method === 'POST') {
-      if (await limitarTentativas(req)) return json({ erro: 'Muitas tentativas. Aguarde um minuto.' }, 429)
+      const { limitado } = await (await chamar(ns.limitador(ipDe(req)), 'POST', '/')).json()
+      if (limitado) return json({ erro: 'Muitas tentativas. Aguarde um minuto.' }, 429)
       const corpo = await req.json().catch(() => null)
       const codigo = normalizarCodigo(corpo?.codigo)
       if (codigo.length !== TAMANHO_CODIGO) return json({ erro: 'Código inválido.' }, 400)
-      const id = await kv.get(chaveCodigo(await resumoCodigo(codigo)))
-      if (!id) return json({ erro: 'Código não encontrado ou expirado.' }, 404)
-      const guardado = await kv.get(chave(id))
-      if (!guardado) return json({ erro: 'Código não encontrado ou expirado.' }, 404)
-      return json({ id, salt: JSON.parse(guardado).salt })
+      const entrada = await chamar(ns.entrada(await resumoCodigo(codigo)), 'GET', '/')
+      if (!entrada.ok) return json({ erro: 'Código não encontrado ou expirado.' }, 404)
+      const { id } = await entrada.json()
+      const salt = await chamar(ns.sessao(id), 'GET', '/salt')
+      if (!salt.ok) return json({ erro: 'Código não encontrado ou expirado.' }, 404)
+      return json({ id, salt: (await salt.json()).salt })
     }
 
     if (partes.length !== 3) return json({ erro: 'Rota não encontrada.' }, 404)
@@ -88,38 +96,22 @@ export function criarRotasSessoes(kv, { ipDe = () => 'local' } = {}) {
     if (!/^[0-9a-f]{32}$/.test(id)) return json({ erro: 'Sessão inválida.' }, 400)
 
     if (req.method === 'GET') {
-      const guardado = await kv.get(chave(id))
-      if (!guardado) return json({ erro: 'Sessão não encontrada ou expirada.' }, 404)
-      const { payload } = JSON.parse(guardado)
-      await kv.put(chave(id), guardado, { expirationTtl: TTL_SEGUNDOS })
-      if (!payload) return new Response(null, { status: 204 })
-      // ?depois=N: o PC pede só o que é mais novo que a versão N que já recebeu.
-      const depois = Number(url.searchParams.get('depois') ?? 0)
-      if (payload.versao <= depois) return new Response(null, { status: 204 })
-      return json(payload)
+      const depois = Number(url.searchParams.get('depois') ?? 0) || 0
+      return chamar(ns.sessao(id), 'GET', `/resultado?depois=${depois}`)
     }
 
     if (req.method === 'POST') {
       const tamanho = Number(req.headers.get('content-length') ?? 0)
       if (tamanho > LIMITE_CORPO_BYTES) return json({ erro: 'Conteúdo grande demais.' }, 413)
-      const guardado = await kv.get(chave(id))
-      if (!guardado) return json({ erro: 'Sessão não encontrada ou expirada.' }, 404)
-      const estado = JSON.parse(guardado)
-      const corpo = await req.json().catch(() => null)
-      if (!corpo || typeof corpo.iv !== 'string' || typeof corpo.ciphertext !== 'string') {
-        return json({ erro: 'Envie { iv, ciphertext }.' }, 400)
-      }
-      const versao = (estado.payload?.versao ?? 0) + 1
-      await kv.put(
-        chave(id),
-        JSON.stringify({ salt: estado.salt, payload: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao } }),
-        { expirationTtl: TTL_SEGUNDOS },
-      )
-      return json({ ok: true, versao }, 201)
+      return chamar(ns.sessao(id), 'POST', '/resultado', await req.text())
     }
 
     if (req.method === 'DELETE') {
-      await kv.delete(chave(id))
+      const resposta = await chamar(ns.sessao(id), 'DELETE', '/')
+      if (resposta.ok) {
+        const { codigoResumo } = await resposta.json()
+        if (codigoResumo) await chamar(ns.entrada(codigoResumo), 'DELETE', '/')
+      }
       return new Response(null, { status: 204 })
     }
 
