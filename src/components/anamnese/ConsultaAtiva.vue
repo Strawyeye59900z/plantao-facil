@@ -59,13 +59,21 @@ function aoVoltar() {
   if (document.visibilityState === 'visible') void manterTelaLigada()
 }
 
+// No app instalado, a barra de status e a de navegação do Android usam a cor do tema. Durante a
+// consulta ela fica igual ao fundo da tela, sem a faixa clara embaixo, e volta ao normal ao sair.
+const COR_DA_CONSULTA = '#080d22'
+const metaTema = document.querySelector('meta[name="theme-color"]')
+const corAnterior = metaTema?.getAttribute('content') ?? null
+
 onMounted(() => {
+  metaTema?.setAttribute('content', COR_DA_CONSULTA)
   relogio = window.setInterval(() => (agora.value = new Date()), 1000)
   window.addEventListener('beforeunload', avisarAoSair)
   document.addEventListener('visibilitychange', aoVoltar)
   void manterTelaLigada()
 })
 onBeforeUnmount(() => {
+  if (corAnterior) metaTema?.setAttribute('content', corAnterior)
   clearInterval(relogio)
   clearTimeout(pausa)
   window.removeEventListener('beforeunload', avisarAoSair)
