@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { X } from '@lucide/vue'
+import { computed, ref, watch } from 'vue'
+import { ClipboardPaste, Copy, Sparkles, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { adicionarConsulta } from '@/dominio/anamnese/bloco'
+import { montarMensagemGemini } from '@/dominio/anamnese/mensagemGemini'
 import { destacar, numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
 import { separarProntuario } from '@/dominio/anamnese/separarProntuario'
 import { celular, evolucoes, pc } from '@/lib/anamnese/estado'
 
 /**
  * Transcrição de consulta. No celular: colar o texto ditado e guardar (vai para o PC sozinho).
- * No PC: só a lista de consultas, o botão para o Gemini e o resultado em tela cheia. O texto da
- * transcrição não aparece na tela do PC. A revisão de cada consulta fica guardada em memória.
+ * No PC: o prontuário ocupa a tela, editável e com destaque do que precisa de conferência; a resposta
+ * do Gemini é colada num painel flutuante. O texto da transcrição não aparece na tela do PC.
  */
 const ehCelular = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
 const gerarId = () => crypto.randomUUID()
@@ -30,40 +31,53 @@ function guardarConsulta() {
 }
 
 // ----- PC -----
+const consultas = computed(() => pc.bloco.value?.consultas ?? [])
 const consultaId = ref<string | null>(null)
-const consulta = computed(() => pc.bloco.value?.consultas.find((c) => c.id === consultaId.value) ?? null)
+const consulta = computed(() => consultas.value.find((c) => c.id === consultaId.value) ?? null)
 const evolucao = computed(() => (consultaId.value ? (evolucoes[consultaId.value] ?? null) : null))
 const trechos = computed(() => destacar(evolucao.value?.prontuario ?? ''))
-const modalAberto = ref(false)
+const painelAberto = ref(true)
 const copiado = ref(false)
 const aviso = ref<string | null>(null)
 
 function selecionarConsulta(id: string) {
   consultaId.value = id
   evolucoes[id] ??= { resposta: '', prontuario: '', fora: '', alertaNumeros: [] }
-  modalAberto.value = false
+  painelAberto.value = !evolucoes[id].prontuario
   aviso.value = null
 }
+
+// A primeira consulta recebida já abre sozinha.
+watch(
+  consultas,
+  (lista) => {
+    if (!lista.length) consultaId.value = null
+    else if (!lista.some((c) => c.id === consultaId.value)) selecionarConsulta(lista[0]!.id)
+  },
+  { immediate: true },
+)
 
 /** Copia a consulta com @nova-consulta e abre o Gemini. O texto não é mostrado na tela. */
 async function enviarParaGemini() {
   if (!consulta.value) return
-  await navigator.clipboard.writeText(`@nova-consulta\n\n${consulta.value.texto}`)
+  await navigator.clipboard.writeText(montarMensagemGemini(consulta.value.texto))
   window.open('https://gemini.google.com/app', '_blank', 'noopener')
   aviso.value = 'Mensagem copiada. Cole no Gemini, envie e copie a resposta de volta aqui.'
 }
 
-function conferirResposta() {
+/** Joga a resposta do Gemini no documento (sem os marcadores) e fecha o painel. */
+function aplicarResposta() {
   if (!consulta.value || !evolucao.value) return
   const partes = separarProntuario(textoLimpo(evolucao.value.resposta))
   evolucao.value.prontuario = partes.prontuario
   evolucao.value.fora = partes.fora
   evolucao.value.alertaNumeros = numerosNaoEncontrados(consulta.value.texto, evolucao.value.resposta)
-  modalAberto.value = true
+  painelAberto.value = false
+  aviso.value = null
 }
 
 async function copiarProntuario() {
-  if (!evolucao.value) return
+  if (!evolucao.value?.prontuario) return
   await navigator.clipboard.writeText(evolucao.value.prontuario)
   copiado.value = true
   setTimeout(() => (copiado.value = false), 2000)
@@ -71,7 +85,7 @@ async function copiarProntuario() {
 </script>
 
 <template>
-  <main class="mx-auto flex max-w-4xl flex-col gap-4 p-4">
+  <main class="mx-auto flex max-w-5xl flex-col gap-4 p-4">
     <header>
       <h1 class="text-2xl font-bold">Transcrição</h1>
     </header>
@@ -102,84 +116,46 @@ async function copiarProntuario() {
     <template v-else>
       <p v-if="pc.erro.value" class="text-critico text-sm" role="alert">{{ pc.erro.value }}</p>
 
-      <div class="grid gap-4 md:grid-cols-[14rem_1fr]">
-        <aside aria-label="Consultas recebidas" class="flex flex-col gap-2">
-          <h2 class="px-1 text-sm font-semibold">Consultas</h2>
-          <p v-if="!pc.bloco.value?.consultas.length" class="text-muted-foreground px-1 text-sm">Nenhuma consulta recebida.</p>
-          <button
-            v-for="c in pc.bloco.value?.consultas ?? []"
-            :key="c.id"
-            type="button"
-            class="min-h-11 rounded-xl border px-3 py-2 text-left text-sm"
-            :class="c.id === consultaId ? 'border-primary bg-accent font-semibold' : 'bg-card'"
-            :aria-pressed="c.id === consultaId"
-            @click="selecionarConsulta(c.id)"
-          >
-            Consulta às {{ c.hora }}
-            <span v-if="evolucoes[c.id]?.prontuario" class="text-muted-foreground block text-xs font-normal">Prontuário pronto</span>
-          </button>
-        </aside>
+      <p v-if="!consultas.length" class="rounded-2xl border border-dashed bg-card p-6 text-muted-foreground">
+        Nenhuma consulta recebida. Guarde uma consulta no celular (aba Transcrição) e ela aparece aqui.
+        O código de sincronização fica em <RouterLink to="/ajustes" class="underline">Ajustes</RouterLink>.
+      </p>
 
-        <section v-if="consulta && evolucao" aria-labelledby="titulo-revisao" class="flex flex-col gap-4">
-          <h2 id="titulo-revisao" class="text-xl font-bold">Consulta às {{ consulta.hora }}</h2>
-          <div>
-            <Button size="touch" @click="enviarParaGemini">Copiar para o Gemini (@nova-consulta)</Button>
-            <p v-if="aviso" class="text-muted-foreground mt-2 text-sm" role="status">{{ aviso }}</p>
+      <template v-else>
+        <!-- Consultas como abas, e ações do documento -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <nav class="flex flex-wrap gap-2" aria-label="Consultas recebidas">
+            <button
+              v-for="c in consultas"
+              :key="c.id"
+              type="button"
+              class="min-h-10 rounded-full border px-4 text-sm"
+              :class="c.id === consultaId ? 'border-primary bg-accent font-semibold' : 'bg-card hover:bg-accent/60'"
+              :aria-pressed="c.id === consultaId"
+              @click="selecionarConsulta(c.id)"
+            >
+              Consulta {{ c.hora }}
+              <span v-if="evolucoes[c.id]?.prontuario" class="bg-primary ml-1.5 inline-block size-2 rounded-full" title="Prontuário pronto" />
+            </button>
+          </nav>
+          <div class="flex gap-2">
+            <Button size="touch" variant="outline" @click="painelAberto = true"><ClipboardPaste /> Colar resposta do Gemini</Button>
+            <Button size="touch" :disabled="!evolucao?.prontuario" @click="copiarProntuario"><Copy /> {{ copiado ? 'Copiado' : 'Copiar' }}</Button>
           </div>
+        </div>
 
-          <section class="rounded-2xl border bg-card p-4">
-            <h3 class="mb-2 text-sm font-semibold">Resposta do Gemini</h3>
-            <textarea
-              v-model="evolucao.resposta"
-              rows="6"
-              spellcheck="false"
-              class="border-input w-full rounded-xl border p-3 text-base"
-              aria-label="Resposta do Gemini"
-              placeholder="Cole aqui a resposta copiada do Gemini"
-            />
-            <div class="mt-2 flex flex-wrap gap-2">
-              <Button size="touch" :disabled="!evolucao.resposta.trim()" @click="conferirResposta">Conferir e abrir resultado</Button>
-              <Button v-if="evolucao.prontuario" size="touch" variant="outline" @click="modalAberto = true">Abrir resultado</Button>
-            </div>
-          </section>
-        </section>
-
-        <section v-else class="rounded-2xl border border-dashed bg-card p-6 text-muted-foreground">
-          Escolha uma consulta na lista ao lado.
-        </section>
-      </div>
-
-      <!-- Resultado em tela cheia: editável e pronto para copiar -->
-      <div
-        v-if="modalAberto && evolucao && consulta"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        @click.self="modalAberto = false"
-        @keydown.esc="modalAberto = false"
-      >
-      <div
-        class="bg-background flex max-h-[85vh] w-full max-w-3xl flex-col gap-3 overflow-y-auto rounded-2xl border p-4 shadow-xl md:p-6"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Resultado da consulta"
-      >
-        <header class="flex items-center justify-between gap-2">
-          <h2 class="text-xl font-bold">Consulta às {{ consulta.hora }}</h2>
-          <Button size="icon-touch" variant="ghost" aria-label="Fechar" @click="modalAberto = false"><X /></Button>
-        </header>
-
-        <p v-if="evolucao.alertaNumeros.length" class="text-atencao-suave-foreground text-sm" role="status">
+        <p v-if="evolucao?.alertaNumeros.length" class="text-atencao-suave-foreground bg-atencao-suave rounded-xl px-3 py-2 text-sm" role="status">
           Confira estes números, que não estavam na transcrição: {{ evolucao.alertaNumeros.join(', ') }}
         </p>
-
-        <p class="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span><mark class="bg-critico-suave text-critico-suave-foreground rounded px-1">incompreensível</mark> conferir com o paciente</span>
+        <p v-if="evolucao?.prontuario" class="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span><mark class="bg-critico-suave text-critico-suave-foreground rounded px-1">incompreensível</mark> conferir</span>
           <span><mark class="bg-atencao-suave text-atencao-suave-foreground rounded px-1">datas, doses e durações</mark> conferir</span>
         </p>
 
-        <!-- O texto é editável; o destaque é desenhado por trás e acompanha o que você digita. -->
-        <div class="relative min-h-[40vh] flex-1">
+        <!-- Documento: editável; o destaque é desenhado por trás e acompanha o que você digita. -->
+        <section v-if="evolucao" aria-label="Prontuário" class="bg-card relative min-h-[65vh] rounded-2xl border">
           <div
-            class="border-input pointer-events-none min-h-[40vh] rounded-xl border p-4 text-base leading-relaxed break-words whitespace-pre-wrap"
+            class="pointer-events-none min-h-[65vh] rounded-2xl border border-transparent p-6 text-base leading-relaxed break-words whitespace-pre-wrap"
             aria-hidden="true"
           ><template v-for="(t, i) in trechos" :key="i"><mark
                 v-if="t.tipo !== 'texto'"
@@ -189,22 +165,45 @@ async function copiarProntuario() {
           <textarea
             v-model="evolucao.prontuario"
             spellcheck="false"
-            class="caret-foreground absolute inset-0 size-full resize-none overflow-hidden rounded-xl border border-transparent bg-transparent p-4 text-base leading-relaxed text-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            placeholder="O prontuário da consulta aparece aqui. Clique em “Colar resposta do Gemini”."
+            class="caret-foreground placeholder:text-muted-foreground absolute inset-0 size-full resize-none overflow-hidden rounded-2xl border border-transparent bg-transparent p-6 text-base leading-relaxed text-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label="Prontuário editável"
           />
-        </div>
+        </section>
 
-        <section v-if="evolucao.fora" class="rounded-2xl border border-dashed p-4">
-          <h3 class="mb-2 text-sm font-semibold">Fora do prontuário (não copiar)</h3>
+        <section v-if="evolucao?.fora" class="rounded-2xl border border-dashed p-4">
+          <h2 class="mb-2 text-sm font-semibold">Fora do prontuário (não copiar)</h2>
           <p class="text-muted-foreground whitespace-pre-wrap text-sm">{{ evolucao.fora }}</p>
         </section>
 
-        <div class="flex flex-wrap gap-2">
-          <Button size="touch" @click="copiarProntuario">{{ copiado ? 'Copiado' : 'Copiar prontuário' }}</Button>
-          <Button size="touch" variant="outline" @click="modalAberto = false">Fechar</Button>
-        </div>
-      </div>
-      </div>
+        <!-- Painel flutuante: copiar para o Gemini e colar a resposta -->
+        <aside
+          v-if="painelAberto && evolucao && consulta"
+          class="bg-background fixed right-4 bottom-4 z-40 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border p-4 shadow-xl"
+          aria-label="Painel do Gemini"
+          @keydown.esc="painelAberto = false"
+        >
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold">Consulta {{ consulta.hora }} · Gemini</h2>
+            <Button size="icon-sm" variant="ghost" aria-label="Fechar painel" @click="painelAberto = false"><X /></Button>
+          </header>
+
+          <div>
+            <Button size="touch" variant="outline" class="w-full" @click="enviarParaGemini"><Sparkles /> Copiar para o Gemini</Button>
+            <p v-if="aviso" class="text-muted-foreground mt-2 text-xs" role="status">{{ aviso }}</p>
+          </div>
+
+          <textarea
+            v-model="evolucao.resposta"
+            rows="7"
+            spellcheck="false"
+            class="border-input w-full rounded-xl border p-3 text-sm"
+            aria-label="Resposta do Gemini"
+            placeholder="Cole aqui a resposta copiada do Gemini"
+          />
+          <Button size="touch" :disabled="!evolucao.resposta.trim()" @click="aplicarResposta">Aplicar ao prontuário</Button>
+        </aside>
+      </template>
     </template>
   </main>
 </template>
