@@ -16,7 +16,6 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import ExcluirBiblioteca from '@/components/backup/ExcluirBiblioteca.vue'
-import ConfiguracaoIA from '@/components/ia/ConfiguracaoIA.vue'
 import SincronizacaoAnamnese from '@/components/anamnese/SincronizacaoAnamnese.vue'
 import { apagarDadosDestePc, carregarBibliotecaDoArquivo } from '@/lib/penDrive'
 import { armazenamento, MODO_PENDRIVE } from '@/modo'
@@ -121,9 +120,6 @@ async function apagar() {
         </Button>
       </CardContent>
     </Card>
-
-    <!-- Importação por IA (desativada no pen drive: a chave nunca fica em PC do hospital) -->
-    <ConfiguracaoIA v-if="!MODO_PENDRIVE" />
 
     <!-- Sincronização do bloco de notas e transcrições com o celular -->
     <SincronizacaoAnamnese v-if="!MODO_PENDRIVE" />
