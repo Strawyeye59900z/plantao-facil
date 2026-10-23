@@ -12,6 +12,9 @@ export interface ResultadoRecebido extends Envelope {
   versao: number
 }
 
+/** Sem canal: bloco de notas e transcrições. 'biblioteca': prescrições entre os aparelhos do médico. */
+export type CanalSessao = 'biblioteca'
+
 /** A sessão foi encerrada por um dos lados ou expirou (sem uso por 12 h). */
 export class SessaoEncerradaError extends Error {}
 
@@ -40,16 +43,16 @@ export async function entrarSessao(codigo: string): Promise<{ id: string; salt: 
 }
 
 /** Devolve o envelope mais novo que `depois`; null quando não há nada novo. */
-export async function buscarResultado(id: string, depois = 0): Promise<ResultadoRecebido | null> {
-  const resposta = await fetch(`/api/sessoes/${id}?depois=${depois}`)
+export async function buscarResultado(id: string, depois = 0, canal?: CanalSessao): Promise<ResultadoRecebido | null> {
+  const resposta = await fetch(`/api/sessoes/${id}?depois=${depois}${canal ? `&canal=${canal}` : ''}`)
   if (resposta.status === 204) return null
   if (resposta.status === 404) throw new SessaoEncerradaError('A sincronização foi encerrada.')
   if (!resposta.ok) throw new Error('Falha ao consultar a sincronização.')
   return resposta.json()
 }
 
-export async function enviarResultado(id: string, envelope: Envelope): Promise<void> {
-  const resposta = await fetch(`/api/sessoes/${id}`, {
+export async function enviarResultado(id: string, envelope: Envelope, canal?: CanalSessao): Promise<void> {
+  const resposta = await fetch(`/api/sessoes/${id}${canal ? `?canal=${canal}` : ''}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(envelope),

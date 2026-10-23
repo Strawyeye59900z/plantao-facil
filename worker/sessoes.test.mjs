@@ -231,6 +231,30 @@ describe('prazo e gravações', () => {
   })
 })
 
+describe('canal da biblioteca (entre os aparelhos do médico)', () => {
+  it('é independente do bloco de notas e funciona nos dois sentidos', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    const { id } = await criar(tratar)
+    await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'bloco', ciphertext: 'B1' }))
+    assert.equal((await tratar(req('GET', `/api/sessoes/${id}?canal=biblioteca`))).status, 204)
+
+    await tratar(req('POST', `/api/sessoes/${id}?canal=biblioteca`, { iv: 'lib', ciphertext: 'L1' }))
+    assert.deepEqual(await (await tratar(req('GET', `/api/sessoes/${id}?canal=biblioteca`))).json(), { iv: 'lib', ciphertext: 'L1', versao: 1 })
+    assert.deepEqual(await (await tratar(req('GET', `/api/sessoes/${id}`))).json(), { iv: 'bloco', ciphertext: 'B1', versao: 1 })
+
+    await tratar(req('POST', `/api/sessoes/${id}?canal=biblioteca`, { iv: 'lib', ciphertext: 'L2' }))
+    assert.equal((await (await tratar(req('GET', `/api/sessoes/${id}?canal=biblioteca&depois=1`))).json()).ciphertext, 'L2')
+    assert.equal((await (await tratar(req('GET', `/api/sessoes/${id}`))).json()).ciphertext, 'B1')
+  })
+
+  it('canal desconhecido cai no padrão, sem abrir canais novos', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    const { id } = await criar(tratar)
+    await tratar(req('POST', `/api/sessoes/${id}?canal=qualquer`, { iv: 'a', ciphertext: 'b' }))
+    assert.equal((await (await tratar(req('GET', `/api/sessoes/${id}`))).json()).ciphertext, 'b')
+  })
+})
+
 describe('compartilhamento de prescrições (7 dias)', () => {
   const DIAS_7 = 7 * 86400
   const criarCompartilhamento = async (tratar) =>

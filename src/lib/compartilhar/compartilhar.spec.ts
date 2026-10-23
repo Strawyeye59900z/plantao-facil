@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { categoriaTeste, prescricaoTeste } from '@/dominio/prescricoes/fixtures.spec-helper'
 import { montarPacote } from '@/dominio/compartilhar/pacote'
@@ -6,7 +7,10 @@ import { montarPacote } from '@/dominio/compartilhar/pacote'
 import { Entrada, Limitador, Sessao } from '../../../worker/objetos.js'
 // @ts-expect-error o Worker é JavaScript, sem tipos
 import { criarRotasSessoes } from '../../../worker/sessoes.js'
+import { derivarChave } from '@/dominio/anamnese/cifra'
+import { criarSessao } from '@/lib/anamnese/sessao'
 import { baixarPacote, cancelarCompartilhamento, publicarPacote } from './compartilhar'
+import { enviarBiblioteca, receberBiblioteca } from './entreAparelhos'
 
 function ctxFalso() {
   const dados = new Map<string, unknown>()
@@ -95,5 +99,40 @@ describe('compartilhar prescrições (ponta a ponta, sem rede)', () => {
     })
     await publicarPacote(montarPacote(biblioteca, ['a'], AGORA, '1'))
     expect(enviados.join('')).not.toContain('Situação Teste A')
+  })
+})
+
+describe('biblioteca entre os aparelhos (mesmo código da transcrição)', () => {
+  it('um aparelho envia e o outro recebe a biblioteca inteira, inclusive a lixeira', async () => {
+    const { db } = await import('@/db/banco')
+    await db.categorias.put(categoriaTeste({ id: 'g1' }))
+    await db.prescricoes.bulkPut([
+      prescricaoTeste({ id: 'a', favorito: true }),
+      prescricaoTeste({ id: 'lixo', excluidoEm: AGORA }),
+    ])
+    const criada = await criarSessao()
+    const sessao = { id: criada.id, chave: await derivarChave(criada.codigo.replace('-', ''), criada.salt) }
+
+    expect(await receberBiblioteca(sessao)).toBeNull()
+    await enviarBiblioteca(sessao)
+    const leitura = await receberBiblioteca(sessao)
+    expect(leitura?.ok).toBe(true)
+    if (leitura?.ok) {
+      expect(leitura.backup.prescricoes.map((p) => [p.id, p.favorito, p.excluidoEm !== null]).sort()).toEqual([
+        ['a', true, false],
+        ['lixo', false, true],
+      ])
+      expect(leitura.backup.categorias).toHaveLength(1)
+    }
+    await db.prescricoes.clear()
+    await db.categorias.clear()
+  })
+
+  it('o outro aparelho precisa do mesmo código para abrir', async () => {
+    const criada = await criarSessao()
+    const certa = { id: criada.id, chave: await derivarChave(criada.codigo.replace('-', ''), criada.salt) }
+    const errada = { id: criada.id, chave: await derivarChave('ZZZZZZZZ', criada.salt) }
+    await enviarBiblioteca(certa)
+    await expect(receberBiblioteca(errada)).rejects.toThrow('mesmo código')
   })
 })

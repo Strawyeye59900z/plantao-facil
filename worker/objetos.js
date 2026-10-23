@@ -4,6 +4,8 @@
  *  - Entrada:    liga o resumo do código digitado ao id da sessão (nome = resumo SHA-256 do código);
  *  - Limitador:  conta tentativas de entrada por IP, só em memória (nome = IP).
  * O prazo de 12 h é renovado no máximo a cada 30 min: consultar não grava nada na maior parte das vezes.
+ * Cada sessão tem dois "canais" de texto cifrado: o padrão (bloco de notas e transcrições, do celular para o PC)
+ * e `biblioteca` (prescrições entre os aparelhos do mesmo médico, nos dois sentidos).
  * Compartilhamento de prescrições (`fixo`): prazo de 7 dias contado da criação, que nada renova.
  */
 import { LIMITE_CORPO_BYTES, LIMITE_TENTATIVAS_POR_MINUTO, TTL_SEGUNDOS } from './sessoes.js'
@@ -63,6 +65,7 @@ export class Sessao extends ComPrazo {
   async fetch(req) {
     await this.pronto
     const { pathname, searchParams } = new URL(req.url)
+    const campo = searchParams.get('canal') === 'biblioteca' ? 'biblioteca' : 'payload'
 
     if (req.method === 'POST' && pathname === '/iniciar') {
       if (this.estado) return json({ erro: 'Sessão já existe.' }, 409)
@@ -77,7 +80,7 @@ export class Sessao extends ComPrazo {
 
     if (req.method === 'GET' && pathname === '/resultado') {
       await this.tocar()
-      const { payload } = this.estado
+      const payload = this.estado[campo]
       if (!payload) return new Response(null, { status: 204 })
       // ?depois=N: o PC pede só o que é mais novo que a versão N que já recebeu.
       const depois = Number(searchParams.get('depois') ?? 0)
@@ -97,8 +100,8 @@ export class Sessao extends ComPrazo {
       if (!corpo || typeof corpo.iv !== 'string' || typeof corpo.ciphertext !== 'string') {
         return json({ erro: 'Envie { iv, ciphertext }.' }, 400)
       }
-      const versao = (this.estado.payload?.versao ?? 0) + 1
-      await this.salvar({ ...this.estado, payload: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao } })
+      const versao = (this.estado[campo]?.versao ?? 0) + 1
+      await this.salvar({ ...this.estado, [campo]: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao } })
       return json({ ok: true, versao }, 201)
     }
 

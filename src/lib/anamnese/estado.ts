@@ -165,6 +165,11 @@ export async function encerrarCodigoPc(): Promise<void> {
   esquecerSessaoPc('Sincronização encerrada. Gere um novo código para sincronizar de novo.')
 }
 
+/** Sessão deste aparelho (a do PC ou a do celular), para outros recursos usarem o mesmo código. */
+export function sessaoDeSincronizacao(): SessaoAtiva | null {
+  return papelAtual === 'celular' ? celular.sessao.value : pc.sessao.value
+}
+
 // ----- Restaurar depois de recarregar a página -----
 /** Reconecta com a conexão guardada. O bloco volta do servidor (cifrado) e é decifrado de novo com o código. */
 async function restaurar(): Promise<void> {

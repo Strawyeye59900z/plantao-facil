@@ -100,15 +100,18 @@ export function criarRotasSessoes(ns, { ipDe = () => 'local' } = {}) {
     const id = partes[2]
     if (!/^[0-9a-f]{32}$/.test(id)) return json({ erro: 'Sessão inválida.' }, 400)
 
+    // ?canal=biblioteca: prescrições entre os aparelhos do médico (o padrão é o bloco de notas/transcrição).
+    const canal = url.searchParams.get('canal') === 'biblioteca' ? 'biblioteca' : ''
+
     if (req.method === 'GET') {
       const depois = Number(url.searchParams.get('depois') ?? 0) || 0
-      return chamar(ns.sessao(id), 'GET', `/resultado?depois=${depois}`)
+      return chamar(ns.sessao(id), 'GET', `/resultado?depois=${depois}${canal && `&canal=${canal}`}`)
     }
 
     if (req.method === 'POST') {
       const tamanho = Number(req.headers.get('content-length') ?? 0)
       if (tamanho > LIMITE_CORPO_BYTES) return json({ erro: 'Conteúdo grande demais.' }, 413)
-      return chamar(ns.sessao(id), 'POST', '/resultado', await req.text())
+      return chamar(ns.sessao(id), 'POST', `/resultado${canal && `?canal=${canal}`}`, await req.text())
     }
 
     if (req.method === 'DELETE') {

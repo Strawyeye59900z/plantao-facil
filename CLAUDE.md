@@ -153,6 +153,10 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Worker: `POST /api/sessoes` com `{ tipo: 'compartilhamento' }` cria a sessão de prazo fixo (`ttl`/`fixo` nos Durable Objects); sem corpo continua a sessão de consulta de 12 h.
 - Backups com prescrições recebidas contêm `origem: 'recebida_colega'`; versões antigas do app não aceitam esse valor.
 
+#### Biblioteca entre PC e celular (v3.1)
+- Ajustes → Sincronização, **com o código ativo** (o mesmo da transcrição): botões **Enviar biblioteca** e **Receber biblioteca**, nos dois sentidos. Usa o canal `biblioteca` da sessão (`?canal=biblioteca`, independente do bloco de notas/transcrição); pacote comprimido e cifrado com a chave da sessão (`src/lib/compartilhar/entreAparelhos.ts`).
+- Envia a biblioteca **inteira, inclusive a lixeira e favoritos**. Receber usa `PreviaMesclagem` (novos/iguais/conflitos, escolha por conflito) e **só mescla — nunca apaga**; não marca "Recebida de colega". Sem botão automático (decisão: manual, com pré-visualização).
+
 ### Backup (Fase 3)
 - JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + **`versaoFormato: 2`** (v2); backups `versaoFormato: 1` (v1) são aceitos e convertidos (ver "Migração v1 → v2"); prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
 - Backups `versaoFormato: 2` feitos na Fase 2 (calculadoras/grupos ainda no formato da v1, sem `area`) passam por `migrarCalculadorasEGruposV1` antes da validação; os que já têm `area` não mudam.

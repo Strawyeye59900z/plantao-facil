@@ -2,8 +2,9 @@
 import { onMounted, ref } from 'vue'
 import { Smartphone } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import SincronizarBiblioteca from '@/components/compartilhar/SincronizarBiblioteca.vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { celular, conectarCelular, encerrarCelular, encerrarCodigoPc, garantirCodigoPc, gerarCodigoPc, pc } from '@/lib/anamnese/estado'
+import { celular, conectarCelular, encerrarCelular, encerrarCodigoPc, garantirCodigoPc, gerarCodigoPc, pc, sessaoDeSincronizacao } from '@/lib/anamnese/estado'
 
 /**
  * Sincronização com o celular, nas Configurações. No PC mostra o código para digitar no celular;
@@ -73,6 +74,11 @@ async function conectar() {
         </div>
       </template>
       <p v-if="celular.erro.value" class="text-critico text-sm" role="alert">{{ celular.erro.value }}</p>
+    </CardContent>
+
+    <!-- Prescrições entre os aparelhos (some se a sincronização não estiver ativa) -->
+    <CardContent v-if="sessaoDeSincronizacao()">
+      <SincronizarBiblioteca />
     </CardContent>
   </Card>
 </template>
