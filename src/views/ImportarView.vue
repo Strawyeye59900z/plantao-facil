@@ -13,7 +13,6 @@ import {
   MessagesSquare,
   Pencil,
   Scissors,
-  ShieldAlert,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -619,37 +618,6 @@ onBeforeUnmount(() => {
             <p v-if="erroIntervalo" role="alert" class="text-destructive text-sm">{{ erroIntervalo }}</p>
             <p v-else class="text-muted-foreground text-sm">{{ resumoLotes }}</p>
           </template>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle class="flex items-center gap-2"><Sparkles class="size-5" /> Enviar pela API</CardTitle>
-          <CardDescription>
-            Provedor: {{ provedor.nome }} · modelo {{ modelo }}.
-            <RouterLink to="/ajustes" class="text-primary underline-offset-2 hover:underline">Alterar em Ajustes</RouterLink>
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-4">
-          <label v-if="arquivo && trechosPlanejados.length" class="border-atencao/45 bg-atencao/12 flex items-start gap-3 rounded-xl border p-3 text-sm">
-            <input v-model="confirmado" type="checkbox" class="accent-primary mt-0.5 size-5 shrink-0" />
-            <span>
-              <ShieldAlert class="text-atencao mr-1 inline size-4" />
-              Confirmo que este PDF <strong>não contém dados de pacientes</strong> e autorizo enviar
-              {{ trechosPlanejados.length === 1 ? 'o lote' : `os ${trechosPlanejados.length} lotes` }} ao
-              <strong>{{ provedor.nome }}</strong>.
-            </span>
-          </label>
-
-          <p v-if="bloqueioApi && arquivo && !erroIntervalo" class="text-muted-foreground text-sm">{{ bloqueioApi }}</p>
-          <p v-if="!arquivo && !chave" class="text-muted-foreground text-sm">
-            Cadastre a chave de API em <RouterLink to="/ajustes" class="text-primary underline">Ajustes</RouterLink>.
-          </p>
-
-          <Button size="touch" class="self-start" :disabled="!!bloqueioApi" @click="iniciar('api')">
-            <Sparkles />
-            {{ trechosPlanejados.length > 1 ? `Enviar ${trechosPlanejados.length} lotes para a IA` : 'Enviar para a IA' }}
-          </Button>
         </CardContent>
       </Card>
 
