@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { db } from '@/db/banco'
+import { moverPrescricoesParaLixeira } from '@/db/exclusao'
 import { repoPrescricoes } from '@/db/repositorios'
 import { duplicarPrescricao, type DadosPrescricao } from '@/dominio/prescricoes/editar'
 import type { Prescricao, UUID } from '@/dominio/tipos'
@@ -61,6 +62,13 @@ export const usePrescricoesStore = defineStore('prescricoes', () => {
     return substituir(await repoPrescricoes.moverParaLixeira(id))
   }
 
+  /** Exclusão em massa: tudo vai para a lixeira numa só transação. Devolve quantas foram movidas. */
+  async function moverVariasParaLixeira(ids: UUID[]) {
+    const movidas = await moverPrescricoesParaLixeira([...ids])
+    await carregar()
+    return movidas
+  }
+
   async function restaurar(id: UUID) {
     return substituir(await repoPrescricoes.restaurar(id))
   }
@@ -82,6 +90,7 @@ export const usePrescricoesStore = defineStore('prescricoes', () => {
     duplicar,
     alternarFavorito,
     moverParaLixeira,
+    moverVariasParaLixeira,
     restaurar,
     excluirPermanentemente,
   }

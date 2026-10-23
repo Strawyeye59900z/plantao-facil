@@ -140,6 +140,12 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **Regra de dose vira texto** com **todos os números**, inclusive arredondamento (`descreverRegraV1`): o primeiro `{dose}`/`{dose_diaria}` vira "[regra por extenso]", os seguintes "[dose]"/"[dose diária]", `{volume}` → "[volume]", `{tomadas}` → intervalo ("de 8h em 8h") ou "[tomadas]"; sem marcador de dose, a regra é anexada ao fim. A prescrição fica **"importada — revisar"** (`revisada: false`) com uma dúvida por item convertido.
 - Campos ausentes em registros antigos: receita `''`, condições `[]`, condição "Sempre"; `calculadoraIds` começa vazio.
 
+#### Exclusão em massa (v3.1)
+- **Selecionar** (botão na lista de Prescrições ou **tocar e segurar** um cartão): caixas nos cartões, barra flutuante com "N selecionadas", **Todas/Nenhuma** (só as visíveis) e **Excluir**. Trocar de grupo ou de busca desmarca tudo. Só em Prescrições (`PainelBiblioteca` com `selecionavel`); não existe no pen drive.
+- Excluir selecionadas e **excluir grupo** mandam as prescrições para a **Lixeira** (restauráveis). **Excluir grupo** (botão no cabeçalho, só com um grupo aberto) também exclui o grupo, que não aparece na Lixeira; restauradas, as prescrições caem em "Sem grupo".
+- **Excluir biblioteca inteira** (Ajustes → `ExcluirBiblioteca.vue`): apaga **de vez** prescrições, calculadoras, escalas, grupos e lixeira; mantém as configurações. Oferece baixar backup antes e exige digitar EXCLUIR.
+- Regras em `src/db/exclusao.ts` (uma transação cada; testes em `exclusao.spec.ts`).
+
 ### Backup (Fase 3)
 - JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + **`versaoFormato: 2`** (v2); backups `versaoFormato: 1` (v1) são aceitos e convertidos (ver "Migração v1 → v2"); prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
 - Backups `versaoFormato: 2` feitos na Fase 2 (calculadoras/grupos ainda no formato da v1, sem `area`) passam por `migrarCalculadorasEGruposV1` antes da validação; os que já têm `area` não mudam.

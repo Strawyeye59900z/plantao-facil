@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { db } from '@/db/banco'
+import { excluirGrupoComPrescricoes } from '@/db/exclusao'
 import { repoCategorias } from '@/db/repositorios'
 import { ROTULO_SEM_GRUPO } from '@/dominio/biblioteca/lateral'
 import type { Categoria, EscopoCategoria, UUID } from '@/dominio/tipos'
@@ -95,5 +96,12 @@ export const useCategoriasStore = defineStore('categorias', () => {
     )
   }
 
-  return { todas, dePrescricoes, deCalculadoras, deEscalas, doEscopo, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, emUso }
+  /** Exclui o grupo e manda as prescrições dele para a lixeira. Devolve quantas foram movidas. */
+  async function excluirComPrescricoes(id: UUID) {
+    const movidas = await excluirGrupoComPrescricoes(id)
+    await Promise.all([carregar(), usePrescricoesStore().carregar()])
+    return movidas
+  }
+
+  return { todas, dePrescricoes, deCalculadoras, deEscalas, doEscopo, carregar, obter, nome, criar, renomear, definirIcone, mover, excluir, excluirComPrescricoes, emUso }
 })

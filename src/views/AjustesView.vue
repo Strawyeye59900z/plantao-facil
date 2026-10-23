@@ -15,6 +15,7 @@ import { useConfiguracoesStore } from '@/stores/configuracoes'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
+import ExcluirBiblioteca from '@/components/backup/ExcluirBiblioteca.vue'
 import ConfiguracaoIA from '@/components/ia/ConfiguracaoIA.vue'
 import SincronizacaoAnamnese from '@/components/anamnese/SincronizacaoAnamnese.vue'
 import { apagarDadosDestePc, carregarBibliotecaDoArquivo } from '@/lib/penDrive'
@@ -142,6 +143,8 @@ async function apagar() {
         </RouterLink>
       </nav>
     </Card>
+
+    <ExcluirBiblioteca v-if="!MODO_PENDRIVE" />
 
     <!-- Modo pen drive: biblioteca deste PC -->
     <Card v-if="MODO_PENDRIVE">
