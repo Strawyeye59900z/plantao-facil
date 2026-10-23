@@ -69,6 +69,12 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - Código: nomes de domínio em português; termos técnicos genéricos em inglês.
 - Git iniciado; commit ao fim de cada fase.
 
+### Sincronização PC ↔ celular (v3.1, branch `v3.1`)
+- O app e a API `/api/sessoes` rodam num **Cloudflare Worker** (`prescricao`, domínio `prescricao.mhvl.com.br`; `wrangler.jsonc`, publicar com `npm run build && npx wrangler deploy`). O GitHub Pages continua só como cópia estática, sem sincronização.
+- **Durable Objects com SQLite** (`worker/objetos.js`: `Sessao`, `Entrada`, `Limitador`), no plano grátis. O **KV foi abandonado**: o limite grátis é 1.000 gravações/dia e cada consulta do PC (a cada 3 s) gravava, causando erros 5xx.
+- O prazo de 12 h só é renovado a cada 30 min; o limitador de tentativas por IP fica em memória. Limite a vigiar no plano grátis: tempo de execução dos objetos (13 mil GB-s/dia, ~29 h de sessão aberta somadas); se apertar, trocar a consulta por WebSocket.
+- Testes do Worker: `node --test worker/sessoes.test.mjs` (fora do Vitest).
+
 ### Layout (v2, branch `v2`)
 - Largura: a biblioteca (`/prescricoes`, `/calculadoras`) usa `max-w-6xl`; as demais telas ficam em `max-w-3xl`, para leitura.
 - Topo único (sem menu lateral nem navegação inferior): logo redondo na cor de destaque, pílulas das áreas (`AREAS` em `navegacao.ts`; a ativa em `--foreground`), busca em pílula (grava `?q=` na rota da área) e botão redondo de menu (`MENU`: Grupos, Importar PDF, Backup, Lixeira, Ajustes). No celular, logo + busca + menu numa linha e as pílulas embaixo: **3 pílulas iguais na largura toda, ícone sobre o rótulo** (cabem em 320 px, 44 px de altura); a partir de `sm`, ícone ao lado do rótulo.
