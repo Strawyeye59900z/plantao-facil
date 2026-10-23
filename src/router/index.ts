@@ -101,6 +101,12 @@ export const router = createRouter({
       meta: { titulo: 'Ajustes' },
     },
     {
+      path: '/receber',
+      name: 'receber',
+      component: () => import('@/views/ReceberView.vue'),
+      meta: { titulo: 'Receber de colega' },
+    },
+    {
       path: '/categorias',
       name: 'categorias',
       component: () => import('@/views/CategoriasView.vue'),

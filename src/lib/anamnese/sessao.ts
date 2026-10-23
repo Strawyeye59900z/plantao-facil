@@ -15,8 +15,12 @@ export interface ResultadoRecebido extends Envelope {
 /** A sessão foi encerrada por um dos lados ou expirou (sem uso por 12 h). */
 export class SessaoEncerradaError extends Error {}
 
-export async function criarSessao(): Promise<SessaoCriada> {
-  const resposta = await fetch('/api/sessoes', { method: 'POST' })
+/** Sem argumento: sessão de consulta (12 h sem uso). 'compartilhamento': prazo fixo de 7 dias. */
+export async function criarSessao(tipo?: 'compartilhamento'): Promise<SessaoCriada> {
+  const resposta = await fetch('/api/sessoes', {
+    method: 'POST',
+    ...(tipo ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo }) } : {}),
+  })
   if (!resposta.ok) throw new Error('Não consegui criar a sincronização. Verifique a conexão.')
   return resposta.json()
 }

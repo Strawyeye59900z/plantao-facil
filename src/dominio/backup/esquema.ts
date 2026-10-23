@@ -56,7 +56,7 @@ export const esquemaPrescricao: v.GenericSchema<unknown, Prescricao> = v.object(
   observacoes: v.string(),
   referencia: v.string(),
   favorito: v.boolean(),
-  origem: v.picklist(['manual', 'importada_ia']),
+  origem: v.picklist(['manual', 'importada_ia', 'recebida_colega']),
   revisada: v.boolean(),
   duvidasImportacao: v.array(v.string()),
 })

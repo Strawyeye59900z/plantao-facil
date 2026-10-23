@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import PainelBiblioteca from '@/components/biblioteca/PainelBiblioteca.vue'
+import CodigoCompartilhamento from '@/components/compartilhar/CodigoCompartilhamento.vue'
+import { lerBiblioteca } from '@/db/backup'
+import { ETIQUETA_RECEBIDA, montarPacote, ORIGEM_RECEBIDA } from '@/dominio/compartilhar/pacote'
+import { cancelarCompartilhamento, publicarPacote, type Compartilhamento } from '@/lib/compartilhar/compartilhar'
 import { ETIQUETA_REVISAR } from '@/components/biblioteca/etiquetas'
 import { filtrarPrescricoes } from '@/dominio/prescricoes/busca'
 import type { Prescricao } from '@/dominio/tipos'
@@ -34,10 +39,38 @@ async function excluirGrupo(grupoId: string) {
   }
 }
 
+// ===== Compartilhar com colegas =====
+const compartilhamento = ref<Compartilhamento | null>(null)
+const mostrarCodigo = ref(false)
+const quantidadeEnviada = ref(0)
+
+async function compartilhar(ids: string[]) {
+  const aviso = toast.loading('Preparando o pacote…')
+  try {
+    const pacote = montarPacote(await lerBiblioteca(), ids, new Date().toISOString(), __APP_VERSION__)
+    quantidadeEnviada.value = pacote.prescricoes.length
+    compartilhamento.value = await publicarPacote(pacote)
+    mostrarCodigo.value = true
+  } catch (erro) {
+    toast.error(erro instanceof Error ? erro.message : 'Não consegui compartilhar. Verifique a conexão.')
+  } finally {
+    toast.dismiss(aviso)
+  }
+}
+
+async function cancelarEnvio() {
+  if (!compartilhamento.value) return
+  await cancelarCompartilhamento(compartilhamento.value.id)
+  mostrarCodigo.value = false
+  compartilhamento.value = null
+  toast.success('Compartilhamento cancelado. O código não vale mais.')
+}
+
 function descrever(p: Prescricao) {
   const etiquetas: string[] = []
   const n = p.condicoes.length
   if (n > 0) etiquetas.push(`${n} ${n === 1 ? 'condição' : 'condições'}`)
+  if (p.origem === ORIGEM_RECEBIDA) etiquetas.push(ETIQUETA_RECEBIDA)
   if (p.revisada === false) etiquetas.push(ETIQUETA_REVISAR)
   return { etiquetas, meta: p.receita.trim() ? 'Receita de alta' : '' }
 }
@@ -56,5 +89,12 @@ function descrever(p: Prescricao) {
     selecionavel
     @excluir-varias="excluirVarias"
     @excluir-grupo="excluirGrupo"
+    @compartilhar="compartilhar"
+  />
+  <CodigoCompartilhamento
+    v-model:aberto="mostrarCodigo"
+    :compartilhamento="compartilhamento"
+    :descricao="`${plural(quantidadeEnviada)}`"
+    @cancelar="cancelarEnvio"
   />
 </template>

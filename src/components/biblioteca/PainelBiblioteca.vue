@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="T extends { id: string; categoriaId: string | null; titulo?: string; nome?: string; favorito: boolean }">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ListChecks, Plus, Trash2, X } from '@lucide/vue'
+import { ListChecks, Plus, Share2, Trash2, X } from '@lucide/vue'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
 import { Button } from '@/components/ui/button'
 import { filtrarPorChave, montarLateral, type ChaveLateral } from '@/dominio/biblioteca/lateral'
@@ -30,7 +30,7 @@ const props = defineProps<{
   descrever: (item: T) => { etiquetas: string[]; meta: string }
   selecionavel?: boolean
 }>()
-const emit = defineEmits<{ excluirVarias: [ids: string[]]; excluirGrupo: [grupoId: string] }>()
+const emit = defineEmits<{ excluirVarias: [ids: string[]]; excluirGrupo: [grupoId: string]; compartilhar: [ids: string[]] }>()
 
 const colador = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 
@@ -83,6 +83,10 @@ function alternar(id: string) {
 }
 function alternarTodas() {
   marcadas.value = todasMarcadas.value ? [] : visiveis.value.map((i) => i.id)
+}
+function compartilharMarcadas() {
+  emit('compartilhar', [...marcadas.value])
+  sairDaSelecao()
 }
 function excluirMarcadas() {
   emit('excluirVarias', [...marcadas.value])
@@ -193,6 +197,16 @@ const textoSemItens = computed(() => {
       </span>
       <Button size="touch" variant="ghost" class="rounded-full" @click="alternarTodas">
         {{ todasMarcadas ? 'Nenhuma' : 'Todas' }}
+      </Button>
+      <Button
+        size="icon-touch"
+        variant="outline"
+        class="rounded-full"
+        aria-label="Compartilhar com um colega"
+        :disabled="marcadas.length === 0"
+        @click="compartilharMarcadas"
+      >
+        <Share2 />
       </Button>
       <Button size="touch" variant="destructive" class="rounded-full" :disabled="marcadas.length === 0" @click="confirmarExcluir = true">
         <Trash2 /> Excluir

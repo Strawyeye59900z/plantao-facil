@@ -230,3 +230,58 @@ describe('prazo e gravações', () => {
     assert.equal((await tratar(req('GET', `/api/sessoes/${id}`))).status, 204)
   })
 })
+
+describe('compartilhamento de prescrições (7 dias)', () => {
+  const DIAS_7 = 7 * 86400
+  const criarCompartilhamento = async (tratar) =>
+    (await (await tratar(req('POST', '/api/sessoes', { tipo: 'compartilhamento' }))).json())
+
+  it('informa o prazo de 7 dias; sem corpo continua 12 h', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    assert.equal((await criarCompartilhamento(tratar)).expiraEmSegundos, DIAS_7)
+    assert.equal((await criar(tratar)).expiraEmSegundos, 43200)
+  })
+
+  it('vários colegas entram com o mesmo código e baixam o mesmo pacote', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    const { id, codigo } = await criarCompartilhamento(tratar)
+    await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'IV', ciphertext: 'PACOTE' }))
+    for (const ip of ['colega1', 'colega2', 'colega3']) {
+      const entrada = await tratar(req('POST', '/api/sessoes/entrar', { codigo }, { 'x-ip': ip }))
+      assert.equal(entrada.status, 200)
+      const baixado = await tratar(req('GET', `/api/sessoes/${(await entrada.json()).id}`))
+      assert.deepEqual(await baixado.json(), { iv: 'IV', ciphertext: 'PACOTE', versao: 1 })
+    }
+  })
+
+  it('o prazo é fixo: consultar e reenviar não o estendem, e aos 7 dias tudo é apagado', async () => {
+    const amb = ambiente()
+    const tratar = criarRotasSessoes(amb.ns)
+    const { id, codigo } = await criarCompartilhamento(tratar)
+    const { ctx, objeto } = amb.instancias.get(`sessao:${id}`)
+    const alarmeInicial = ctx.alarme
+    assert.equal(alarmeInicial, amb.relogio.agora + DIAS_7 * 1000)
+
+    amb.relogio.agora += 3 * 86400 * 1000
+    await tratar(req('GET', `/api/sessoes/${id}`))
+    await tratar(req('POST', `/api/sessoes/${id}`, { iv: 'a', ciphertext: 'b' }))
+    assert.equal(ctx.alarme, alarmeInicial)
+
+    amb.relogio.agora = alarmeInicial - 1000
+    await objeto.alarm()
+    assert.equal((await tratar(req('GET', `/api/sessoes/${id}`))).status, 200)
+
+    amb.relogio.agora = alarmeInicial
+    await objeto.alarm()
+    assert.equal((await tratar(req('GET', `/api/sessoes/${id}`))).status, 404)
+    for (const [k, v] of amb.instancias) if (k.startsWith('entrada:')) await v.objeto.alarm()
+    assert.equal((await tratar(req('POST', '/api/sessoes/entrar', { codigo }))).status, 404)
+  })
+
+  it('quem enviou pode cancelar: o código deixa de valer', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    const { id, codigo } = await criarCompartilhamento(tratar)
+    assert.equal((await tratar(req('DELETE', `/api/sessoes/${id}`))).status, 204)
+    assert.equal((await tratar(req('POST', '/api/sessoes/entrar', { codigo }))).status, 404)
+  })
+})

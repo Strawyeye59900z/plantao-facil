@@ -41,6 +41,27 @@ export async function cifrar(texto: string, chave: CryptoKey): Promise<Envelope>
   return { iv: base64url(iv), ciphertext: base64url(new Uint8Array(cifrado)) }
 }
 
+/** Como `cifrar`, para bytes (ex.: texto já comprimido). */
+export async function cifrarBytes(bytes: Uint8Array<ArrayBuffer>, chave: CryptoKey): Promise<Envelope> {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const cifrado = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, chave, bytes)
+  return { iv: base64url(iv), ciphertext: base64url(new Uint8Array(cifrado)) }
+}
+
+/** Devolve os bytes, ou null se a chave não confere (ou o envelope foi alterado). */
+export async function decifrarBytes(envelope: Envelope, chave: CryptoKey): Promise<Uint8Array<ArrayBuffer> | null> {
+  try {
+    const claro = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: bytesDeBase64url(envelope.iv) },
+      chave,
+      bytesDeBase64url(envelope.ciphertext),
+    )
+    return new Uint8Array(claro)
+  } catch {
+    return null
+  }
+}
+
 /** Devolve o texto, ou null se a chave não confere (ou o envelope foi alterado). */
 export async function decifrar(envelope: Envelope, chave: CryptoKey): Promise<string | null> {
   try {

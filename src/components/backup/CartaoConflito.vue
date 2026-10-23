@@ -4,12 +4,14 @@ import type { ItemPlano } from '@/dominio/backup/backup'
 import type { Entidade } from '@/dominio/tipos'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   item: ItemPlano<Entidade>
   /** Ex.: "Prescrição", "Grupo". */
   tipo: string
   nome: (e: Entidade) => string
-}>()
+  /** Rótulo do lado que veio de fora (backup: "No arquivo"; colega: "Do colega"). */
+  rotuloArquivo?: string
+}>(), { rotuloArquivo: 'No arquivo' })
 
 const escolha = defineModel<'local' | 'arquivo'>({ required: true })
 
@@ -51,7 +53,7 @@ function data(e: Entidade) {
 
 const lados = computed(() => [
   { valor: 'local' as const, rotulo: 'Neste aparelho', entidade: props.item.local! },
-  { valor: 'arquivo' as const, rotulo: 'No arquivo', entidade: props.item.arquivo },
+  { valor: 'arquivo' as const, rotulo: props.rotuloArquivo, entidade: props.item.arquivo },
 ])
 </script>
 

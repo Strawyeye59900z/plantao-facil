@@ -53,7 +53,7 @@ export interface Condicao {
   nome: string
 }
 
-export type OrigemPrescricao = 'manual' | 'importada_ia'
+export type OrigemPrescricao = 'manual' | 'importada_ia' | 'recebida_colega'
 
 export interface Prescricao extends Entidade {
   /** Doença/situação. */
@@ -73,7 +73,7 @@ export interface Prescricao extends Entidade {
   referencia: string
   favorito: boolean
   origem: OrigemPrescricao
-  /** false = "importada — não revisada". Prescrições manuais nascem revisadas. */
+  /** false = "importada — não revisada" (IA ou recebida de colega). Prescrições manuais nascem revisadas. */
   revisada: boolean
   /** Campo "dúvidas" devolvido pela IA na importação. */
   duvidasImportacao: string[]

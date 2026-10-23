@@ -4,6 +4,7 @@
  *  - Entrada:    liga o resumo do código digitado ao id da sessão (nome = resumo SHA-256 do código);
  *  - Limitador:  conta tentativas de entrada por IP, só em memória (nome = IP).
  * O prazo de 12 h é renovado no máximo a cada 30 min: consultar não grava nada na maior parte das vezes.
+ * Compartilhamento de prescrições (`fixo`): prazo de 7 dias contado da criação, que nada renova.
  */
 import { LIMITE_CORPO_BYTES, LIMITE_TENTATIVAS_POR_MINUTO, TTL_SEGUNDOS } from './sessoes.js'
 
@@ -26,11 +27,13 @@ class ComPrazo {
   }
 
   fim(estado) {
-    return estado.renovadoEm + TTL_SEGUNDOS * 1000 + RENOVA_A_CADA_MS
+    const ttl = (estado.ttl ?? TTL_SEGUNDOS) * 1000
+    return estado.fixo ? estado.iniciadoEm + ttl : estado.renovadoEm + ttl + RENOVA_A_CADA_MS
   }
 
   async salvar(estado) {
     estado.renovadoEm = this.agora()
+    estado.iniciadoEm ??= estado.renovadoEm
     this.estado = estado
     await this.ctx.storage.put('estado', estado)
     await this.ctx.storage.setAlarm(this.fim(estado))
@@ -38,7 +41,7 @@ class ComPrazo {
 
   /** Estende o prazo só se a última renovação for antiga; evita uma gravação a cada consulta. */
   async tocar() {
-    if (this.estado && this.agora() - this.estado.renovadoEm > RENOVA_A_CADA_MS) await this.salvar(this.estado)
+    if (this.estado && !this.estado.fixo && this.agora() - this.estado.renovadoEm > RENOVA_A_CADA_MS) await this.salvar(this.estado)
   }
 
   async apagar() {
@@ -63,8 +66,8 @@ export class Sessao extends ComPrazo {
 
     if (req.method === 'POST' && pathname === '/iniciar') {
       if (this.estado) return json({ erro: 'Sessão já existe.' }, 409)
-      const { salt, codigoResumo } = await req.json()
-      await this.salvar({ salt, codigoResumo, payload: null })
+      const { salt, codigoResumo, ttl, fixo } = await req.json()
+      await this.salvar({ salt, codigoResumo, payload: null, ttl, fixo: fixo === true })
       return json({ ok: true }, 201)
     }
 
@@ -95,11 +98,7 @@ export class Sessao extends ComPrazo {
         return json({ erro: 'Envie { iv, ciphertext }.' }, 400)
       }
       const versao = (this.estado.payload?.versao ?? 0) + 1
-      await this.salvar({
-        salt: this.estado.salt,
-        codigoResumo: this.estado.codigoResumo,
-        payload: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao },
-      })
+      await this.salvar({ ...this.estado, payload: { iv: corpo.iv, ciphertext: corpo.ciphertext, versao } })
       return json({ ok: true, versao }, 201)
     }
 
@@ -118,8 +117,8 @@ export class Entrada extends ComPrazo {
     await this.pronto
     if (req.method === 'POST') {
       if (this.estado) return json({ erro: 'Código já existe.' }, 409)
-      const { id } = await req.json()
-      await this.salvar({ id })
+      const { id, ttl, fixo } = await req.json()
+      await this.salvar({ id, ttl, fixo: fixo === true })
       return json({ ok: true }, 201)
     }
     if (!this.estado) return naoEncontrada()

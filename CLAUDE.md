@@ -146,6 +146,13 @@ Testes ficam ao lado do código: `*.spec.ts`.
 - **Excluir biblioteca inteira** (Ajustes → `ExcluirBiblioteca.vue`): apaga **de vez** prescrições, calculadoras, escalas, grupos e lixeira; mantém as configurações. Oferece baixar backup antes e exige digitar EXCLUIR.
 - Regras em `src/db/exclusao.ts` (uma transação cada; testes em `exclusao.spec.ts`).
 
+#### Compartilhar prescrições com colegas (v3.1)
+- **Enviar:** na lista de Prescrições, **Selecionar** → marcar → botão de compartilhar. O app monta um **pacote** (um backup só com as prescrições escolhidas ativas, as calculadoras/escalas ligadas e os grupos usados; **favoritos saem desmarcados**; nada da lixeira) — `src/dominio/compartilhar/pacote.ts`. O pacote é comprimido (gzip), cifrado com chave derivada do código e enviado ao Worker; aparece um código **XXXX-XXXX** com "Copiar código" e "Copiar mensagem com instruções", e "Cancelar compartilhamento".
+- **Receber:** menu → **Receber de colega** (`/receber`, bloqueado no pen drive): digita o código, vê novos/iguais/conflitos (mesma mesclagem do backup, `CartaoConflito` com "Do colega") e importa. Tudo o que entra fica `origem: 'recebida_colega'` e `revisada: false`, com a etiqueta **"Recebida de colega"** (e "revisar antes de usar" até **Marcar como revisada**). Só o que entra pela mesclagem é marcado; o que já era igual fica como está.
+- **Código:** vale **7 dias a partir da criação** (nada renova), **vários colegas** podem usar o mesmo código; quem enviou pode cancelar. O servidor só guarda texto cifrado. Limite do pacote: ~1 MB cifrado (confere antes de enviar).
+- Worker: `POST /api/sessoes` com `{ tipo: 'compartilhamento' }` cria a sessão de prazo fixo (`ttl`/`fixo` nos Durable Objects); sem corpo continua a sessão de consulta de 12 h.
+- Backups com prescrições recebidas contêm `origem: 'recebida_colega'`; versões antigas do app não aceitam esse valor.
+
 ### Backup (Fase 3)
 - JSON (`plantao-facil-backup-AAAA-MM-DD-HHMM.json`) com `formato` + **`versaoFormato: 2`** (v2); backups `versaoFormato: 1` (v1) são aceitos e convertidos (ver "Migração v1 → v2"); prescrições, categorias e calculadoras **incluindo lixeira**. Fora: configurações, chaves de IA.
 - Backups `versaoFormato: 2` feitos na Fase 2 (calculadoras/grupos ainda no formato da v1, sem `area`) passam por `migrarCalculadorasEGruposV1` antes da validação; os que já têm `area` não mudam.

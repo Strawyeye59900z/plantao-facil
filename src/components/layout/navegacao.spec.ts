@@ -6,7 +6,7 @@ describe('navegação', () => {
     expect(AREAS.map((a) => a.rota)).toEqual(['/prescricoes', '/calculadoras', '/escalas', '/anamnese/bloco', '/anamnese/transcricao'])
   })
 
-  it('o menu tem Grupos, Importar PDF, Backup, Lixeira e Ajustes, nesta ordem', () => {
-    expect(MENU.map((m) => m.rotulo)).toEqual(['Grupos', 'Importar PDF', 'Backup', 'Lixeira', 'Ajustes'])
+  it('o menu tem Grupos, Importar PDF, Receber de colega, Backup, Lixeira e Ajustes, nesta ordem', () => {
+    expect(MENU.map((m) => m.rotulo)).toEqual(['Grupos', 'Importar PDF', 'Receber de colega', 'Backup', 'Lixeira', 'Ajustes'])
   })
 })

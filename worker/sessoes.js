@@ -4,6 +4,7 @@
  * chave de cifragem. O servidor só guarda o resumo do código e o texto cifrado (ver objetos.js). Nada é registrado em log.
  */
 export const TTL_SEGUNDOS = 43200 // 12 h sem uso; cada acesso renova o prazo
+export const TTL_COMPARTILHAMENTO_SEGUNDOS = 7 * 86400 // compartilhar prescrições: 7 dias a partir da criação, sem renovar
 export const LIMITE_CORPO_BYTES = 1024 * 1024 // bloco de notas com vários leitos
 export const LIMITE_TENTATIVAS_POR_MINUTO = 20
 export const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // sem 0, O, 1, I, L
@@ -63,15 +64,19 @@ export function criarRotasSessoes(ns, { ipDe = () => 'local' } = {}) {
 
     // Criar sessão (PC): devolve o código para mostrar e o salt para derivar a chave.
     if (partes.length === 2 && req.method === 'POST') {
+      // Sem corpo: sincronização de consultas (12 h sem uso). { tipo: 'compartilhamento' }: prazo fixo de 7 dias.
+      const pedido = await req.json().catch(() => null)
+      const fixo = pedido?.tipo === 'compartilhamento'
+      const ttl = fixo ? TTL_COMPARTILHAMENTO_SEGUNDOS : TTL_SEGUNDOS
       const id = gerarId()
       const salt = base64(crypto.getRandomValues(new Uint8Array(16)))
       for (let tentativa = 0; tentativa < 5; tentativa++) {
         const codigo = gerarCodigo()
         const resumo = await resumoCodigo(codigo)
-        const entrada = await chamar(ns.entrada(resumo), 'POST', '/', { id })
+        const entrada = await chamar(ns.entrada(resumo), 'POST', '/', { id, ttl, fixo })
         if (entrada.status === 409) continue // código já em uso: sorteia outro
-        await chamar(ns.sessao(id), 'POST', '/iniciar', { salt, codigoResumo: resumo })
-        return json({ id, codigo: `${codigo.slice(0, 4)}-${codigo.slice(4)}`, salt, expiraEmSegundos: TTL_SEGUNDOS }, 201)
+        await chamar(ns.sessao(id), 'POST', '/iniciar', { salt, codigoResumo: resumo, ttl, fixo })
+        return json({ id, codigo: `${codigo.slice(0, 4)}-${codigo.slice(4)}`, salt, expiraEmSegundos: ttl }, 201)
       }
       return json({ erro: 'Não consegui gerar um código. Tente de novo.' }, 503)
     }

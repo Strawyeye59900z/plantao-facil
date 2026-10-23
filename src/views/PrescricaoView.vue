@@ -18,6 +18,7 @@ import CaixaObservacoes from '@/components/prescricoes/CaixaObservacoes.vue'
 import CartaoReceita from '@/components/prescricoes/CartaoReceita.vue'
 import ListaItens from '@/components/prescricoes/ListaItens.vue'
 import SeletorCondicoes from '@/components/prescricoes/SeletorCondicoes.vue'
+import { ETIQUETA_RECEBIDA, ORIGEM_RECEBIDA } from '@/dominio/compartilhar/pacote'
 import { ETIQUETA_REVISAR } from '@/components/biblioteca/etiquetas'
 import { alertasDaPrescricao } from '@/dominio/prescricoes/alertas'
 import type { CondicoesMarcadas } from '@/dominio/prescricoes/condicoes'
@@ -218,6 +219,12 @@ async function moverParaLixeira() {
           <span class="bg-card flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold shadow-xs">
             <IconeCategoria :icone="categorias.obter(prescricao.categoriaId)?.icone" class="text-primary" />
             {{ categorias.nome(prescricao.categoriaId) }}
+          </span>
+          <span
+            v-if="prescricao.origem === ORIGEM_RECEBIDA"
+            class="bg-accent text-primary flex h-8 items-center rounded-full px-3 text-xs font-semibold"
+          >
+            {{ ETIQUETA_RECEBIDA }}
           </span>
           <template v-if="!prescricao.revisada">
             <span class="bg-atencao-suave text-atencao-suave-foreground flex h-8 items-center rounded-full px-3 text-xs font-semibold">
