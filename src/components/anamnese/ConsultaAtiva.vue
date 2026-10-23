@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Check, Mic } from '@lucide/vue'
+import { faseGravacao } from '@/dominio/anamnese/limiteGravacao'
 
 /**
  * Tela da consulta no celular. O app não grava áudio: o texto vem do ditado do teclado (ex.: Wispr Flow)
@@ -25,6 +26,13 @@ const duracao = computed(() => {
   const s = Math.max(0, Math.floor((agora.value.getTime() - inicio) / 1000))
   return `${dois(Math.floor(s / 3600))}:${dois(Math.floor((s % 3600) / 60))}:${dois(s % 60)}`
 })
+
+// O ditado para após 5 min: nos últimos 30 s do ciclo o fundo pisca. "Nova gravação" zera o ciclo.
+const inicioGravacao = ref(Date.now())
+const fase = computed(() => faseGravacao((agora.value.getTime() - inicioGravacao.value) / 1000))
+function reiniciarGravacao() {
+  inicioGravacao.value = Date.now()
+}
 
 // Barras das ondas: mais altas no meio de cada lado, com atrasos diferentes.
 const BARRAS = 14
@@ -88,7 +96,7 @@ function cancelar() {
 </script>
 
 <template>
-  <div class="consulta" role="dialog" aria-modal="true" aria-label="Consulta ativa">
+  <div class="consulta" :class="{ alerta: fase.alerta }" role="dialog" aria-modal="true" aria-label="Consulta ativa">
     <header class="text-center">
       <h2 class="titulo">Consulta ativa</h2>
       <p class="estado">
@@ -119,6 +127,10 @@ function cancelar() {
       </div>
     </div>
     <p class="duracao">Duração <strong>{{ duracao }}</strong></p>
+    <p class="gravacao" :class="{ urgente: fase.alerta }" :role="fase.alerta ? 'alert' : undefined">
+      <template v-if="fase.alerta">Ditado encerra em {{ fase.restante }} s</template>
+      <button type="button" @click="reiniciarGravacao">Nova gravação (zerar 5 min)</button>
+    </p>
 
     <section class="rodape">
       <textarea
@@ -162,6 +174,30 @@ function cancelar() {
   color: #e8eefb;
   background: radial-gradient(120% 70% at 50% 35%, #16264f 0%, #0b1330 60%, #080d22 100%);
 }
+/* Aviso dos últimos 30 s do ditado: camada colorida atrás do conteúdo que pisca uma vez por segundo. */
+.consulta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #f97316;
+  opacity: 0;
+  pointer-events: none;
+}
+.consulta.alerta::before {
+  animation: alerta 1s ease-in-out infinite;
+}
+.gravacao {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #9fb0d0;
+  font-size: 0.8rem;
+}
+.gravacao.urgente { color: #fed7aa; font-size: 1rem; font-weight: 700; }
+.gravacao button { min-height: 2rem; text-decoration: underline; text-underline-offset: 3px; }
 .titulo {
   font-size: 1.875rem;
   font-weight: 700;
@@ -333,6 +369,10 @@ function cancelar() {
   0% { transform: scale(1); opacity: 0.65; }
   100% { transform: scale(2.1); opacity: 0; border-width: 1px; }
 }
+@keyframes alerta {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.6; }
+}
 @keyframes pisca {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 1; }
@@ -347,5 +387,7 @@ function cancelar() {
   .ondulacao:nth-child(2) { opacity: 0.18; transform: scale(1.5); }
   .ondulacao:nth-child(3) { opacity: 0.1; transform: scale(1.75); }
   .barra { transform: scaleY(0.5); }
+  /* Sem movimento: o aviso vira uma cor fixa. */
+  .consulta.alerta::before { animation: none; opacity: 0.4; }
 }
 </style>
