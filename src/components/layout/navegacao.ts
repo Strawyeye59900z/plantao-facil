@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, Inbox, Mic, NotebookPen, Settings, Tags, Trash2 } from '@lucide/vue'
+import { Calculator, ClipboardList, ListChecks, DatabaseBackup, FileUp, HeartPulse, Inbox, Mic, NotebookPen, Settings, Tags, Trash2 } from '@lucide/vue'
 
 export interface ItemNavegacao {
   rota: string
@@ -23,5 +23,6 @@ export const MENU: ItemNavegacao[] = [
   { rota: '/receber', rotulo: 'Receber de colega', icone: Inbox },
   { rota: '/backup', rotulo: 'Backup', icone: DatabaseBackup },
   { rota: '/lixeira', rotulo: 'Lixeira', icone: Trash2 },
+  { rota: '/pcr', rotulo: 'PCR', icone: HeartPulse },
   { rota: '/ajustes', rotulo: 'Ajustes', icone: Settings },
 ]

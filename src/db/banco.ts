@@ -2,6 +2,7 @@ import { Dexie, type EntityTable } from 'dexie'
 import { migrarCalculadorasEGruposV1 } from '@/dominio/migracao/calculadora'
 import { migrarPrescricaoV1 } from '@/dominio/migracao/prescricao'
 import type { CalculadoraV1, CategoriaV1, PrescricaoV1 } from '@/dominio/migracao/v1/tipos'
+import type { RegistroPcr } from '@/dominio/pcr/pcr'
 import type { Calculadora, Categoria, Configuracoes, Prescricao } from '@/dominio/tipos'
 
 export const NOME_BANCO = 'plantao-facil'
@@ -11,6 +12,8 @@ export type BancoPlantao = Dexie & {
   calculadoras: EntityTable<Calculadora, 'id'>
   categorias: EntityTable<Categoria, 'id'>
   configuracoes: EntityTable<Configuracoes, 'id'>
+  /** Registros de parada (PCR): só neste aparelho, apagados depois de 2 dias; fora do backup. */
+  pcr: EntityTable<RegistroPcr, 'id'>
 }
 
 /**
@@ -52,6 +55,8 @@ export function criarBanco(nome = NOME_BANCO): BancoPlantao {
       await tx.table('categorias').bulkPut(categorias)
       await tx.table('calculadoras').bulkPut(calculadoras)
     })
+  // v4: registros de PCR (tempos e marcações, sem identificador de paciente).
+  banco.version(4).stores({ ...stores, calculadoras: 'id, categoriaId, area, tipo, atualizadoEm', pcr: 'id, iniciadoEm' })
   return banco
 }
 

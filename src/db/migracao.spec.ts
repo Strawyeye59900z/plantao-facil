@@ -149,7 +149,7 @@ async function gravarComoV1(dados: { prescricoes: unknown[]; categorias: unknown
   antigo.close()
 }
 
-describe('migração do banco (Dexie versão 1 → 2 → 3)', () => {
+describe('migração do banco (Dexie versão 1 → 2 → 3 → 4)', () => {
   it('converte as prescrições v1, inclusive as da lixeira, e as calculadoras; categoria sem uso fica igual', async () => {
     await gravarComoV1({
       prescricoes: [prescricaoV1Crua('p-ativa'), prescricaoV1Crua('p-lixeira', { excluidoEm: T2 })],
@@ -159,7 +159,7 @@ describe('migração do banco (Dexie versão 1 → 2 → 3)', () => {
 
     banco = criarBanco(nome)
     await banco.open()
-    expect(banco.verno).toBe(3)
+    expect(banco.verno).toBe(4)
 
     const prescricoes = await banco.prescricoes.orderBy('id').toArray()
     expect(prescricoes.map((p) => p.id)).toEqual(['p-ativa', 'p-lixeira'])
@@ -213,14 +213,14 @@ describe('migração do banco (Dexie versão 1 → 2 → 3)', () => {
     await gravarComoV1({ prescricoes: [], categorias: [], calculadoras: [] })
     banco = criarBanco(nome)
     expect(await banco.prescricoes.count()).toBe(0)
-    expect(banco.verno).toBe(3)
+    expect(banco.verno).toBe(4)
   })
 
   it('separa grupos e calculadoras: só escalas → "escala"; misto → cópia "escala" com as escalas; resto igual', async () => {
     await gravarComoV1({ prescricoes: [], ...gruposECalculadorasV1() })
     banco = criarBanco(nome)
     await banco.open()
-    expect(banco.verno).toBe(3)
+    expect(banco.verno).toBe(4)
 
     const categorias = await banco.categorias.orderBy('id').toArray()
     expect(categorias.map((c) => [c.id, c.escopo, c.excluidoEm])).toEqual([

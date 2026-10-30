@@ -5,10 +5,13 @@
  *  - Limitador:  conta tentativas de entrada por IP, só em memória (nome = IP).
  * O prazo de 12 h é renovado no máximo a cada 30 min: consultar não grava nada na maior parte das vezes.
  * Cada sessão tem dois "canais" de texto cifrado: o padrão (bloco de notas e transcrições, do celular para o PC)
- * e `biblioteca` (prescrições entre os aparelhos do mesmo médico, nos dois sentidos).
+ * `biblioteca` (prescrições entre os aparelhos do mesmo médico, nos dois sentidos) e `pcr` (registros de parada, do celular para o PC).
  * Compartilhamento de prescrições (`fixo`): prazo de 7 dias contado da criação, que nada renova.
  */
 import { LIMITE_CORPO_BYTES, LIMITE_TENTATIVAS_POR_MINUTO, TTL_SEGUNDOS } from './sessoes.js'
+
+/** Canais extras de texto cifrado, além do padrão (`payload`). */
+const CANAIS = ['biblioteca', 'pcr']
 
 export const RENOVA_A_CADA_MS = 30 * 60 * 1000
 
@@ -65,7 +68,8 @@ export class Sessao extends ComPrazo {
   async fetch(req) {
     await this.pronto
     const { pathname, searchParams } = new URL(req.url)
-    const campo = searchParams.get('canal') === 'biblioteca' ? 'biblioteca' : 'payload'
+    const canal = searchParams.get('canal')
+    const campo = CANAIS.includes(canal) ? canal : 'payload'
 
     if (req.method === 'POST' && pathname === '/iniciar') {
       if (this.estado) return json({ erro: 'Sessão já existe.' }, 409)

@@ -1,5 +1,5 @@
 /**
- * Texto devolvido pelo @nova-consulta no Gemini. Os trechos entre ⟦ ⟧ são para conferir (doses,
+ * Texto devolvido pela IA (ver promptProntuario.ts). Os trechos entre ⟦ ⟧ são para conferir (doses,
  * durações, datas): o app destaca em negrito e tira os marcadores na hora de copiar.
  */
 

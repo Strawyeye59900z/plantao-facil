@@ -95,6 +95,12 @@ export const router = createRouter({
       meta: { titulo: 'Transcrição' },
     },
     {
+      path: '/pcr',
+      name: 'pcr',
+      component: () => import('@/views/PcrView.vue'),
+      meta: { titulo: 'PCR' },
+    },
+    {
       path: '/ajustes',
       name: 'ajustes',
       component: () => import('@/views/AjustesView.vue'),

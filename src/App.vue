@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import BotaoPcr from '@/components/pcr/BotaoPcr.vue'
 import { Toaster } from '@/components/ui/sonner'
 import { useConfiguracoesStore } from '@/stores/configuracoes'
 
@@ -14,6 +15,7 @@ const telaCheia = computed(() => route.meta.telaCheia === true)
 <template>
   <RouterView v-if="telaCheia" />
   <AppLayout v-else />
+  <BotaoPcr />
   <Toaster
     position="top-center"
     :theme="configuracoes.config.tema === 'escuro' ? 'dark' : 'light'"

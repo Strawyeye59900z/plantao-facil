@@ -11,6 +11,7 @@ import { MODO_PENDRIVE } from './modo'
 import { useCalculadorasStore } from './stores/calculadoras'
 import { useCategoriasStore } from './stores/categorias'
 import { useConfiguracoesStore } from './stores/configuracoes'
+import { usePcrStore } from './stores/pcr'
 import { usePrescricoesStore } from './stores/prescricoes'
 
 export async function montarApp() {
@@ -36,5 +37,9 @@ export async function montarApp() {
   app.mount('#app')
 
   // Não bloqueia a abertura do app; o status aparece em Ajustes. Irrelevante no pen drive.
-  if (!MODO_PENDRIVE) void pedirArmazenamentoPersistente()
+  if (!MODO_PENDRIVE) {
+    void pedirArmazenamentoPersistente()
+    // Registros de PCR: fora da abertura para uma falha aqui não impedir o app de abrir.
+    void usePcrStore().carregar().catch((erro) => console.error('Falha ao carregar os registros de PCR', erro))
+  }
 }

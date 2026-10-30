@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ClipboardPaste, Copy, Mic, Sparkles, X } from '@lucide/vue'
+import { ClipboardPaste, Copy, Mic, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import ConsultaAtiva from '@/components/anamnese/ConsultaAtiva.vue'
 import { adicionarConsulta } from '@/dominio/anamnese/bloco'
-import { montarMensagemGemini } from '@/dominio/anamnese/mensagemGemini'
+import { montarMensagemProntuario } from '@/dominio/anamnese/promptProntuario'
 import { destacar, numerosNaoEncontrados, textoLimpo } from '@/dominio/anamnese/textoRevisado'
 import { separarProntuario } from '@/dominio/anamnese/separarProntuario'
 import { celular, evolucoes, pc } from '@/lib/anamnese/estado'
-import { abrirGemini } from '@/lib/anamnese/gemini'
 
 /**
  * Transcrição de consulta. No celular: colar o texto ditado e guardar (vai para o PC sozinho).
  * No PC: o prontuário ocupa a tela, editável e com destaque do que precisa de conferência; a resposta
- * do Gemini é colada num painel flutuante. O texto da transcrição não aparece na tela do PC.
+ * da IA é colada num painel flutuante. O texto da transcrição não aparece na tela do PC.
  */
 const ehCelular = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
 const gerarId = () => crypto.randomUUID()
@@ -73,15 +72,14 @@ watch(
   { immediate: true },
 )
 
-/** Copia a consulta com @nova-consulta e abre o Gemini. O texto não é mostrado na tela. */
-async function enviarParaGemini() {
+/** Copia prompt + transcrição para a IA que o usuário escolher. O texto não é mostrado na tela. */
+async function copiarParaIA() {
   if (!consulta.value) return
-  await navigator.clipboard.writeText(montarMensagemGemini(consulta.value.texto))
-  abrirGemini()
-  aviso.value = 'Mensagem copiada. Cole no Gemini, envie e copie a resposta de volta aqui.'
+  await navigator.clipboard.writeText(montarMensagemProntuario(consulta.value.texto))
+  aviso.value = 'Copiado. Cole na IA que preferir, envie e copie a resposta de volta aqui.'
 }
 
-/** Joga a resposta do Gemini no documento (sem os marcadores) e fecha o painel. */
+/** Joga a resposta da IA no documento (sem os marcadores) e fecha o painel. */
 function aplicarResposta() {
   if (!consulta.value || !evolucao.value) return
   const partes = separarProntuario(textoLimpo(evolucao.value.resposta))
@@ -155,7 +153,7 @@ async function copiarProntuario() {
             </button>
           </nav>
           <div class="flex gap-2">
-            <Button size="touch" variant="outline" @click="painelAberto = true"><ClipboardPaste /> Colar resposta do Gemini</Button>
+            <Button size="touch" variant="outline" @click="painelAberto = true"><ClipboardPaste /> Colar resposta da IA</Button>
             <Button size="touch" :disabled="!evolucao?.prontuario" @click="copiarProntuario"><Copy /> {{ copiado ? 'Copiado' : 'Copiar' }}</Button>
           </div>
         </div>
@@ -181,7 +179,7 @@ async function copiarProntuario() {
           <textarea
             v-model="evolucao.prontuario"
             spellcheck="false"
-            placeholder="O prontuário da consulta aparece aqui. Clique em “Colar resposta do Gemini”."
+            placeholder="O prontuário da consulta aparece aqui. Clique em “Colar resposta da IA”."
             class="caret-foreground placeholder:text-muted-foreground absolute inset-0 size-full resize-none overflow-hidden rounded-2xl border border-transparent bg-transparent p-6 text-base leading-relaxed text-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label="Prontuário editável"
           />
@@ -192,22 +190,22 @@ async function copiarProntuario() {
           <p class="text-muted-foreground whitespace-pre-wrap text-sm">{{ evolucao.fora }}</p>
         </section>
 
-        <!-- Painel flutuante: copiar para o Gemini e colar a resposta -->
+        <!-- Painel flutuante: copiar prompt + consulta para a IA e colar a resposta -->
         <aside
           v-if="painelAberto && evolucao && consulta"
           class="bg-background fixed right-4 bottom-4 z-40 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border p-4 shadow-xl"
-          aria-label="Painel do Gemini"
+          aria-label="Painel da IA"
           @keydown.esc="painelAberto = false"
         >
           <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold">Consulta {{ consulta.hora }} · Gemini</h2>
+            <h2 class="text-sm font-semibold">Consulta {{ consulta.hora }} · IA</h2>
             <Button size="icon-sm" variant="ghost" aria-label="Fechar painel" @click="painelAberto = false"><X /></Button>
           </header>
 
           <div>
-            <Button size="touch" variant="outline" class="w-full" @click="enviarParaGemini"><Sparkles /> Copiar para o Gemini</Button>
+            <Button size="touch" variant="outline" class="w-full" @click="copiarParaIA"><Copy /> Copiar prompt + consulta</Button>
             <p class="text-muted-foreground mt-2 text-xs">
-              Dica: no Gemini, abra um <strong>chat temporário</strong> e cole a mensagem com Ctrl+V.
+              Dica: cole em qualquer IA (Gemini, ChatGPT, Claude…), de preferência num <strong>chat temporário</strong>.
             </p>
             <p v-if="aviso" class="text-muted-foreground mt-2 text-xs" role="status">{{ aviso }}</p>
           </div>
@@ -217,8 +215,8 @@ async function copiarProntuario() {
             rows="7"
             spellcheck="false"
             class="border-input w-full rounded-xl border p-3 text-sm"
-            aria-label="Resposta do Gemini"
-            placeholder="Cole aqui a resposta copiada do Gemini"
+            aria-label="Resposta da IA"
+            placeholder="Cole aqui a resposta copiada da IA"
           />
           <Button size="touch" :disabled="!evolucao.resposta.trim()" @click="aplicarResposta">Aplicar ao prontuário</Button>
         </aside>

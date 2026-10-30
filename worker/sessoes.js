@@ -100,8 +100,9 @@ export function criarRotasSessoes(ns, { ipDe = () => 'local' } = {}) {
     const id = partes[2]
     if (!/^[0-9a-f]{32}$/.test(id)) return json({ erro: 'Sessão inválida.' }, 400)
 
-    // ?canal=biblioteca: prescrições entre os aparelhos do médico (o padrão é o bloco de notas/transcrição).
-    const canal = url.searchParams.get('canal') === 'biblioteca' ? 'biblioteca' : ''
+    // ?canal=biblioteca: prescrições entre os aparelhos do médico; ?canal=pcr: registros de parada (o padrão é o bloco de notas/transcrição).
+    const pedido = url.searchParams.get('canal')
+    const canal = pedido === 'biblioteca' || pedido === 'pcr' ? pedido : ''
 
     if (req.method === 'GET') {
       const depois = Number(url.searchParams.get('depois') ?? 0) || 0

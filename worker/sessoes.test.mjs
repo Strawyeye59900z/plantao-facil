@@ -247,6 +247,15 @@ describe('canal da biblioteca (entre os aparelhos do médico)', () => {
     assert.equal((await (await tratar(req('GET', `/api/sessoes/${id}`))).json()).ciphertext, 'B1')
   })
 
+  it('o canal pcr é independente dos demais', async () => {
+    const tratar = criarRotasSessoes(ambiente().ns)
+    const { id } = await criar(tratar)
+    await tratar(req('POST', `/api/sessoes/${id}?canal=pcr`, { iv: 'p', ciphertext: 'P1' }))
+    assert.deepEqual(await (await tratar(req('GET', `/api/sessoes/${id}?canal=pcr`))).json(), { iv: 'p', ciphertext: 'P1', versao: 1 })
+    assert.equal((await tratar(req('GET', `/api/sessoes/${id}`))).status, 204)
+    assert.equal((await tratar(req('GET', `/api/sessoes/${id}?canal=biblioteca`))).status, 204)
+  })
+
   it('canal desconhecido cai no padrão, sem abrir canais novos', async () => {
     const tratar = criarRotasSessoes(ambiente().ns)
     const { id } = await criar(tratar)

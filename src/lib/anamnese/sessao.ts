@@ -12,8 +12,8 @@ export interface ResultadoRecebido extends Envelope {
   versao: number
 }
 
-/** Sem canal: bloco de notas e transcrições. 'biblioteca': prescrições entre os aparelhos do médico. */
-export type CanalSessao = 'biblioteca'
+/** Sem canal: bloco de notas e transcrições. 'biblioteca': prescrições entre os aparelhos do médico. 'pcr': registros de parada, do celular para o PC. */
+export type CanalSessao = 'biblioteca' | 'pcr'
 
 /** A sessão foi encerrada por um dos lados ou expirou (sem uso por 12 h). */
 export class SessaoEncerradaError extends Error {}
