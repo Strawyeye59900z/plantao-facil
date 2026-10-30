@@ -25,6 +25,8 @@ export interface RegistroPcr {
 
 /** Ciclo de RCP até a checagem de ritmo. */
 export const CICLO_MS = 2 * 60 * 1000
+/** A tela pisca nos últimos 15 s antes da checagem de ritmo. */
+export const AVISO_ANTES_MS = 15 * 1000
 /** Epinefrina: a repetição é razoável a cada 3–5 min (contados da dose anterior). */
 export const EPI_REPETIR_MS = 3 * 60 * 1000
 export const EPI_ATRASO_MS = 5 * 60 * 1000

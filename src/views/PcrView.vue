@@ -33,7 +33,7 @@ onBeforeUnmount(() => clearInterval(relogioPc))
 
 <template>
   <section class="flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold md:text-3xl">PCR</h1>
+    <h1 v-if="!(ehCelular && pcr.ativa)" class="text-2xl font-semibold md:text-3xl">PCR</h1>
 
     <!-- CELULAR -->
     <template v-if="ehCelular">

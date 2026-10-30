@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { Check, Pill, Stethoscope, Undo2, Volume2, VolumeX, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
-import { BPM_METRONOMO, descreverEvento, doseDaProxima, formatarTempo, type Medicacao } from '@/dominio/pcr/pcr'
+import { AVISO_ANTES_MS, BPM_METRONOMO, descreverEvento, doseDaProxima, formatarTempo, type Medicacao } from '@/dominio/pcr/pcr'
 import { usePcrStore } from '@/stores/pcr'
 
 /**
@@ -21,6 +21,13 @@ const perguntando = ref(false)
 /** Ritmo inicial (ainda sem nenhuma checagem), checagem vencida ou pedida pelo médico. */
 const mostrarChoque = computed(() => contagens.value.checagens === 0 || estado.value.checagemPendente || perguntando.value)
 const checagemVencida = computed(() => estado.value.checagemPendente)
+/** Últimos 15 s antes da checagem de ritmo: a tela pisca em outra cor. */
+const checagemProxima = computed(
+  () => !estado.value.checagemPendente && estado.value.cicloRestanteMs > 0 && estado.value.cicloRestanteMs <= AVISO_ANTES_MS,
+)
+const fundo = computed(() =>
+  checagemVencida.value ? 'bg-critico text-critico-foreground' : checagemProxima.value ? 'pcr-pisca' : 'bg-background text-foreground',
+)
 
 const painel = ref<'drogas' | 'procedimentos' | null>(null)
 const encerrando = ref(false)
@@ -82,19 +89,23 @@ const textoEpi = computed(() =>
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100dvh-11rem)] flex-col gap-4">
+  <!-- Tela cheia: cobre o topo do app e muda de cor na checagem de ritmo -->
+  <div
+    class="fixed inset-0 z-40 flex flex-col gap-4 overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] transition-colors"
+    :class="fundo"
+  >
     <!-- Contadores no alto -->
     <div class="flex items-stretch gap-2">
       <ul class="grid flex-1 grid-cols-3 gap-2 text-center" aria-label="Contagens">
-        <li class="bg-card rounded-2xl border p-2">
+        <li class="bg-card text-card-foreground rounded-2xl border p-2">
           <p class="text-3xl leading-none font-bold">{{ contagens.choques }}</p>
           <p class="text-muted-foreground mt-1 text-xs">Choques</p>
         </li>
-        <li class="rounded-2xl border p-2" :class="epiAlerta ? 'bg-atencao-suave text-atencao-suave-foreground animate-pulse' : 'bg-card'">
+        <li class="rounded-2xl border p-2" :class="epiAlerta ? 'bg-atencao-suave text-atencao-suave-foreground animate-pulse' : 'bg-card text-card-foreground'">
           <p class="text-3xl leading-none font-bold">{{ contagens.epinefrina }}</p>
           <p class="mt-1 text-xs" :class="!epiAlerta && 'text-muted-foreground'">Epinefrina</p>
         </li>
-        <li class="bg-card rounded-2xl border p-2">
+        <li class="bg-card text-card-foreground rounded-2xl border p-2">
           <p class="text-3xl leading-none font-bold">{{ contagens.amiodarona }}</p>
           <p class="text-muted-foreground mt-1 text-xs">Amiodarona</p>
         </li>
@@ -111,7 +122,7 @@ const textoEpi = computed(() =>
       </Button>
     </div>
 
-    <Button v-if="!pcr.somLiberado" size="touch" variant="outline" @click="pcr.liberarSom">
+    <Button v-if="!pcr.somLiberado" size="touch" variant="outline" class="bg-card text-foreground" @click="pcr.liberarSom">
       <Volume2 /> Toque para ativar o som e os alertas
     </Button>
 
@@ -125,22 +136,22 @@ const textoEpi = computed(() =>
 
       <!-- Choque: só no início, na checagem de ritmo vencida ou pedida -->
       <div v-if="mostrarChoque" class="w-full max-w-sm" role="status">
-        <p class="mb-2 text-center text-sm font-semibold" :class="checagemVencida && 'text-critico animate-pulse'">
+        <p class="mb-2 text-center text-base font-semibold">
           {{ checagemVencida ? 'Checar o ritmo. Houve choque?' : contagens.checagens === 0 ? 'Ritmo inicial: houve choque?' : 'Houve choque?' }}
         </p>
         <div class="grid grid-cols-2 gap-2">
           <Button size="touch" class="h-14 text-base" @click="responder(true)">Choque</Button>
-          <Button size="touch" variant="outline" class="bg-card h-14 text-base" @click="responder(false)">Sem choque</Button>
+          <Button size="touch" variant="outline" class="bg-card text-foreground h-14 text-base" @click="responder(false)">Sem choque</Button>
         </div>
       </div>
     </div>
 
     <!-- Embaixo -->
     <div class="grid grid-cols-2 gap-3">
-      <Button size="touch" variant="outline" class="bg-card h-16 text-base" @click="painel = 'drogas'"><Pill /> Drogas</Button>
-      <Button size="touch" variant="outline" class="bg-card h-16 text-base" @click="painel = 'procedimentos'"><Stethoscope /> Procedimentos</Button>
+      <Button size="touch" variant="outline" class="bg-card text-foreground h-16 text-base" @click="painel = 'drogas'"><Pill /> Drogas</Button>
+      <Button size="touch" variant="outline" class="bg-card text-foreground h-16 text-base" @click="painel = 'procedimentos'"><Stethoscope /> Procedimentos</Button>
     </div>
-    <Button size="sm" variant="ghost" class="text-muted-foreground self-center" @click="encerrando = true"><X /> Encerrar PCR</Button>
+    <Button size="sm" variant="ghost" class="self-center opacity-70" @click="encerrando = true"><X /> Encerrar PCR</Button>
 
     <!-- Painel de baixo: drogas ou procedimentos -->
     <div v-if="painel" class="fixed inset-0 z-50" @keydown.esc="fechar">
@@ -206,3 +217,27 @@ const textoEpi = computed(() =>
     />
   </div>
 </template>
+
+<style scoped>
+/* Aviso de checagem próxima: alterna entre o amarelo de atenção e o fundo normal. */
+.pcr-pisca {
+  color: var(--atencao-foreground);
+  animation: pcr-pisca 1s steps(1, end) infinite;
+}
+@keyframes pcr-pisca {
+  0%,
+  100% {
+    background-color: var(--atencao);
+  }
+  50% {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcr-pisca {
+    animation: none;
+    background-color: var(--atencao);
+  }
+}
+</style>
