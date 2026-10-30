@@ -27,6 +27,15 @@ export interface RegistroPcr {
 export const CICLO_MS = 2 * 60 * 1000
 /** A tela pisca nos últimos 15 s antes da checagem de ritmo. */
 export const AVISO_ANTES_MS = 15 * 1000
+
+/**
+ * Período de cada piscada (ms) conforme falta para a checagem: começa lento (1,2 s) e encurta a cada
+ * segundo até 0,25 s, para dar a noção de que o tempo está acabando.
+ */
+export function periodoPiscaMs(restanteMs: number): number {
+  const segundos = Math.min(AVISO_ANTES_MS / 1000, Math.max(1, Math.ceil(restanteMs / 1000)))
+  return Math.round(250 + ((segundos - 1) / (AVISO_ANTES_MS / 1000 - 1)) * 950)
+}
 /** Epinefrina: a repetição é razoável a cada 3–5 min (contados da dose anterior). */
 export const EPI_REPETIR_MS = 3 * 60 * 1000
 export const EPI_ATRASO_MS = 5 * 60 * 1000
@@ -54,7 +63,11 @@ export function novoRegistro(id: string, agora: number): RegistroPcr {
   return { id, iniciadoEm: agora, encerradoEm: null, eventos: [] }
 }
 
+/** Via aérea avançada só se faz uma vez. */
+export const viaAereaFeita = (registro: RegistroPcr) => registro.eventos.some((e) => e.tipo === 'via_aerea')
+
 export function registrarEvento(registro: RegistroPcr, evento: EventoPcr): RegistroPcr {
+  if (evento.tipo === 'via_aerea' && viaAereaFeita(registro)) return registro
   return { ...registro, eventos: [...registro.eventos, evento] }
 }
 

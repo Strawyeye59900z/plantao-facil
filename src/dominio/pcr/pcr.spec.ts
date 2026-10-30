@@ -12,7 +12,9 @@ import {
   lerRegistros,
   montarResumo,
   novoRegistro,
+  periodoPiscaMs,
   registrarEvento,
+  viaAereaFeita,
   VALIDADE_MS,
   type EventoPcr,
 } from './pcr'
@@ -69,6 +71,25 @@ describe('PCR: tempos', () => {
     expect(formatarTempo(0)).toBe('00:00')
     expect(formatarTempo(125_900)).toBe('02:05')
     expect(formatarTempo(61 * 60_000)).toBe('61:00')
+  })
+})
+
+describe('PCR: via aérea e aviso piscante', () => {
+  it('a via aérea avançada só entra uma vez, e voltar atrás libera de novo', () => {
+    let r = registrarEvento(novoRegistro('r', T0), ev('via_aerea', T0 + 1000))
+    expect(viaAereaFeita(r)).toBe(true)
+    r = registrarEvento(r, ev('via_aerea', T0 + 2000))
+    expect(r.eventos).toHaveLength(1)
+    expect(viaAereaFeita(desfazerUltimo(r))).toBe(false)
+  })
+
+  it('o intervalo do piscar encurta a cada segundo até a checagem', () => {
+    const periodos = [15, 12, 9, 6, 3, 1].map((s) => periodoPiscaMs(s * 1000))
+    expect(periodos[0]).toBe(1200)
+    expect(periodos.at(-1)).toBe(250)
+    for (let i = 1; i < periodos.length; i++) expect(periodos[i]).toBeLessThan(periodos[i - 1]!)
+    expect(periodoPiscaMs(0)).toBe(250)
+    expect(periodoPiscaMs(13_900)).toBeLessThan(periodoPiscaMs(15_000))
   })
 })
 

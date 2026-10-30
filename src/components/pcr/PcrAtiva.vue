@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { Check, Pill, Stethoscope, Undo2, Volume2, VolumeX, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import DialogoConfirmar from '@/components/comum/DialogoConfirmar.vue'
-import { AVISO_ANTES_MS, BPM_METRONOMO, descreverEvento, doseDaProxima, formatarTempo, type Medicacao } from '@/dominio/pcr/pcr'
+import { AVISO_ANTES_MS, BPM_METRONOMO, descreverEvento, doseDaProxima, formatarTempo, periodoPiscaMs, type Medicacao } from '@/dominio/pcr/pcr'
 import { usePcrStore } from '@/stores/pcr'
 
 /**
@@ -25,6 +25,8 @@ const checagemVencida = computed(() => estado.value.checagemPendente)
 const checagemProxima = computed(
   () => !estado.value.checagemPendente && estado.value.cicloRestanteMs > 0 && estado.value.cicloRestanteMs <= AVISO_ANTES_MS,
 )
+/** Só na fase de aviso: a piscada acelera a cada segundo. */
+const estiloPisca = computed(() => (checagemProxima.value ? { animationDuration: `${periodoPiscaMs(estado.value.cicloRestanteMs)}ms` } : undefined))
 const fundo = computed(() =>
   checagemVencida.value ? 'bg-critico text-critico-foreground' : checagemProxima.value ? 'pcr-pisca' : 'bg-background text-foreground',
 )
@@ -93,6 +95,7 @@ const textoEpi = computed(() =>
   <div
     class="fixed inset-0 z-40 flex flex-col gap-4 overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] transition-colors"
     :class="fundo"
+    :style="estiloPisca"
   >
     <!-- Contadores no alto -->
     <div class="flex items-stretch gap-2">
@@ -181,9 +184,15 @@ const textoEpi = computed(() =>
         </template>
 
         <template v-else>
-          <Button size="touch" variant="outline" class="bg-card h-14 justify-between text-base" @click="darViaAerea">
+          <Button
+            size="touch"
+            variant="outline"
+            class="bg-card h-14 justify-between text-base"
+            :disabled="contagens.viaAerea > 0"
+            @click="darViaAerea"
+          >
             <span>Via aérea avançada</span>
-            <span class="text-muted-foreground text-sm font-normal">{{ contagens.viaAerea ? `${contagens.viaAerea}x` : 'marcar como feita' }}</span>
+            <span class="text-muted-foreground text-sm font-normal">{{ contagens.viaAerea ? 'já realizada' : 'marcar como feita' }}</span>
           </Button>
           <Button size="touch" variant="outline" class="bg-card h-14 text-base" @click="escrevendoOutro = !escrevendoOutro">Outro procedimento</Button>
           <form v-if="escrevendoOutro" class="flex gap-2" @submit.prevent="marcarOutro">
